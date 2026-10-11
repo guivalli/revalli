@@ -83,6 +83,21 @@ export interface PdfFocus {
   text: string
 }
 
+/** Texto selecionado com o mouse e a página onde a seleção começa. */
+export interface PdfSelection {
+  page: number | null
+  text: string
+}
+
+function readSelection(): PdfSelection | null {
+  const sel = window.getSelection()
+  const text = sel?.toString().replace(/\s+/g, ' ').trim() ?? ''
+  if (!sel || text.length < 3) return null
+  const node = sel.anchorNode
+  const el = (node instanceof Element ? node : node?.parentElement)?.closest('[data-page]')
+  return { page: el ? Number(el.getAttribute('data-page')) : null, text }
+}
+
 function Page({
   doc,
   number,
@@ -198,11 +213,13 @@ export function PdfViewer({
   include,
   exclude,
   focus,
+  onSelect,
 }: {
   url: string
   include: string[]
   exclude: string[]
   focus?: PdfFocus | null
+  onSelect?: (sel: PdfSelection) => void
 }) {
   const { t } = useTranslation()
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
@@ -256,7 +273,17 @@ export function PdfViewer({
           {t('pdf.open')}
         </a>
       </div>
-      <div className="flex-1 space-y-4 overflow-auto bg-stone-200 p-4 dark:bg-stone-800">
+      <div
+        className="flex-1 space-y-4 overflow-auto bg-stone-200 p-4 dark:bg-stone-800"
+        onMouseUp={
+          onSelect
+            ? () => {
+                const sel = readSelection()
+                if (sel) onSelect(sel)
+              }
+            : undefined
+        }
+      >
         {error && <p className="text-sm text-red-700">{t('pdf.error')}</p>}
         {!doc && !error && <p className="text-sm text-stone-500">{t('app.loading')}</p>}
         {doc &&

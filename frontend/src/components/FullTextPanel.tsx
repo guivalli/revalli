@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fileUrl, useFileActions, useRecordFiles } from '../api/files'
-import { PdfViewer, type PdfFocus } from './PdfViewer'
+import { PdfViewer, type PdfFocus, type PdfSelection } from './PdfViewer'
 import { Button, Card, ErrorText } from './ui'
 
 export function FullTextPanel({
@@ -12,6 +12,7 @@ export function FullTextPanel({
   canUpload,
   focus,
   onClearFocus,
+  onSelect,
 }: {
   pid: string
   rid: string
@@ -21,6 +22,8 @@ export function FullTextPanel({
   /** Página e trecho a destacar, num arquivo específico */
   focus?: (PdfFocus & { fileId: string | null }) | null
   onClearFocus?: () => void
+  /** Texto selecionado no PDF aberto */
+  onSelect?: (sel: PdfSelection & { fileId: string }) => void
 }) {
   const { t } = useTranslation()
   const files = useRecordFiles(pid, rid)
@@ -107,6 +110,7 @@ export function FullTextPanel({
           include={include}
           exclude={exclude}
           focus={focus && (!focus.fileId || focus.fileId === current.id) ? focus : null}
+          onSelect={onSelect && ((sel) => onSelect({ ...sel, fileId: current.id }))}
         />
       </div>
     </Card>

@@ -488,3 +488,66 @@ export interface Translation {
   notes: string[]
   model: string
 }
+
+export interface Code {
+  id: string
+  parent_id: string | null
+  name: string
+  description: string
+  color: string
+  position: number
+  excerpts: number
+}
+
+export interface Excerpt {
+  id: string
+  record_id: string
+  study: string
+  file_id: string | null
+  file_record_id: string | null
+  page: number | null
+  text: string
+  note: string
+  code_ids: string[]
+  user_id: string | null
+  user_name: string
+  created_at: string
+}
+
+export interface CodingUnit {
+  record_id: string
+  label: string
+  report_ids: string[]
+  title: string
+  year: number | null
+  excerpts: number
+  has_pdf: boolean
+}
+
+export type ChecklistStatus = 'pending' | 'done' | 'na'
+
+export interface ChecklistEntry {
+  item: string
+  status: ChecklistStatus
+  location: string
+  note: string
+  updated_at: string | null
+}
+
+export interface ChecklistFacts {
+  review_type: string
+  searches: {
+    source: string
+    method: SearchMethod
+    searched_on: string | null
+    has_query: boolean
+    via_api: boolean
+    reported: number | null
+    imported: number
+  }[]
+  screening: { reviewers_title_abstract: number; reviewers_full_text: number; blind: boolean; has_criteria: boolean }
+  ai: { enabled: boolean; mode: 'suggest' | 'second_reviewer'; local_only: boolean; calls: Record<string, number> }
+  forms: { name: string; kind: 'extraction' | 'rob'; template: string; extractors: number }[]
+  coding: { codes: number; excerpts: number }
+  prisma: Prisma
+}

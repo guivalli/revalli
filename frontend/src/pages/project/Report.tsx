@@ -5,6 +5,7 @@ import { Button, Card, Field, Select } from '../../components/ui'
 import { PrismaDiagram } from '../../components/PrismaDiagram'
 import { savePng, saveSvg } from '../../lib/download'
 import { useProjectContext } from './context'
+import { ChecklistSection } from './ChecklistSection'
 
 const STATES = ['all', 'included', 'excluded', 'conflict', 'pending'] as const
 
@@ -70,6 +71,7 @@ export default function Report() {
           </a>
         </div>
       </Card>
+      <ChecklistSection />
     </div>
   )
 }

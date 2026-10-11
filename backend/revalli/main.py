@@ -14,6 +14,7 @@ from revalli.modules.records.router import router as records_router
 from revalli.modules.reports.router import router as reports_router
 from revalli.modules.screening.router import router as screening_router
 from revalli.modules.sources.router import router as sources_router
+from revalli.modules.synthesis.router import router as synthesis_router
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -72,3 +73,4 @@ app.include_router(ai_project_router, prefix="/api")
 app.include_router(fulltext_router, prefix="/api")
 app.include_router(extraction_router, prefix="/api")
 app.include_router(sources_router, prefix="/api")
+app.include_router(synthesis_router, prefix="/api")

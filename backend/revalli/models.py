@@ -19,8 +19,13 @@ from revalli.modules.records.models import (
     Search,
 )
 from revalli.modules.screening.models import DecisionEvent, ExclusionReason
+from revalli.modules.synthesis.models import ChecklistEntry, Code, Excerpt, ExcerptCode
 
 __all__ = [
+    "ChecklistEntry",
+    "Code",
+    "Excerpt",
+    "ExcerptCode",
     "AIProvider",
     "AISuggestion",
     "AIUsage",

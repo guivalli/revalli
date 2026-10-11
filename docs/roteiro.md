@@ -10,4 +10,4 @@ Cada marco termina com uma versão utilizável.
 | M3 | IA plugável (local ou remota), triagem assistida, calibração, controle de custo, aprendizado ativo e critério de parada | pronto (falta medir a meta de recall com um modelo real, veja [benchmark](benchmark.md)) |
 | M4 | Texto completo: PDFs, busca de acesso aberto, visualizador, agrupamento de relatórios por estudo | pronto (sem OCR de PDFs escaneados) |
 | M5 | Extração de dados e risco de viés, com citação literal verificada no PDF | pronto (falta medir a IA com estudos reais) |
-| M6 | Síntese, snowballing, buscas por API, relatórios, conversa com o corpus, API pública e servidor MCP | em andamento (buscas por API e snowballing prontos) |
+| M6 | Síntese, snowballing, buscas por API, relatórios, conversa com o corpus, API pública e servidor MCP | em andamento (buscas por API, snowballing, codificação qualitativa e checklists PRISMA prontos) |

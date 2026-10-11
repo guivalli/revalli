@@ -38,7 +38,10 @@ Versão **0.5.0-dev (M0 a M5, M6 em andamento)**. O que já funciona:
 - Busca direta no PubMed, no OpenAlex e no Europe PMC pela API pública, com contagem e amostra antes de importar, e tradução da estratégia de busca para outras bases com IA (sempre revisada pela pessoa).
 - Snowballing pelo OpenAlex: referências dos incluídos (para trás) e trabalhos que os citam (para frente), separados como "outros métodos" no PRISMA. Veja [docs/buscas.md](docs/buscas.md).
 
-Síntese, relatórios e os demais recursos do M6 vêm a seguir (veja o [roteiro](docs/roteiro.md)).
+- Codificação qualitativa para revisões integrativas e de escopo: árvore de códigos, trechos marcados direto no PDF, matriz de códigos por estudo e exportação em CSV. Veja [docs/sintese.md](docs/sintese.md).
+- Checklists PRISMA 2020 e PRISMA-ScR no relatório, com o local de cada item no manuscrito e os dados do projeto que ajudam a escrevê-lo.
+
+Meta-análise, relatórios e os demais recursos do M6 vêm a seguir (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 
