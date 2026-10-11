@@ -39,6 +39,11 @@ export function Layout() {
             {t('app.name')}
           </Link>
           <div className="flex items-center gap-3 text-sm">
+            {me?.is_admin && (
+              <Link to="/ia" className="text-stone-600 hover:text-stone-900 dark:text-stone-300">
+                {t('app.ai_settings')}
+              </Link>
+            )}
             <span className="hidden text-stone-500 sm:inline">{me?.full_name}</span>
             <LanguageSelect />
             <Button variant="ghost" onClick={() => logout.mutate()}>

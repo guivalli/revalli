@@ -6,13 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from revalli.core.db import get_db
 from revalli.core.deps import admin_user, current_user, get_membership, require_lead
-from revalli.models import AIProvider, AIUsage, User
+from revalli.models import AIProvider, AIUsage, Record, User
 from revalli.modules.ai import client
 from revalli.modules.ai.client import AIError, Endpoint
 from revalli.modules.ai.crypto import decrypt, encrypt
 from revalli.modules.ai.schemas import (
     Calibration,
     Estimate,
+    FlagOut,
     InstanceAISettings,
     ProjectAISettings,
     ProviderIn,
@@ -35,6 +36,7 @@ from revalli.modules.projects.models import Role
 from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.schemas import JobOut
 from revalli.modules.screening.models import Phase
+from revalli.modules.screening.router import _item
 from revalli.modules.screening.service import State, compute_states
 
 router = APIRouter(tags=["ai"])
@@ -244,7 +246,7 @@ async def read_calibration(
     return out
 
 
-@project_router.get("/{phase}/flags", response_model=list[SuggestionOut])
+@project_router.get("/{phase}/flags", response_model=list[FlagOut])
 async def flags(
     project_id: uuid.UUID,
     phase: Phase,
@@ -258,7 +260,12 @@ async def flags(
     states = await compute_states(db, project, phase)
     excluded = [rid for rid, st in states.items() if st.state == State.excluded]
     sugs = await latest_suggestions(db, project_id, phase, excluded)
-    return [s for s in sugs.values() if s.decision != "exclude"]
+    flagged = {rid: s for rid, s in sugs.items() if s.decision != "exclude"}
+    records = (await db.execute(select(Record).where(Record.id.in_(list(flagged))))).scalars()
+    return [
+        FlagOut(record=_item(r), suggestion=SuggestionOut.model_validate(flagged[r.id]))
+        for r in records
+    ]
 
 
 @project_router.get("/usage", response_model=UsageOut)

@@ -62,11 +62,13 @@ export function Card({ children, className }: { children: ReactNode; className?:
 export function ErrorText({ error }: { error: unknown }) {
   const { t } = useTranslation()
   if (!error) return null
-  const code = error instanceof ApiError ? error.code : 'unknown_error'
+  // O servidor pode mandar "codigo: detalhe"; o detalhe aparece depois da mensagem traduzida
+  const [code, detail] = (error instanceof ApiError ? error.code : 'unknown_error').split(/: (.*)/s)
   const msg = t(`errors.${code}`, { defaultValue: t('errors.unknown_error') })
   return (
     <p role="alert" className="text-sm text-red-700 dark:text-red-400">
       {msg}
+      {detail && <span className="block text-xs opacity-80">{detail}</span>}
     </p>
   )
 }

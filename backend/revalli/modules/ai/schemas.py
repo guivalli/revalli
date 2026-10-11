@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from revalli.modules.screening.schemas import QueueItem
+
 PROVIDER_KINDS = ("ollama", "openai", "anthropic", "google", "openrouter", "custom")
 
 
@@ -102,3 +104,8 @@ class UsageOut(BaseModel):
     input_tokens: int
     output_tokens: int
     calls: int
+
+
+class FlagOut(BaseModel):
+    record: QueueItem
+    suggestion: SuggestionOut

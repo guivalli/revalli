@@ -97,7 +97,7 @@ export interface DuplicateGroup {
 
 export interface Job {
   id: string
-  kind: 'dedup' | 'enrich'
+  kind: 'dedup' | 'enrich' | 'ai_screen'
   status: 'queued' | 'running' | 'done' | 'failed'
   progress: number
   total: number
@@ -211,4 +211,71 @@ export interface Prisma {
     pending: number
   }
   included: number
+}
+export type ProviderKind = 'ollama' | 'openai' | 'anthropic' | 'google' | 'openrouter' | 'custom'
+export interface Provider {
+  id: string
+  name: string
+  kind: ProviderKind
+  base_url: string
+  api_key_hint: string
+  is_local: boolean
+}
+export interface TaskModel {
+  provider_id: string | null
+  model: string
+  price_input: number
+  price_output: number
+}
+export interface InstanceAISettings {
+  screening: TaskModel
+  embeddings: TaskModel
+}
+export interface ProjectAISettings {
+  enabled: boolean
+  local_only: boolean
+  mode: 'suggest' | 'second_reviewer'
+  budget_usd: number | null
+  extra_instructions: string
+}
+export type AIScope = 'pending' | 'excluded' | 'calibration'
+export interface AIEstimate {
+  records: number
+  cached: number
+  input_tokens: number
+  output_tokens: number
+  cost_usd: number
+  local: boolean
+  budget_usd: number | null
+  spent_usd: number
+}
+export interface AISuggestion {
+  record_id: string
+  decision: DecisionKind
+  confidence: number | null
+  justification: string
+  criteria: { criterion: string; status: 'met' | 'violated' | 'unclear' }[]
+  model_key: string
+  created_at: string
+}
+export interface AICalibration {
+  n: number
+  tp: number
+  fp: number
+  tn: number
+  fn: number
+  maybe: number
+  sensitivity: number | null
+  specificity: number | null
+  kappa: number | null
+}
+export interface AIUsage {
+  spent_usd: number
+  input_tokens: number
+  output_tokens: number
+  calls: number
+}
+export interface AIFlag {
+  record: ScreeningItem
+  suggestion: AISuggestion
 }

@@ -7,7 +7,7 @@ Plataforma open source e auto-hospedada para conduzir revisões de literatura (s
 
 ## Estado atual
 
-Versão **0.1.0-dev (M0, M1 e M2)**. O que já funciona:
+Versão **0.2.0-dev (M0 a M2 e a primeira parte do M3)**. O que já funciona:
 
 - Instalação com Docker Compose (banco, fila, API, worker e servidor web).
 - Configuração inicial com criação do administrador.
@@ -25,8 +25,10 @@ Versão **0.1.0-dev (M0, M1 e M2)**. O que já funciona:
 - Painel da triagem com progresso por revisor, concordância (porcentagem e kappa de Cohen), resolução de conflitos com decisão final e lista das minhas decisões.
 - Fluxograma PRISMA 2020 gerado a partir das decisões, para baixar em SVG ou PNG.
 - Exportação das referências em RIS ou CSV, com estado, motivos de exclusão, etiquetas e decisões (respeitando o cegamento).
+- IA plugável: Ollama no próprio servidor ou APIs remotas compatíveis com OpenAI, com chaves cifradas, opção “só IA local” por projeto, estimativa de custo, limite de gasto e cache.
+- Triagem por IA como sugestão (mostrada só depois da decisão humana) ou como segunda revisora, checagem dos excluídos e calibração (sensibilidade, especificidade e kappa contra os humanos).
 
-Os recursos de IA e o texto completo com PDFs vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
+O aprendizado ativo, o benchmark da IA e o texto completo com PDFs vêm nos próximos passos (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 

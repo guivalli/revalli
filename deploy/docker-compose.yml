@@ -10,7 +10,7 @@ x-backend-env: &backend-env
   REDIS_URL: redis://redis:6379/0
   PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
-  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+  SECRET_KEY: ${SECRET_KEY:-}
   ENRICHMENT_ENABLED: ${ENRICHMENT_ENABLED:-true}
   ENRICHMENT_CONTACT_EMAIL: ${ENRICHMENT_CONTACT_EMAIL:-}
   MAX_IMPORT_MB: ${MAX_IMPORT_MB:-50}
@@ -37,6 +37,9 @@ services:
     image: ${REVALLI_IMAGE_PREFIX:-ghcr.io/guivalli}/revalli-api:${REVALLI_VERSION:-latest}
     restart: unless-stopped
     environment: *backend-env
+    # Permite usar um Ollama que roda fora do Docker no mesmo servidor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - revalli_data:/data
     healthcheck:
@@ -57,6 +60,9 @@ services:
     restart: unless-stopped
     command: celery -A revalli.workers.celery_app worker --loglevel=info --concurrency=2 -Q default,remote,gpu
     environment: *backend-env
+    # Permite usar um Ollama que roda fora do Docker no mesmo servidor
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - revalli_data:/data
     depends_on:

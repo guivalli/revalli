@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useAIBot, useProjectAI, useSuggestions } from '../../api/ai'
 import { useMe } from '../../api/hooks'
 import {
   useAgreement,
@@ -10,7 +11,8 @@ import {
   useScreened,
   useScreeningActions,
 } from '../../api/screening'
-import type { DecisionInfo, DecisionKind, Phase, Reason, ScreenedItem } from '../../api/types'
+import type { AISuggestion, DecisionInfo, DecisionKind, Phase, Reason, ScreenedItem } from '../../api/types'
+import { AISuggestionChip } from '../../components/AISuggestionChip'
 import { RecordLinks } from '../../components/RecordView'
 import { Button, Card, ErrorText, Select } from '../../components/ui'
 import { useProjectContext } from './context'
@@ -157,6 +159,9 @@ function ConflictsSection({ phase, reasons }: { phase: Phase; reasons: Reason[] 
   // Com cegamento, só árbitros veem as decisões dos outros
   const blind = !!progress.data?.blind && project.my_role !== 'arbitrator'
   const conflicts = useConflicts(project.id, phase, page, canResolve && !!progress.data && !blind)
+  const aiOn = !!useProjectAI(project.id).data?.enabled
+  const sugs = useSuggestions(project.id, phase, conflicts.data?.items.map((i) => i.record.id) ?? [], aiOn)
+  const bot = useAIBot(project.id, aiOn).data?.user_id
   const { resolve } = useScreeningActions(project.id, phase)
   const [reasonFor, setReasonFor] = useState<Record<string, string>>({})
   if (!canResolve) return null
@@ -192,10 +197,14 @@ function ConflictsSection({ phase, reasons }: { phase: Phase; reasons: Reason[] 
                   <p className="mt-1 whitespace-pre-line">{r.abstract}</p>
                 </details>
               )}
-              <div className="flex flex-wrap gap-2">
-                {decisions.map((d, i) => (
-                  <DecisionChip key={i} d={d} reasons={reasons} />
-                ))}
+              <div className="flex flex-wrap items-start gap-2">
+                {/* O voto da IA aparece pelo cartão da sugestão, que mostra os critérios */}
+                {decisions
+                  .filter((d) => !(sugs.data?.has(r.id) && d.user_id === bot))
+                  .map((d, i) => (
+                    <DecisionChip key={i} d={d} reasons={reasons} />
+                  ))}
+                {sugs.data?.get(r.id) && <AISuggestionChip s={sugs.data.get(r.id)!} />}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -260,7 +269,19 @@ function Pager({ page, pages, onChange }: { page: number; pages: number; onChang
   )
 }
 
-function ScreenedRow({ item, phase, reasons }: { item: ScreenedItem; phase: Phase; reasons: Reason[] }) {
+function ScreenedRow({
+  item,
+  phase,
+  reasons,
+  suggestion,
+  botId,
+}: {
+  item: ScreenedItem
+  phase: Phase
+  reasons: Reason[]
+  suggestion?: AISuggestion
+  botId?: string
+}) {
   const { t } = useTranslation()
   const { project } = useProjectContext()
   const { decide } = useScreeningActions(project.id, phase)
@@ -281,10 +302,13 @@ function ScreenedRow({ item, phase, reasons }: { item: ScreenedItem; phase: Phas
           {t(`state.${item.state}`)}
         </span>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {item.decisions.map((d, i) => (
-          <DecisionChip key={i} d={d} reasons={reasons} />
-        ))}
+      <div className="flex flex-wrap items-start gap-2">
+        {item.decisions
+          .filter((d) => !(suggestion && d.user_id === botId))
+          .map((d, i) => (
+            <DecisionChip key={i} d={d} reasons={reasons} />
+          ))}
+        {suggestion && <AISuggestionChip s={suggestion} />}
         {mine?.labels.map((l) => (
           <span key={l} className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700 dark:bg-stone-800 dark:text-brand-100">
             {l}
@@ -323,6 +347,9 @@ function ScreenedSection({ phase, reasons }: { phase: Phase; reasons: Reason[] }
   const [decision, setDecision] = useState<DecisionKind | ''>('')
   const [page, setPage] = useState(1)
   const { data } = useScreened(project.id, phase, state, page, state === 'mine' && decision ? decision : undefined)
+  const aiOn = !!useProjectAI(project.id).data?.enabled
+  const sugs = useSuggestions(project.id, phase, data?.items.map((i) => i.record.id) ?? [], aiOn)
+  const bot = useAIBot(project.id, aiOn).data?.user_id
   return (
     <Card className="space-y-3 p-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -366,7 +393,14 @@ function ScreenedSection({ phase, reasons }: { phase: Phase; reasons: Reason[] }
       {data?.items.length ? (
         <ul>
           {data.items.map((it) => (
-            <ScreenedRow key={it.record.id} item={it} phase={phase} reasons={reasons} />
+            <ScreenedRow
+              key={it.record.id}
+              item={it}
+              phase={phase}
+              reasons={reasons}
+              suggestion={sugs.data?.get(it.record.id)}
+              botId={bot}
+            />
           ))}
         </ul>
       ) : (

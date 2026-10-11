@@ -42,9 +42,19 @@ docker compose exec ollama ollama pull qwen3:8b
 docker compose exec ollama ollama pull bge-m3
 ```
 
-Com uma GPU de 11 GB, um modelo de 7 a 9B em Q4 e o modelo de embeddings cabem juntos. Se você já tem um Ollama rodando no servidor, não ative o profile e use `OLLAMA_BASE_URL=http://host.docker.internal:11434`.
+Com uma GPU de 11 GB, um modelo de 7 a 9B em Q4 e o modelo de embeddings cabem juntos.
 
-> A configuração dos provedores de IA na interface chega no marco M3.
+Depois, entre como administrador e abra **IA** no topo da página:
+
+1. Em **Provedores**, clique em **Adicionar provedor**, escolha **Ollama (local)** e salve. O endereço já vem preenchido (`http://ollama:11434/v1`). Use **Testar** para ver os modelos baixados.
+2. Em **Modelos por tarefa**, escolha o provedor e escreva o nome do modelo: `qwen3:8b` para a triagem e `bge-m3` para os embeddings.
+3. Em cada projeto, a aba **IA** liga a IA, define se ela só sugere ou se atua como segunda revisora, e permite rodar uma calibração antes de confiar nela.
+
+Se você já tem um Ollama rodando fora do Docker no mesmo servidor, não ative o profile e cadastre o endereço `http://host.docker.internal:11434/v1`.
+
+### APIs remotas
+
+Qualquer serviço que siga o formato de chat compatível com OpenAI funciona: escolha o tipo na lista (ou **Outro**), cole a chave de API e informe o preço por milhão de tokens para o ReValli estimar o custo antes de cada execução. As chaves ficam cifradas no banco com a chave secreta da instalação (veja `SECRET_KEY` no `.env`). Projetos marcados como **Só IA local** nunca enviam dados para provedores remotos.
 
 ## 5. Backup
 

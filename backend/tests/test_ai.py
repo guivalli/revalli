@@ -212,6 +212,8 @@ async def test_budget_local_only_and_flags(admin):
     assert job["status"] == "done"
     flags = (await admin.get(f"/api/projects/{pid}/ai/{TA}/flags")).json()
     assert len(flags) == 2
+    assert {f["record"]["title"] for f in flags} == {"Exercise and anxiety", "Yoga and anxiety"}
+    assert flags[0]["suggestion"]["decision"] == "include"
 
 
 async def test_invalid_answers_are_counted_not_fatal(admin):
