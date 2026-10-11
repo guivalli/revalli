@@ -18,6 +18,7 @@ import { AISuggestionChip } from '../../components/AISuggestionChip'
 import { RecordLinks } from '../../components/RecordView'
 import { Button, Card, ErrorText, Select } from '../../components/ui'
 import { useProjectContext } from './context'
+import { StudiesSection } from './StudiesSection'
 
 const PHASES: Phase[] = ['title_abstract', 'full_text']
 const STATES = ['mine', 'all', 'included', 'excluded', 'conflict', 'pending'] as const
@@ -540,6 +541,7 @@ export default function Screening() {
       </div>
       <ProgressSection key={`p-${phase}`} phase={phase} />
       {phase === 'full_text' && <FullTextSection />}
+      {phase === 'full_text' && <StudiesSection />}
       <ConflictsSection key={`c-${phase}`} phase={phase} reasons={reasons} />
       <ScreenedSection key={`s-${phase}`} phase={phase} reasons={reasons} />
     </div>

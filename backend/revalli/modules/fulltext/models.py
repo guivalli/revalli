@@ -42,3 +42,30 @@ class FilePage(Base):
     )
     page: Mapped[int] = mapped_column(Integer, primary_key=True)
     text: Mapped[str] = mapped_column(Text, default="")
+
+
+class Study(IdMixin, TimestampMixin, Base):
+    """Um estudo com vários relatórios (artigo principal, protocolo, resultados de seguimento...).
+
+    No PRISMA 2020 a última caixa conta estudos e relatórios separadamente."""
+
+    __tablename__ = "studies"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    label: Mapped[str] = mapped_column(String(300), default="")
+
+
+class StudyReport(Base):
+    """Registro que é um relatório de um estudo. Cada registro pertence a no máximo um."""
+
+    __tablename__ = "study_reports"
+
+    record_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("records.id", ondelete="CASCADE"), primary_key=True
+    )
+    study_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("studies.id", ondelete="CASCADE"), index=True
+    )
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -8,6 +8,7 @@ import pymupdf
 from revalli.modules.fulltext import service as ft_service
 from revalli.modules.fulltext import storage
 from revalli.modules.fulltext.service import _public_url
+from revalli.modules.fulltext.studies import trial_ids
 from tests.conftest import invite_and_join
 from tests.test_records import UPLOAD_HEADERS, _import, _ris
 
@@ -188,3 +189,87 @@ async def test_open_access_download(admin, monkeypatch):
     files = (await admin.get(f"/api/projects/{pid}/records/{ids[TITLES[0][0]]}/files")).json()
     assert files[0]["source"] == "open_access"
     assert files[0]["source_url"] == "https://repo.example.org/a.pdf"
+
+
+def test_trial_ids():
+    text = "Registered at ClinicalTrials.gov (nct01234567) and EudraCT: 2019-001234-56; ISRCTN12345678."
+    assert trial_ids(text) == {"NCT01234567", "EudraCT 2019-001234-56", "ISRCTN12345678"}
+    assert trial_ids("NCT123 is too short") == set()
+
+
+async def _include_all_ft(admin, pid):
+    items = (await admin.get(f"/api/projects/{pid}/screening/full_text/queue")).json()["items"]
+    for it in items:
+        r = await admin.post(
+            f"/api/projects/{pid}/screening/full_text/decisions",
+            json={"record_id": it["id"], "decision": "include"},
+        )
+        assert r.status_code in (200, 201), r.text
+
+
+async def test_studies_group_suggest_and_prisma(admin):
+    pid, ids = await _project_ft(admin)
+    s = (await admin.get(f"/api/projects/{pid}/screening/settings")).json()
+    s["reviewers_full_text"] = 1
+    await admin.put(f"/api/projects/{pid}/screening/settings", json=s)
+    a, b, c = (ids[t] for t, _ in TITLES)
+    # Dois PDFs citam o mesmo registro de ensaio
+    await _upload(admin, pid, a, make_pdf("Trial registration: NCT01234567"))
+    await _upload(admin, pid, b, make_pdf("Follow-up of trial NCT01234567"))
+    sug = (await admin.get(f"/api/projects/{pid}/studies/suggestions")).json()
+    assert len(sug) == 1 and sug[0]["key"] == "NCT01234567"
+    assert {r["id"] for r in sug[0]["records"]} == {a, b}
+
+    r = await admin.post(f"/api/projects/{pid}/studies", json={"record_ids": [a, b]})
+    assert r.status_code == 201, r.text
+    study = r.json()
+    assert study["label"].startswith("A0")
+    assert [x["is_primary"] for x in study["reports"]] == [True, False]
+    assert (await admin.get(f"/api/projects/{pid}/studies/suggestions")).json() == []
+
+    # Adicionar o terceiro registro ao mesmo estudo e trocar o principal
+    r = await admin.post(f"/api/projects/{pid}/studies", json={"record_ids": [c, a], "label": "X"})
+    assert r.json()["id"] == study["id"] and len(r.json()["reports"]) == 3
+    r = await admin.patch(
+        f"/api/projects/{pid}/studies/{study['id']}", json={"primary_record_id": c}
+    )
+    assert [x["id"] for x in r.json()["reports"] if x["is_primary"]] == [c]
+    assert r.json()["label"] == "X"
+
+    await _include_all_ft(admin, pid)
+    p = (await admin.get(f"/api/projects/{pid}/report/prisma")).json()
+    assert p["included"] == 1 and p["included_reports"] == 3
+    csv_text = (await admin.get(f"/api/projects/{pid}/export?format=csv&phase=full_text")).text
+    assert csv_text.splitlines()[0].endswith(",study") and csv_text.count(",X\r\n") == 3
+
+    # Tirar relatórios até sobrar um desfaz o grupo
+    base = f"/api/projects/{pid}/studies/{study['id']}/reports"
+    assert (await admin.delete(f"{base}/{c}")).status_code == 204
+    studies = (await admin.get(f"/api/projects/{pid}/studies")).json()
+    assert len(studies) == 1 and sum(x["is_primary"] for x in studies[0]["reports"]) == 1
+    assert (await admin.delete(f"{base}/{b}")).status_code == 204
+    assert (await admin.get(f"/api/projects/{pid}/studies")).json() == []
+    p = (await admin.get(f"/api/projects/{pid}/report/prisma")).json()
+    assert p["included"] == 3 and p["included_reports"] == 3
+
+
+async def test_studies_merge_and_permissions(admin):
+    pid, ids = await _project_ft(admin)
+    a, b, c = (ids[t] for t, _ in TITLES)
+    s1 = (await admin.post(f"/api/projects/{pid}/studies", json={"record_ids": [a, b]})).json()
+    # c entra no grupo de a; grupos diferentes são fundidos
+    other = await admin.post(f"/api/projects/{pid}/studies", json={"record_ids": [c, a]})
+    assert other.json()["id"] == s1["id"]
+    cands = (await admin.get(f"/api/projects/{pid}/studies/candidates?q=yoga")).json()
+    assert [x["id"] for x in cands] == [b] and cands[0]["study_id"] == s1["id"]
+    obs = await invite_and_join(admin, "obs2@ex.org", pid, "observer")
+    assert (await obs.get(f"/api/projects/{pid}/studies")).status_code == 200
+    assert (
+        await obs.post(f"/api/projects/{pid}/studies", json={"record_ids": [a, b]})
+    ).status_code == 403
+    other_pid = (await admin.post("/api/projects", json={"title": "Outro"})).json()["id"]
+    r = await admin.post(f"/api/projects/{other_pid}/studies", json={"record_ids": [a, b]})
+    assert r.status_code == 404
+    assert (await admin.delete(f"/api/projects/{pid}/studies/{s1['id']}")).status_code == 204
+    assert (await admin.get(f"/api/projects/{pid}/studies")).json() == []
+    await obs.aclose()

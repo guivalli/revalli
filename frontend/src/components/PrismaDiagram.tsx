@@ -80,7 +80,15 @@ export function PrismaDiagram({ data, ref }: { data: Prisma; ref?: Ref<SVGSVGEle
         ],
       },
     },
-    { left: { lines: [`${t('prisma.included')} ${n(data.included)}`] }, right: null },
+    {
+      left: {
+        lines: [
+          `${t('prisma.included')} ${n(data.included)}`,
+          `${t('prisma.included_reports')} ${n(data.included_reports)}`,
+        ],
+      },
+      right: null,
+    },
   ]
 
   // Posição vertical de cada linha do diagrama

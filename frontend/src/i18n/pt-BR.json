@@ -111,7 +111,9 @@
     "file_not_found": "Arquivo não encontrado.",
     "file_missing": "O arquivo sumiu do disco do servidor.",
     "lead_or_uploader_only": "Só líderes ou quem enviou o arquivo podem fazer isso.",
-    "record_not_found": "Referência não encontrada."
+    "record_not_found": "Referência não encontrada.",
+    "study_not_found": "Estudo não encontrado.",
+    "record_not_in_study": "Esta referência não faz parte do estudo."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -340,7 +342,8 @@
     "no_reason": "Sem motivo informado",
     "included": "Estudos incluídos na revisão",
     "pending_note_one": "{{count}} registro ainda sem decisão final não aparece nas caixas.",
-    "pending_note_other": "{{count}} registros ainda sem decisão final não aparecem nas caixas."
+    "pending_note_other": "{{count}} registros ainda sem decisão final não aparecem nas caixas.",
+    "included_reports": "Relatórios dos estudos incluídos"
   },
   "export": {
     "title": "Exportar referências",
@@ -493,5 +496,26 @@
     "zip_result": "{{matched}} PDFs ligados, {{already}} já existiam, {{unmatched}} sem referência, {{invalid}} inválidos",
     "oa_result": "{{checked}} verificadas, {{found}} com versão aberta, {{downloaded}} baixadas",
     "unmatched": "Sem referência correspondente"
+  },
+  "studies": {
+    "title": "Estudos com vários relatórios",
+    "hint": "Quando o mesmo estudo aparece em mais de uma referência (protocolo, resultados, seguimento), agrupe os relatórios. No PRISMA, cada estudo conta uma vez.",
+    "suggestions": "Sugestões pelo número de registro do ensaio",
+    "group": "Agrupar",
+    "label": "Nome do estudo",
+    "reports_one": "{{count}} relatório",
+    "reports_other": "{{count}} relatórios",
+    "ungroup": "Desfazer grupo",
+    "ungroup_confirm": "Desfazer este grupo? As referências continuam no projeto.",
+    "primary": "principal",
+    "make_primary": "Tornar principal",
+    "remove_report": "Tirar do grupo",
+    "none": "Nenhum estudo agrupado.",
+    "new": "Agrupar à mão",
+    "search": "Buscar referências da fase de texto completo pelo título ou DOI",
+    "in_group": "já está num grupo",
+    "no_match": "Nenhuma referência encontrada.",
+    "group_selected_one": "Agrupar {{count}} selecionada",
+    "group_selected_other": "Agrupar {{count}} selecionadas"
   }
 }

@@ -15,6 +15,7 @@ from revalli.modules.reports.service import (
     STATE_LABELS,
     prisma_counts,
     reason_labels,
+    study_labels,
     to_csv,
     to_ris,
 )
@@ -69,6 +70,7 @@ async def export(
         )
     ).all()
     reasons = await reason_labels(db, project_id)
+    study_names = await study_labels(db, list(states))
     names = await _names(db, {u for st in states.values() for u in st.votes})
     if see_others:
         names |= await _names(db, {st.final.user_id for st in states.values() if st.final})
@@ -106,6 +108,8 @@ async def export(
             summary += f". Motivos: {', '.join(reason_text)}"
         if labels:
             summary += f". Etiquetas: {', '.join(labels)}"
+        if r.id in study_names:
+            summary += f". Estudo: {study_names[r.id]}"
         rows.append(
             {
                 "record": r,
@@ -115,6 +119,7 @@ async def export(
                 "labels": labels,
                 "decisions": decisions,
                 "notes": notes,
+                "study": study_names.get(r.id, ""),
                 "summary": summary,
             }
         )

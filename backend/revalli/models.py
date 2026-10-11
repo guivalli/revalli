@@ -8,7 +8,7 @@ from revalli.modules.ai.models import (
     RecordEmbedding,
 )
 from revalli.modules.auth.models import Invitation, Session, User
-from revalli.modules.fulltext.models import FilePage, RecordFile
+from revalli.modules.fulltext.models import FilePage, RecordFile, Study, StudyReport
 from revalli.modules.projects.models import Project, ProjectMember
 from revalli.modules.records.models import (
     DuplicateGroup,
@@ -38,5 +38,7 @@ __all__ = [
     "RecordFile",
     "Search",
     "Session",
+    "Study",
+    "StudyReport",
     "User",
 ]

@@ -8,7 +8,16 @@ from collections import Counter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from revalli.models import DuplicateGroup, ExclusionReason, Project, Record, Search
+from revalli.models import (
+    DuplicateGroup,
+    ExclusionReason,
+    Project,
+    Record,
+    Search,
+    Study,
+    StudyReport,
+)
+from revalli.modules.fulltext.studies import study_keys
 from revalli.modules.records.models import DuplicateStatus
 from revalli.modules.screening.models import Decision, Phase
 from revalli.modules.screening.service import RecordState, State, compute_states
@@ -45,6 +54,17 @@ def _count(states: dict[uuid.UUID, RecordState], state: str) -> int:
     return sum(1 for st in states.values() if st.state == state)
 
 
+async def study_labels(db: AsyncSession, record_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+    if not record_ids:
+        return {}
+    rows = await db.execute(
+        select(StudyReport.record_id, Study.label)
+        .join(Study, Study.id == StudyReport.study_id)
+        .where(StudyReport.record_id.in_(record_ids))
+    )
+    return {rid: label for rid, label in rows.all()}
+
+
 async def prisma_counts(db: AsyncSession, project: Project) -> dict:
     by_source = (
         await db.execute(
@@ -73,6 +93,8 @@ async def prisma_counts(db: AsyncSession, project: Project) -> dict:
     ta = await compute_states(db, project, Phase.title_abstract)
     ft = await compute_states(db, project, Phase.full_text)
     labels = await reason_labels(db, project.id)
+    included = [rid for rid, st in ft.items() if st.state == State.included]
+    keys = await study_keys(db, included)
     reasons = Counter(main_reason(st) for st in ft.values() if st.state == State.excluded)
     no_reason = reasons.pop(None, 0)
     return {
@@ -100,7 +122,8 @@ async def prisma_counts(db: AsyncSession, project: Project) -> dict:
             + ([{"reason": None, "count": no_reason}] if no_reason else []),
             "pending": _count(ft, State.pending) + _count(ft, State.conflict),
         },
-        "included": _count(ft, State.included),
+        "included": len(set(keys.values())),
+        "included_reports": len(included),
     }
 
 
@@ -170,6 +193,7 @@ CSV_FIELDS = [
     "labels",
     "decisions",
     "notes",
+    "study",
 ]
 
 
@@ -206,6 +230,7 @@ def to_csv(rows: list[dict]) -> str:
             "labels": "; ".join(row["labels"]),
             "decisions": "; ".join(row["decisions"]),
             "notes": " | ".join(row["notes"]),
+            "study": row.get("study", ""),
         }
         w.writerow({k: _safe_cell(v) if isinstance(v, str) else v for k, v in values.items()})
     return buf.getvalue()

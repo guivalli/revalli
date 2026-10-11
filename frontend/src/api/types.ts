@@ -211,6 +211,7 @@ export interface Prisma {
     pending: number
   }
   included: number
+  included_reports: number
 }
 export type ProviderKind = 'ollama' | 'openai' | 'anthropic' | 'google' | 'openrouter' | 'custom'
 export interface Provider {
@@ -309,4 +310,33 @@ export interface FilesSummary {
   with_pdf: number
   without_text: number
   from_open_access: number
+}
+
+export interface StudyRecord {
+  id: string
+  title: string
+  authors: string[]
+  year: number | null
+  doi: string | null
+  is_primary: boolean
+  state: 'pending' | 'included' | 'excluded' | 'conflict' | null
+}
+
+export interface Study {
+  id: string
+  label: string
+  reports: StudyRecord[]
+}
+
+export interface StudySuggestion {
+  key: string
+  records: StudyRecord[]
+}
+
+export interface StudyCandidate {
+  id: string
+  title: string
+  authors: string[]
+  year: number | null
+  study_id: string | null
 }

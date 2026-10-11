@@ -111,7 +111,9 @@
     "file_not_found": "File not found.",
     "file_missing": "The file is missing from the server disk.",
     "lead_or_uploader_only": "Only leads or the uploader can do this.",
-    "record_not_found": "Reference not found."
+    "record_not_found": "Reference not found.",
+    "study_not_found": "Study not found.",
+    "record_not_in_study": "This reference is not part of the study."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -340,7 +342,8 @@
     "no_reason": "No reason given",
     "included": "Studies included in review",
     "pending_note_one": "{{count}} record without a final decision is not counted in the boxes.",
-    "pending_note_other": "{{count}} records without a final decision are not counted in the boxes."
+    "pending_note_other": "{{count}} records without a final decision are not counted in the boxes.",
+    "included_reports": "Reports of included studies"
   },
   "export": {
     "title": "Export references",
@@ -493,5 +496,26 @@
     "zip_result": "{{matched}} PDFs linked, {{already}} already present, {{unmatched}} unmatched, {{invalid}} invalid",
     "oa_result": "{{checked}} checked, {{found}} with an open version, {{downloaded}} downloaded",
     "unmatched": "No matching reference"
+  },
+  "studies": {
+    "title": "Studies with several reports",
+    "hint": "When the same study appears in more than one reference (protocol, results, follow-up), group the reports. In PRISMA each study counts once.",
+    "suggestions": "Suggestions by trial registration number",
+    "group": "Group",
+    "label": "Study name",
+    "reports_one": "{{count}} report",
+    "reports_other": "{{count}} reports",
+    "ungroup": "Ungroup",
+    "ungroup_confirm": "Ungroup this study? The references stay in the project.",
+    "primary": "main",
+    "make_primary": "Make main",
+    "remove_report": "Remove from group",
+    "none": "No grouped studies.",
+    "new": "Group manually",
+    "search": "Search full-text references by title or DOI",
+    "in_group": "already in a group",
+    "no_match": "No references found.",
+    "group_selected_one": "Group {{count}} selected",
+    "group_selected_other": "Group {{count}} selected"
   }
 }

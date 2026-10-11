@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,16 +10,24 @@ from revalli.core.config import get_settings
 from revalli.core.db import get_db
 from revalli.core.deps import current_user, get_membership, require_lead
 from revalli.models import Record, User
-from revalli.modules.fulltext import storage
-from revalli.modules.fulltext.models import RecordFile
+from revalli.modules.fulltext import storage, studies
+from revalli.modules.fulltext.models import RecordFile, Study
 from revalli.modules.fulltext.pdf import PDFError
-from revalli.modules.fulltext.schemas import FileOut, FilesSummary
+from revalli.modules.fulltext.schemas import (
+    FileOut,
+    FilesSummary,
+    StudyCandidate,
+    StudyIn,
+    StudyOut,
+    StudyPatch,
+    StudySuggestion,
+)
 from revalli.modules.fulltext.service import attach, delete_file, max_pdf_bytes
 from revalli.modules.projects.models import Role
 from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.schemas import JobOut
 from revalli.modules.screening.models import Phase
-from revalli.modules.screening.service import compute_states
+from revalli.modules.screening.service import can_see_others, compute_states
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["fulltext"])
 
@@ -196,3 +204,115 @@ async def summary(
     return FilesSummary(
         records=len(ids), with_pdf=row[0], without_text=row[1], from_open_access=row[2]
     )
+
+
+# --- Estudos com vários relatórios --------------------------------------------------------
+
+
+async def _study(db: AsyncSession, project_id: uuid.UUID, study_id: uuid.UUID) -> Study:
+    s = await db.get(Study, study_id)
+    if s is None or s.project_id != project_id:
+        raise HTTPException(404, "study_not_found")
+    return s
+
+
+@router.get("/studies", response_model=list[StudyOut])
+async def get_studies(
+    project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    project, role = await get_membership(db, project_id, user)
+    return await studies.list_studies(db, project, can_see_others(project, role))
+
+
+@router.get("/studies/suggestions", response_model=list[StudySuggestion])
+async def get_study_suggestions(
+    project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    project, _ = await get_membership(db, project_id, user)
+    return await studies.suggestions(db, project)
+
+
+@router.get("/studies/candidates", response_model=list[StudyCandidate])
+async def get_study_candidates(
+    project_id: uuid.UUID,
+    q: str = "",
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project, _ = await get_membership(db, project_id, user)
+    return await studies.candidates(db, project, q[:200])
+
+
+@router.post("/studies", response_model=StudyOut, status_code=201)
+async def create_study(
+    project_id: uuid.UUID,
+    body: StudyIn,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await _uploader(db, project_id, user)
+    try:
+        study = await studies.group(db, project, body.record_ids, body.label.strip())
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return await _study_out(db, project, user, study.id)
+
+
+@router.patch("/studies/{study_id}", response_model=StudyOut)
+async def update_study(
+    project_id: uuid.UUID,
+    study_id: uuid.UUID,
+    body: StudyPatch,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await _uploader(db, project_id, user)
+    study = await _study(db, project_id, study_id)
+    if body.label is not None:
+        study.label = body.label.strip()
+    if body.primary_record_id is not None:
+        try:
+            await studies.set_primary(db, study, body.primary_record_id)
+        except LookupError as exc:
+            raise HTTPException(404, str(exc)) from exc
+    await db.commit()
+    return await _study_out(db, project, user, study.id)
+
+
+@router.delete("/studies/{study_id}/reports/{record_id}", status_code=204)
+async def remove_report(
+    project_id: uuid.UUID,
+    study_id: uuid.UUID,
+    record_id: uuid.UUID,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await _uploader(db, project_id, user)
+    await studies.ungroup_record(db, await _study(db, project_id, study_id), record_id)
+    return Response(status_code=204)
+
+
+@router.delete("/studies/{study_id}", status_code=204)
+async def delete_study(
+    project_id: uuid.UUID,
+    study_id: uuid.UUID,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await _uploader(db, project_id, user)
+    await db.delete(await _study(db, project_id, study_id))
+    await db.commit()
+    return Response(status_code=204)
+
+
+async def _study_out(db: AsyncSession, project, user: User, study_id: uuid.UUID) -> dict:
+    _, role = await get_membership(db, project.id, user)
+    found = [
+        s
+        for s in await studies.list_studies(db, project, can_see_others(project, role))
+        if s["id"] == study_id
+    ]
+    if not found:
+        # O grupo deixou de existir (ficou com um só relatório)
+        raise HTTPException(404, "study_not_found")
+    return found[0]

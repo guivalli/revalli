@@ -40,4 +40,6 @@ class Prisma(BaseModel):
     screening: ScreeningCounts
     retrieval: Retrieval
     eligibility: Eligibility
+    # Estudos (relatórios do mesmo estudo contam uma vez) e relatórios incluídos
     included: int
+    included_reports: int
