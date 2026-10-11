@@ -36,7 +36,10 @@ async def test_prisma_counts(admin):
         )
     p = (await ana.get(f"/api/projects/{pid}/report/prisma")).json()
     assert p["identification"]["total"] == 4
-    assert p["identification"]["by_source"] == [{"source": "PubMed", "records": 4}]
+    assert p["identification"]["by_source"] == [
+        {"source": "PubMed", "method": "database", "records": 4}
+    ]
+    assert p["identification"]["other_methods"] == []
     assert p["screening"] == {"screened": 4, "excluded": 1, "pending": 1}
     assert p["retrieval"]["sought"] == 2
     assert p["eligibility"]["assessed"] == 2

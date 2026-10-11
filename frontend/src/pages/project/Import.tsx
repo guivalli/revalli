@@ -5,6 +5,7 @@ import { useRecordActions, useSearches } from '../../api/records'
 import type { Search } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
+import { ApiSearchCard, SnowballCard } from './SourceSearch'
 
 const SOURCES = [
   'PubMed',
@@ -31,15 +32,25 @@ function SearchRow({ s, onDelete }: { s: Search; onDelete: () => void }) {
     <li className="space-y-2 py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-medium">{s.source}</p>
+          <p className="font-medium">
+            {s.source}
+            {s.method !== 'database' && (
+              <span className="ml-2 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-normal text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                {t(`import.method_${s.method}`)}
+              </span>
+            )}
+          </p>
           <p className="text-sm text-stone-500">
-            {s.file_name} · {t('import.imported')}: {s.imported_count}
+            {s.file_format === 'api' ? t('import.via_api') : s.file_name} · {t('import.imported')}: {s.imported_count}
             {s.reported_count != null && ` · ${t('import.reported')}: ${s.reported_count}`}
             {s.searched_on && ` · ${t('import.date')}: ${new Date(s.searched_on + 'T00:00').toLocaleDateString()}`}
           </p>
           {mismatch && (
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              {t('import.mismatch', { reported: s.reported_count, imported: s.imported_count })}
+              {t(s.file_format === 'api' ? 'import.mismatch_api' : 'import.mismatch', {
+                reported: s.reported_count,
+                imported: s.imported_count,
+              })}
             </p>
           )}
         </div>
@@ -182,6 +193,9 @@ export default function Import() {
           </Button>
         </form>
       </Card>
+
+      <ApiSearchCard />
+      <SnowballCard />
 
       <Card>
         <h2 className="font-semibold">{t('import.history')}</h2>

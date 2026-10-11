@@ -36,6 +36,7 @@ function TextBox({ x, y, w, h, box }: { x: number; y: number; w: number; h: numb
           fontSize={13}
           fontWeight={i < (box.bold ?? 1) ? 600 : 400}
           fill="#1c1917"
+          style={{ whiteSpace: 'pre' }}
         >
           {l}
         </text>
@@ -49,14 +50,24 @@ export function PrismaDiagram({ data, ref }: { data: Prisma; ref?: Ref<SVGSVGEle
   const n = (v: number) => `(n = ${v.toLocaleString(i18n.language)})`
   const id = data.identification
   const el = data.eligibility
+  const dbTotal = id.by_source.reduce((a, s) => a + s.records, 0)
+  const otherTotal = (id.other_methods ?? []).reduce((a, s) => a + s.records, 0)
 
   const rows: { left: Box; right: Box | null }[] = [
     {
       left: {
         lines: [
           t('prisma.identified'),
-          `${t('prisma.databases')} ${n(id.total)}`,
+          `${t('prisma.databases')} ${n(dbTotal)}`,
           ...id.by_source.map((s) => `  ${cut(s.source, 30)} ${n(s.records)}`),
+          ...(otherTotal
+            ? [
+                `${t('prisma.other_methods')} ${n(otherTotal)}`,
+                ...id.other_methods.map(
+                  (s) => `  ${cut(t(`prisma.method_${s.method}`), 36)} ${n(s.records)}`,
+                ),
+              ]
+            : []),
         ],
       },
       right: {

@@ -16,6 +16,7 @@ class SearchOut(BaseModel):
     file_format: str
     reported_count: int | None
     imported_count: int
+    method: str
     created_at: datetime
 
 
@@ -55,6 +56,8 @@ class RecordOut(BaseModel):
     enriched: dict
     duplicate_group_id: uuid.UUID | None
     is_duplicate: bool = False
+    # Achado por snowballing: direção e registros semente
+    citation: dict | None = None
 
 
 class RecordPage(BaseModel):

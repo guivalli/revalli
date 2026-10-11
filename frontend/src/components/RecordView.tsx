@@ -49,6 +49,11 @@ export function RecordDetails({ r }: { r: RecordItem }) {
           {t('records.keywords')}: {r.keywords.join('; ')}
         </p>
       )}
+      {r.citation && (
+        <p className="text-xs text-stone-500">
+          {t(`records.citation_${r.citation.direction}`, { count: r.citation.seeds.length })}
+        </p>
+      )}
       <RecordLinks r={r} />
     </div>
   )

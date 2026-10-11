@@ -30,6 +30,17 @@ class Settings(BaseSettings):
     enrichment_contact_email: str = ""
     openalex_url: str = "https://api.openalex.org"
 
+    # Busca direta nas bases (PubMed, OpenAlex, Europe PMC) e snowballing de citações
+    search_apis_enabled: bool = True
+    pubmed_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+    europepmc_url: str = "https://www.ebi.ac.uk/europepmc/webservices/rest"
+    # Opcional: aumenta o limite do PubMed de 3 para 10 requisições por segundo
+    ncbi_api_key: str = ""
+    # Máximo de registros trazidos por uma busca ou por um snowballing
+    api_search_max: int = 10_000
+    # Pausa entre requisições, para respeitar o limite das APIs públicas
+    api_delay_seconds: float = 0.35
+
     # Chave usada para cifrar as chaves de API dos provedores de IA. Se ficar vazia,
     # o ReValli gera uma e guarda em data_dir/secret.key na primeira vez.
     secret_key: str = ""

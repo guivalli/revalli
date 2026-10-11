@@ -7,7 +7,7 @@ Plataforma open source e auto-hospedada para conduzir revisões de literatura (s
 
 ## Estado atual
 
-Versão **0.4.0-dev (M0 a M5)**. O que já funciona:
+Versão **0.5.0-dev (M0 a M5, M6 em andamento)**. O que já funciona:
 
 - Instalação com Docker Compose (banco, fila, API, worker e servidor web).
 - Configuração inicial com criação do administrador.
@@ -35,7 +35,10 @@ Versão **0.4.0-dev (M0 a M5)**. O que já funciona:
 - Extração por IA com citação literal: cada valor vem com o trecho do artigo, que é conferido no texto do PDF e destacado no visualizador. Trechos que não aparecem no PDF ficam marcados para conferência.
 - Risco de viés com modelos de RoB 2 (julgamento de cada domínio calculado pelo algoritmo do instrumento) e ROBINS-I, com gráficos de semáforo e de resumo em SVG e PNG.
 
-Síntese, snowballing e os demais recursos vêm no próximo marco (veja o [roteiro](docs/roteiro.md)).
+- Busca direta no PubMed, no OpenAlex e no Europe PMC pela API pública, com contagem e amostra antes de importar, e tradução da estratégia de busca para outras bases com IA (sempre revisada pela pessoa).
+- Snowballing pelo OpenAlex: referências dos incluídos (para trás) e trabalhos que os citam (para frente), separados como "outros métodos" no PRISMA. Veja [docs/buscas.md](docs/buscas.md).
+
+Síntese, relatórios e os demais recursos do M6 vêm a seguir (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 

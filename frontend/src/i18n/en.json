@@ -119,7 +119,12 @@
     "finish_first": "Finish your own extraction to see the others.",
     "no_ai_fields": "No form field is marked for the AI to fill.",
     "invalid_field": "Invalid value in field",
-    "required_missing": "Fill in the required fields:"
+    "required_missing": "Fill in the required fields:",
+    "search_apis_disabled": "Database search is turned off on this installation.",
+    "source_unavailable": "The database did not respond or rejected the strategy. Check the syntax and try again.",
+    "no_seeds": "There are no included studies to use as seeds.",
+    "ai_invalid_answer": "The AI did not return a valid translation. Try again.",
+    "ai_budget_exceeded": "The project's AI budget has run out."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -163,7 +168,9 @@
     "ai_embed": "Computing embeddings",
     "pdf_zip": "Importing PDFs from ZIP",
     "pdf_oa": "Looking for open access PDFs",
-    "ai_extract": "AI extraction"
+    "ai_extract": "AI extraction",
+    "api_search": "Importing from database",
+    "snowball": "Searching citations"
   },
   "import": {
     "title": "Import a search file",
@@ -190,7 +197,11 @@
     "none": "No searches imported yet.",
     "edit_query": "Show strategy",
     "hide_query": "Hide strategy",
-    "mismatch": "The database reported {{reported}} results, but the file had {{imported}}."
+    "mismatch": "The database reported {{reported}} results, but the file had {{imported}}.",
+    "method_citation_backward": "Citations: backward",
+    "method_citation_forward": "Citations: forward",
+    "via_api": "Imported through the API",
+    "mismatch_api": "The database found {{reported}} results and {{imported}} were imported (search limit)."
   },
   "records": {
     "search": "Search title, abstract, authors, journal or DOI",
@@ -209,7 +220,11 @@
     "next": "Next",
     "page": "Page {{page}} of {{pages}}",
     "keywords": "Keywords",
-    "no_title": "(untitled)"
+    "no_title": "(untitled)",
+    "citation_backward_one": "Found by snowballing: listed in the references of {{count}} included study.",
+    "citation_backward_other": "Found by snowballing: listed in the references of {{count}} included studies.",
+    "citation_forward_one": "Found by snowballing: cites {{count}} included study.",
+    "citation_forward_other": "Found by snowballing: cites {{count}} included studies."
   },
   "dups": {
     "pending": "To review",
@@ -351,7 +366,11 @@
     "included": "Studies included in review",
     "pending_note_one": "{{count}} record without a final decision is not counted in the boxes.",
     "pending_note_other": "{{count}} records without a final decision are not counted in the boxes.",
-    "included_reports": "Reports of included studies"
+    "included_reports": "Reports of included studies",
+    "other_methods": "Other methods",
+    "method_citation_backward": "Citation searching (references)",
+    "method_citation_forward": "Citation searching (cited by)",
+    "method_database": "Database"
   },
   "export": {
     "title": "Export references",
@@ -658,5 +677,65 @@
     "level_serious": "Serious risk",
     "level_critical": "Critical risk",
     "level_ni": "No information"
+  },
+  "sources": {
+    "title": "Search a database directly",
+    "hint": "ReValli queries the database through its public API and imports the results as a search, with date and strategy recorded for PRISMA-S.",
+    "source": "Database",
+    "db_pubmed": "PubMed",
+    "db_openalex": "OpenAlex",
+    "db_europepmc": "Europe PMC",
+    "db_scopus": "Scopus",
+    "db_wos": "Web of Science",
+    "db_embase": "Embase",
+    "db_cinahl": "CINAHL",
+    "db_psycinfo": "APA PsycInfo",
+    "db_cochrane": "Cochrane Library",
+    "db_bvs": "BVS / LILACS",
+    "syntax_pubmed": "Same syntax as the PubMed website: MeSH terms with [mh], fields such as [tiab], AND, OR, NOT and * truncation.",
+    "syntax_openalex": "Searches title, abstract and full text: words, quoted phrases, uppercase AND, OR and NOT, and parentheses. No fields or truncation.",
+    "syntax_europepmc": "Fields such as TITLE:, ABSTRACT:, KW: and MESH:, with AND, OR and NOT.",
+    "count": "Count results",
+    "counting": "Counting…",
+    "limit": "Import at most",
+    "import": "Import results",
+    "started": "Import started. Progress shows at the top of the page and the references join screening when it finishes.",
+    "found_one": "{{n}} result in the database.",
+    "found_other": "{{n}} results in the database.",
+    "over_limit": "Only the first {{limit}} will be imported. Refine the strategy or raise the limit.",
+    "sample": "First results:",
+    "last_search": "Last search: {{imported}} of {{found}} results imported from {{source}}.",
+    "last_truncated": "Some results were left out by the limit.",
+    "translate_title": "Translate the strategy to another database (AI)",
+    "translate_hint": "The AI adapts fields, controlled vocabulary and operators to the chosen database syntax. It uses the configured screening model and counts toward the project budget.",
+    "target": "Translate to",
+    "translate": "Translate",
+    "translating": "Translating…",
+    "translated": "Translated strategy",
+    "translate_review": "AI translation ({{model}}). Review the terms and check the number of results before using it.",
+    "copy": "Copy",
+    "use_here": "Use in this search",
+    "snowball_title": "Snowballing (citation searching)",
+    "snowball_hint": "Uses OpenAlex to find what the included studies cite and what cites them. References already in the project are skipped; new ones join screening as a citation search, reported separately in PRISMA.",
+    "seeds_one": "{{count}} study included at full text will be used as a seed.",
+    "seeds_other": "{{count}} studies included at full text will be used as seeds.",
+    "no_seeds": "There are no studies included at full text to use as seeds yet.",
+    "direction": "Direction",
+    "dir_both": "Backward and forward",
+    "dir_both_hint": "References of the included studies and works citing them.",
+    "dir_backward": "Backward",
+    "dir_backward_hint": "Only the reference lists of the included studies.",
+    "dir_forward": "Forward",
+    "dir_forward_hint": "Only later works that cite the included studies.",
+    "snowball_start": "Search citations",
+    "last_snowball": "Last snowballing",
+    "result_backward_one": "Backward: {{count}} new reference.",
+    "result_backward_other": "Backward: {{count}} new references.",
+    "result_forward_one": "Forward: {{count}} new work.",
+    "result_forward_other": "Forward: {{count}} new works.",
+    "result_matched": "{{matched}} of {{seeds}} seeds found in OpenAlex.",
+    "result_known_one": "{{count}} hit was already in the project.",
+    "result_known_other": "{{count}} hits were already in the project.",
+    "result_not_found": "Not found: {{list}}"
   }
 }

@@ -51,6 +51,7 @@ def _is_dup_expr():
 def _record_out(r: Record, is_dup: bool) -> RecordOut:
     out = RecordOut.model_validate(r)
     out.is_duplicate = bool(is_dup)
+    out.citation = (r.raw or {}).get("citation")
     return out
 
 

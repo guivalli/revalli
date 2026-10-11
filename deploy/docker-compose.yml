@@ -13,6 +13,12 @@ x-backend-env: &backend-env
   SECRET_KEY: ${SECRET_KEY:-}
   ENRICHMENT_ENABLED: ${ENRICHMENT_ENABLED:-true}
   ENRICHMENT_CONTACT_EMAIL: ${ENRICHMENT_CONTACT_EMAIL:-}
+  SEARCH_APIS_ENABLED: ${SEARCH_APIS_ENABLED:-true}
+  NCBI_API_KEY: ${NCBI_API_KEY:-}
+  API_SEARCH_MAX: ${API_SEARCH_MAX:-10000}
+  OPENALEX_URL: ${OPENALEX_URL:-https://api.openalex.org}
+  PUBMED_URL: ${PUBMED_URL:-https://eutils.ncbi.nlm.nih.gov/entrez/eutils}
+  EUROPEPMC_URL: ${EUROPEPMC_URL:-https://www.ebi.ac.uk/europepmc/webservices/rest}
   MAX_IMPORT_MB: ${MAX_IMPORT_MB:-50}
   MAX_PDF_MB: ${MAX_PDF_MB:-100}
   MAX_ZIP_MB: ${MAX_ZIP_MB:-2000}

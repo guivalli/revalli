@@ -25,6 +25,9 @@ class Search(IdMixin, TimestampMixin, Base):
     file_format: Mapped[str] = mapped_column(String(20), default="")
     reported_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     imported_count: Mapped[int] = mapped_column(Integer, default=0)
+    # database: busca em base de dados; citation_backward/citation_forward: snowballing.
+    # O PRISMA 2020 separa as bases dos "outros métodos" na identificação.
+    method: Mapped[str] = mapped_column(String(30), default="database", server_default="database")
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

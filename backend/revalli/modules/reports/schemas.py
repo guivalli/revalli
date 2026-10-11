@@ -3,11 +3,13 @@ from pydantic import BaseModel
 
 class SourceCount(BaseModel):
     source: str
+    method: str = "database"
     records: int
 
 
 class Identification(BaseModel):
     by_source: list[SourceCount]
+    other_methods: list[SourceCount] = []
     total: int
     duplicates_removed: int
 

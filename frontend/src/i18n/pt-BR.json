@@ -119,7 +119,12 @@
     "finish_first": "Conclua a sua extração para ver as dos outros.",
     "no_ai_fields": "Nenhum campo do formulário está marcado para a IA preencher.",
     "invalid_field": "Valor inválido no campo",
-    "required_missing": "Preencha os campos obrigatórios:"
+    "required_missing": "Preencha os campos obrigatórios:",
+    "search_apis_disabled": "A busca nas bases está desligada nesta instalação.",
+    "source_unavailable": "A base não respondeu ou recusou a estratégia. Confira a sintaxe e tente de novo.",
+    "no_seeds": "Não há estudos incluídos para servir de semente.",
+    "ai_invalid_answer": "A IA não devolveu uma tradução válida. Tente de novo.",
+    "ai_budget_exceeded": "O orçamento de IA do projeto acabou."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -163,7 +168,9 @@
     "ai_embed": "Calculando embeddings",
     "pdf_zip": "Importando PDFs do ZIP",
     "pdf_oa": "Buscando PDFs de acesso aberto",
-    "ai_extract": "Extração por IA"
+    "ai_extract": "Extração por IA",
+    "api_search": "Importando da base",
+    "snowball": "Buscando citações"
   },
   "import": {
     "title": "Importar arquivo de busca",
@@ -190,7 +197,11 @@
     "none": "Nenhuma busca importada ainda.",
     "edit_query": "Ver estratégia",
     "hide_query": "Ocultar estratégia",
-    "mismatch": "A base informou {{reported}} resultados, mas o arquivo tinha {{imported}}."
+    "mismatch": "A base informou {{reported}} resultados, mas o arquivo tinha {{imported}}.",
+    "method_citation_backward": "Citações: para trás",
+    "method_citation_forward": "Citações: para frente",
+    "via_api": "Importado pela API",
+    "mismatch_api": "A base encontrou {{reported}} resultados e {{imported}} foram importados (limite da busca)."
   },
   "records": {
     "search": "Buscar no título, resumo, autores, revista ou DOI",
@@ -209,7 +220,11 @@
     "next": "Próxima",
     "page": "Página {{page}} de {{pages}}",
     "keywords": "Palavras-chave",
-    "no_title": "(sem título)"
+    "no_title": "(sem título)",
+    "citation_backward_one": "Achado por snowballing: está nas referências de {{count}} estudo incluído.",
+    "citation_backward_other": "Achado por snowballing: está nas referências de {{count}} estudos incluídos.",
+    "citation_forward_one": "Achado por snowballing: cita {{count}} estudo incluído.",
+    "citation_forward_other": "Achado por snowballing: cita {{count}} estudos incluídos."
   },
   "dups": {
     "pending": "A revisar",
@@ -351,7 +366,11 @@
     "included": "Estudos incluídos na revisão",
     "pending_note_one": "{{count}} registro ainda sem decisão final não aparece nas caixas.",
     "pending_note_other": "{{count}} registros ainda sem decisão final não aparecem nas caixas.",
-    "included_reports": "Relatórios dos estudos incluídos"
+    "included_reports": "Relatórios dos estudos incluídos",
+    "other_methods": "Outros métodos",
+    "method_citation_backward": "Busca de citações (referências)",
+    "method_citation_forward": "Busca de citações (citado por)",
+    "method_database": "Base de dados"
   },
   "export": {
     "title": "Exportar referências",
@@ -658,5 +677,65 @@
     "level_serious": "Risco grave",
     "level_critical": "Risco crítico",
     "level_ni": "Sem informação"
+  },
+  "sources": {
+    "title": "Buscar direto na base",
+    "hint": "O ReValli consulta a base pela API pública e importa os resultados como uma busca, com data e estratégia registradas para o PRISMA-S.",
+    "source": "Base",
+    "db_pubmed": "PubMed",
+    "db_openalex": "OpenAlex",
+    "db_europepmc": "Europe PMC",
+    "db_scopus": "Scopus",
+    "db_wos": "Web of Science",
+    "db_embase": "Embase",
+    "db_cinahl": "CINAHL",
+    "db_psycinfo": "APA PsycInfo",
+    "db_cochrane": "Cochrane Library",
+    "db_bvs": "BVS / LILACS",
+    "syntax_pubmed": "Mesma sintaxe do site do PubMed: termos MeSH com [mh], campos como [tiab], AND, OR, NOT e truncamento com *.",
+    "syntax_openalex": "Busca em título, resumo e texto: palavras, frases entre aspas, AND, OR e NOT em maiúsculas e parênteses. Sem campos nem truncamento.",
+    "syntax_europepmc": "Campos como TITLE:, ABSTRACT:, KW: e MESH:, com AND, OR e NOT.",
+    "count": "Contar resultados",
+    "counting": "Contando…",
+    "limit": "Importar no máximo",
+    "import": "Importar resultados",
+    "started": "Importação iniciada. O andamento aparece no topo da página e as referências entram na triagem ao final.",
+    "found_one": "{{n}} resultado na base.",
+    "found_other": "{{n}} resultados na base.",
+    "over_limit": "Só os primeiros {{limit}} serão importados. Refine a estratégia ou aumente o limite.",
+    "sample": "Primeiros resultados:",
+    "last_search": "Última busca: {{imported}} de {{found}} resultados importados de {{source}}.",
+    "last_truncated": "Parte dos resultados ficou de fora pelo limite.",
+    "translate_title": "Traduzir a estratégia para outra base (IA)",
+    "translate_hint": "A IA adapta campos, vocabulário controlado e operadores para a sintaxe da base escolhida. Usa o modelo de triagem configurado e conta no orçamento do projeto.",
+    "target": "Traduzir para",
+    "translate": "Traduzir",
+    "translating": "Traduzindo…",
+    "translated": "Estratégia traduzida",
+    "translate_review": "Tradução feita por IA ({{model}}). Revise os termos e confira o número de resultados antes de usar.",
+    "copy": "Copiar",
+    "use_here": "Usar nesta busca",
+    "snowball_title": "Snowballing (busca de citações)",
+    "snowball_hint": "Usa o OpenAlex para achar o que os estudos incluídos citam e o que os cita. Referências que já estão no projeto são ignoradas; as novas entram na triagem como uma busca de citações, separada no PRISMA.",
+    "seeds_one": "{{count}} estudo incluído no texto completo será usado como semente.",
+    "seeds_other": "{{count}} estudos incluídos no texto completo serão usados como sementes.",
+    "no_seeds": "Ainda não há estudos incluídos no texto completo para servir de semente.",
+    "direction": "Direção",
+    "dir_both": "Para trás e para frente",
+    "dir_both_hint": "Referências dos incluídos e trabalhos que os citam.",
+    "dir_backward": "Para trás",
+    "dir_backward_hint": "Só as referências bibliográficas dos incluídos.",
+    "dir_forward": "Para frente",
+    "dir_forward_hint": "Só os trabalhos publicados depois que citam os incluídos.",
+    "snowball_start": "Buscar citações",
+    "last_snowball": "Último snowballing",
+    "result_backward_one": "Para trás: {{count}} referência nova.",
+    "result_backward_other": "Para trás: {{count}} referências novas.",
+    "result_forward_one": "Para frente: {{count}} trabalho novo.",
+    "result_forward_other": "Para frente: {{count}} trabalhos novos.",
+    "result_matched": "{{matched}} de {{seeds}} sementes encontradas no OpenAlex.",
+    "result_known_one": "{{count}} achado já estava no projeto.",
+    "result_known_other": "{{count}} achados já estavam no projeto.",
+    "result_not_found": "Não encontradas: {{list}}"
   }
 }

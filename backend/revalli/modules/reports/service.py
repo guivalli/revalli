@@ -68,11 +68,11 @@ async def study_labels(db: AsyncSession, record_ids: list[uuid.UUID]) -> dict[uu
 async def prisma_counts(db: AsyncSession, project: Project) -> dict:
     by_source = (
         await db.execute(
-            select(Search.source, func.count(Record.id))
+            select(Search.source, Search.method, func.count(Record.id))
             .join(Record, Record.search_id == Search.id)
             .where(Search.project_id == project.id)
-            .group_by(Search.source)
-            .order_by(Search.source)
+            .group_by(Search.source, Search.method)
+            .order_by(Search.method, Search.source)
         )
     ).all()
     total = (
@@ -99,7 +99,13 @@ async def prisma_counts(db: AsyncSession, project: Project) -> dict:
     no_reason = reasons.pop(None, 0)
     return {
         "identification": {
-            "by_source": [{"source": s, "records": n} for s, n in by_source],
+            "by_source": [
+                {"source": s, "method": m, "records": n} for s, m, n in by_source if m == "database"
+            ],
+            # Outros métodos (busca de citações), que o PRISMA 2020 mostra à parte
+            "other_methods": [
+                {"source": s, "method": m, "records": n} for s, m, n in by_source if m != "database"
+            ],
             "total": total,
             "duplicates_removed": duplicates,
         },

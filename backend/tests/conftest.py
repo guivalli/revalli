@@ -9,6 +9,7 @@ os.environ["JOBS_INLINE"] = "true"
 os.environ["SECRET_KEY"] = "test-secret"
 os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="revalli-test-")
 os.environ["ENRICHMENT_ENABLED"] = "true"
+os.environ["API_DELAY_SECONDS"] = "0"
 
 import pytest  # noqa: E402
 from alembic.config import Config  # noqa: E402

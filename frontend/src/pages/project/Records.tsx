@@ -79,6 +79,7 @@ export default function Records() {
                   {Object.keys(r.enriched).length > 0 && (
                     <Badge tone="brand">{t('records.enriched_badge')}</Badge>
                   )}
+                  {r.citation && <Badge>{t(`import.method_citation_${r.citation.direction}`)}</Badge>}
                 </p>
               </button>
               {open === r.id && (

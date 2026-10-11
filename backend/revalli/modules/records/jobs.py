@@ -58,6 +58,7 @@ async def execute(db: AsyncSession, job_id: uuid.UUID) -> None:
     from revalli.modules.extraction import tasks as extraction_tasks  # noqa: F401
     from revalli.modules.fulltext import tasks as fulltext_tasks  # noqa: F401
     from revalli.modules.records import tasks  # noqa: F401
+    from revalli.modules.sources import tasks as sources_tasks  # noqa: F401
 
     # Reivindica o job de forma atômica para que duas execuções não rodem o mesmo
     claimed = await db.execute(

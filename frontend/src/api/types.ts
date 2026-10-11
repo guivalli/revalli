@@ -54,8 +54,12 @@ export interface Search {
   file_format: string
   reported_count: number | null
   imported_count: number
+  method: SearchMethod
   created_at: string
 }
+
+export type SearchMethod = 'database' | 'citation_backward' | 'citation_forward'
+
 
 export interface RecordItem {
   id: string
@@ -77,6 +81,7 @@ export interface RecordItem {
   enriched: Record<string, string>
   duplicate_group_id: string | null
   is_duplicate: boolean
+  citation: { direction: 'backward' | 'forward'; seeds: string[] } | null
 }
 
 export interface RecordPage {
@@ -97,7 +102,7 @@ export interface DuplicateGroup {
 
 export interface Job {
   id: string
-  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa' | 'ai_extract'
+  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa' | 'ai_extract' | 'api_search' | 'snowball'
   status: 'queued' | 'running' | 'done' | 'failed'
   progress: number
   total: number
@@ -201,7 +206,12 @@ export interface PairAgreement {
   kappa: number | null
 }
 export interface Prisma {
-  identification: { by_source: { source: string; records: number }[]; total: number; duplicates_removed: number }
+  identification: {
+    by_source: SourceCount[]
+    other_methods: SourceCount[]
+    total: number
+    duplicates_removed: number
+  }
   screening: { screened: number; excluded: number; pending: number }
   retrieval: { sought: number; not_retrieved: number }
   eligibility: {
@@ -450,4 +460,31 @@ export interface RobSummaryT {
   domains: { id: string; domain: string; label: string }[]
   scale: string[]
   rows: { record_id: string; label: string; judgements: Record<string, string | null> }[]
+}
+
+export interface SourceCount {
+  source: string
+  method: SearchMethod
+  records: number
+}
+
+export type ApiSource = 'pubmed' | 'openalex' | 'europepmc'
+
+export interface SourcePreview {
+  count: number
+  max: number
+  sample: {
+    title: string
+    authors: string[]
+    year: number | null
+    journal: string
+    doi: string | null
+    pmid: string | null
+  }[]
+}
+
+export interface Translation {
+  query: string
+  notes: string[]
+  model: string
 }
