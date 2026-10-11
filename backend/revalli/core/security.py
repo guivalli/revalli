@@ -15,10 +15,12 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, password_hash: str | None) -> bool:
+    """Sem hash (conta que só entra por login único, ou e-mail inexistente), nunca confere."""
     try:
-        return _hasher.verify(password_hash or _DUMMY_HASH, password) and password_hash is not None
+        ok = _hasher.verify(password_hash or _DUMMY_HASH, password)
     except (VerifyMismatchError, InvalidHashError):
         return False
+    return ok and bool(password_hash)
 
 
 def new_token() -> str:

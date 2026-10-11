@@ -14,7 +14,17 @@
   },
   "login": {
     "title": "Log in",
-    "submit": "Log in"
+    "submit": "Log in",
+    "oidc_failed": "Could not sign in with single sign-on.",
+    "sso": "Sign in with single sign-on",
+    "oidc_no_account": "There is no account with this email. Ask a project lead for an invitation.",
+    "oidc_email_not_verified": "The provider did not confirm your email.",
+    "oidc_domain_not_allowed": "Your email domain is not accepted here.",
+    "oidc_account_disabled": "This account is disabled.",
+    "oidc_provider_unavailable": "The login provider did not answer.",
+    "oidc_invalid_attempt": "The sign-in attempt expired. Try again.",
+    "oidc_expired_attempt": "The sign-in attempt expired. Try again.",
+    "oidc_provider_access_denied": "Access was denied at the provider."
   },
   "fields": {
     "email": "Email",

@@ -43,6 +43,20 @@ class Settings(BaseSettings):
     # Pausa entre requisições, para respeitar o limite das APIs públicas
     api_delay_seconds: float = 0.35
 
+    # Login único (OpenID Connect). Fica ligado quando issuer, client_id e client_secret existem.
+    # O endereço de retorno a cadastrar no provedor é PUBLIC_URL + /api/auth/oidc/callback
+    oidc_issuer: str = ""
+    oidc_client_id: str = ""
+    oidc_client_secret: str = ""
+    oidc_scopes: str = "openid email profile"
+    oidc_button_label: str = ""
+    # Cria a conta de quem entra pela primeira vez (sem permissão de administração)
+    oidc_auto_create: bool = False
+    # Domínios de e-mail aceitos, separados por vírgula; vazio aceita qualquer um
+    oidc_allowed_domains: str = ""
+    # Exige que o provedor declare o e-mail como verificado (desligue só se ele não envia o campo)
+    oidc_require_verified_email: bool = True
+
     # Chave usada para cifrar as chaves de API dos provedores de IA. Se ficar vazia,
     # o ReValli gera uma e guarda em data_dir/secret.key na primeira vez.
     secret_key: str = ""

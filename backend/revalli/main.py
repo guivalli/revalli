@@ -6,6 +6,7 @@ from revalli import __version__
 from revalli.core.db import SessionLocal
 from revalli.modules.ai.router import project_router as ai_project_router
 from revalli.modules.ai.router import router as ai_router
+from revalli.modules.auth.oidc_router import router as oidc_router
 from revalli.modules.auth.router import router as auth_router
 from revalli.modules.corpus.router import router as corpus_router
 from revalli.modules.extraction.router import router as extraction_router
@@ -68,6 +69,7 @@ async def health():
 
 
 app.include_router(auth_router, prefix="/api")
+app.include_router(oidc_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
 app.include_router(records_router, prefix="/api")
 app.include_router(screening_router, prefix="/api")

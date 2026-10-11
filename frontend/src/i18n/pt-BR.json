@@ -14,7 +14,17 @@
   },
   "login": {
     "title": "Entrar",
-    "submit": "Entrar"
+    "submit": "Entrar",
+    "oidc_failed": "Não foi possível entrar pelo login único.",
+    "sso": "Entrar com login único",
+    "oidc_no_account": "Não há conta com este e-mail. Peça um convite à liderança do projeto.",
+    "oidc_email_not_verified": "O provedor não confirmou o seu e-mail.",
+    "oidc_domain_not_allowed": "O domínio do seu e-mail não é aceito aqui.",
+    "oidc_account_disabled": "Esta conta está desativada.",
+    "oidc_provider_unavailable": "O provedor de login não respondeu.",
+    "oidc_invalid_attempt": "A tentativa de entrada expirou. Tente de novo.",
+    "oidc_expired_attempt": "A tentativa de entrada expirou. Tente de novo.",
+    "oidc_provider_access_denied": "O acesso foi negado no provedor."
   },
   "fields": {
     "email": "E-mail",
