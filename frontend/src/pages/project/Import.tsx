@@ -6,6 +6,7 @@ import type { Search } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
 import { ApiSearchCard, SnowballCard } from './SourceSearch'
+import { WatchesCard } from './Watches'
 
 const SOURCES = [
   'PubMed',
@@ -19,7 +20,7 @@ const SOURCES = [
   'PsycINFO',
   'Cochrane Library',
 ]
-const FORMATS = ['ris', 'medline', 'pubmed_xml', 'bibtex', 'wos', 'csv']
+const FORMATS = ['ris', 'medline', 'pubmed_xml', 'bibtex', 'wos', 'csv', 'csl']
 
 const textarea =
   'w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-sm dark:border-stone-700 dark:bg-stone-900'
@@ -121,7 +122,7 @@ export default function Import() {
               ref={fileRef}
               required
               type="file"
-              accept=".ris,.txt,.nbib,.xml,.bib,.csv,.tsv"
+              accept=".ris,.txt,.nbib,.xml,.bib,.csv,.tsv,.json"
               className="file:mr-3 file:rounded file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-brand-700"
             />
           </Field>
@@ -196,6 +197,7 @@ export default function Import() {
 
       <ApiSearchCard />
       <SnowballCard />
+      <WatchesCard />
 
       <Card>
         <h2 className="font-semibold">{t('import.history')}</h2>

@@ -22,6 +22,8 @@ alembic upgrade head
 uvicorn revalli.main:app --reload
 pytest
 ruff check . && ruff format --check .
+# Atualizações automáticas (opcional): um único processo
+celery -A revalli.workers.celery_app beat --loglevel=info
 ```
 
 A documentação interativa da API fica em `http://localhost:8000/api/docs`.

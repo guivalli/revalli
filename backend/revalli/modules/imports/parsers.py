@@ -5,6 +5,7 @@ Cada leitor recebe o texto já decodificado e devolve uma lista de ParsedRecord.
 
 import csv
 import io
+import json
 import re
 from collections.abc import Callable
 
@@ -247,6 +248,63 @@ def parse_bibtex(text: str) -> list[ParsedRecord]:
     return records
 
 
+# --- CSL JSON ----------------------------------------------------------------------
+
+
+def _csl_year(item: dict) -> int | None:
+    parts = (item.get("issued") or item.get("published") or {}).get("date-parts") or [[]]
+    first = parts[0][0] if parts and parts[0] else None
+    if first is None:
+        raw = (item.get("issued") or {}).get("raw") or ""
+        return parse_year(str(raw))
+    return parse_year(str(first))
+
+
+def _csl_name(a: dict) -> str:
+    if a.get("literal"):
+        return str(a["literal"])
+    family, given = str(a.get("family") or ""), str(a.get("given") or "")
+    return f"{family}, {given}" if family and given else family or given
+
+
+def parse_csl_json(text: str) -> list[ParsedRecord]:
+    """CSL JSON, o formato de intercâmbio que gerenciadores de referências costumam exportar."""
+    try:
+        data = json.loads(text)
+    except ValueError as exc:
+        raise ImportFormatError("unknown_format") from exc
+    items = data.get("items") if isinstance(data, dict) else data
+    if not isinstance(items, list):
+        raise ImportFormatError("unknown_format")
+    records = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        keywords = it.get("keyword") or it.get("keywords") or ""
+        if isinstance(keywords, list):
+            keywords = ", ".join(str(k) for k in keywords)
+        records.append(
+            ParsedRecord(
+                title=str(it.get("title") or ""),
+                abstract=str(it.get("abstract") or ""),
+                authors=[_csl_name(a) for a in it.get("author") or [] if isinstance(a, dict)],
+                year=_csl_year(it),
+                journal=str(it.get("container-title") or ""),
+                volume=str(it.get("volume") or ""),
+                issue=str(it.get("issue") or ""),
+                pages=str(it.get("page") or "").replace("\u2013", "-"),
+                doi=str(it.get("DOI") or ""),
+                pmid=str(it.get("PMID") or ""),
+                url=str(it.get("URL") or ""),
+                keywords=split_keywords(str(keywords)) if keywords else [],
+                language=str(it.get("language") or ""),
+                publication_type=str(it.get("type") or ""),
+                raw={"csl_id": str(it.get("id") or "")},
+            )
+        )
+    return records
+
+
 # --- Web of Science (texto simples) ------------------------------------------------
 
 WOS_LINE = re.compile(r"^([A-Z][A-Z0-9]) (.*)$")
@@ -390,6 +448,7 @@ FORMATS: dict[str, Callable[[str], list[ParsedRecord]]] = {
     "bibtex": parse_bibtex,
     "wos": parse_wos,
     "csv": parse_csv,
+    "csl": parse_csl_json,
 }
 
 
@@ -406,6 +465,8 @@ def detect_format(filename: str, text: str) -> str:
         return "wos"
     if re.search(r"^\s*@\w+\s*[{(]", head, re.MULTILINE):
         return "bibtex"
+    if head[:1] in ("[", "{") and (name.endswith(".json") or '"title"' in head):
+        return "csl"
     if name.endswith((".csv", ".tsv", ".txt")) and ("," in head or "\t" in head or ";" in head):
         return "csv"
     raise ImportFormatError("unknown_format")

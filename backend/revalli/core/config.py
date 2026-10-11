@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     ncbi_api_key: str = ""
     # Máximo de registros trazidos por uma busca ou por um snowballing
     api_search_max: int = 10_000
+    # Permite que fontes externas (URLs de atualização) apontem para a rede interna
+    feed_allow_private: bool = False
     # Pausa entre requisições, para respeitar o limite das APIs públicas
     api_delay_seconds: float = 0.35
 

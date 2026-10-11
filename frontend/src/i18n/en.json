@@ -138,7 +138,8 @@
     "corpus_not_indexed": "Index the PDFs before asking.",
     "token_read_only": "This key is read-only.",
     "token_scope": "This key cannot access this route.",
-    "too_many_tokens": "Key limit reached. Revoke one."
+    "too_many_tokens": "Key limit reached. Revoke one.",
+    "too_many_watches": "Automatic update limit reached."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -1124,5 +1125,38 @@
     "last_used": "last used: {{date}}",
     "expires": "expires {{date}}",
     "revoke": "Revoke"
+  },
+  "watches": {
+    "title": "Automatic updates",
+    "hint": "Repeats a search, or rereads a file at a URL (RIS, BibTeX, CSL JSON...), at the chosen interval and imports only what the project does not have yet. Each round with news is recorded as an “(update)” search for PRISMA-S. New records go to screening.",
+    "none": "No automatic updates.",
+    "add": "New update",
+    "kind": "Type",
+    "kind_api_search": "Database search",
+    "kind_feed_url": "File at a URL",
+    "name": "Name (optional)",
+    "every_label": "Every (days)",
+    "every": "every {{count}} days",
+    "url": "File URL",
+    "url_hint": "Addresses inside the server's network are refused.",
+    "secret": "Authorization header (optional)",
+    "secret_hint": "E.g.: Bearer abc123. It is stored encrypted and never shown again.",
+    "create": "Create",
+    "run_now": "Run now",
+    "running": "Running…",
+    "pause": "Pause",
+    "resume": "Resume",
+    "paused": "paused",
+    "remove": "Delete",
+    "last_run": "last: {{date}}",
+    "next_run": "next: {{date}}",
+    "last_result": "Last round: {{new}} new of {{found}} found (total so far: {{total}}).",
+    "last_error": "Failed",
+    "news": "{{count}} new records from “{{name}}” are waiting for screening.",
+    "error_blocked_address": "the address points to the internal network",
+    "error_unknown_format": "the file is not a known references format",
+    "error_dns_failed": "the server name was not found",
+    "error_too_large": "the file is too large",
+    "error_invalid_url": "the URL is invalid"
   }
 }

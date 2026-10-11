@@ -2,6 +2,7 @@
 
 import csv
 import io
+import json
 import uuid
 from collections import Counter
 
@@ -176,6 +177,41 @@ def to_ris(rows: list[dict]) -> str:
         out.append("ER  - ")
         out.append("")
     return "\r\n".join(out)
+
+
+def to_csl_json(rows: list[dict]) -> str:
+    """CSL JSON com o estado da triagem em "note"; gerenciadores de referências importam."""
+    items = []
+    for row in rows:
+        r: Record = row["record"]
+        item: dict = {"id": str(r.id), "type": "article-journal", "title": r.title}
+        authors = []
+        for a in r.authors:
+            family, _, given = a.partition(",")
+            authors.append(
+                {"family": family.strip(), "given": given.strip()} if given else {"literal": a}
+            )
+        if authors:
+            item["author"] = authors
+        if r.year:
+            item["issued"] = {"date-parts": [[r.year]]}
+        for key, value in (
+            ("container-title", r.journal),
+            ("volume", r.volume),
+            ("issue", r.issue),
+            ("page", r.pages),
+            ("DOI", r.doi),
+            ("PMID", r.pmid),
+            ("URL", r.url),
+            ("language", r.language),
+            ("abstract", r.abstract),
+            ("keyword", ", ".join(r.keywords)),
+            ("note", row["summary"]),
+        ):
+            if value:
+                item[key] = value
+        items.append(item)
+    return json.dumps(items, ensure_ascii=False, indent=1)
 
 
 CSV_FIELDS = [

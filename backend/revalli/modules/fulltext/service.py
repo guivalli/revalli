@@ -1,7 +1,6 @@
 """PDFs dos registros: anexar, casar arquivos de um ZIP e buscar versões de acesso aberto."""
 
 import io
-import ipaddress
 import uuid
 import zipfile
 from collections.abc import Callable
@@ -13,6 +12,7 @@ from rapidfuzz import fuzz
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from revalli.core import safefetch
 from revalli.core.config import get_settings
 from revalli.models import Project, Record
 from revalli.modules.fulltext import storage
@@ -239,45 +239,13 @@ def _pdf_urls(work: dict) -> list[str]:
     return urls
 
 
-def _public_url(url: str) -> bool:
-    """Recusa endereços internos: a URL vem de uma base externa e não deve alcançar a rede local."""
-    try:
-        u = httpx.URL(url)
-    except httpx.InvalidURL:
-        return False
-    if u.scheme not in ("http", "https") or not u.host:
-        return False
-    host = u.host.lower()
-    if (
-        host == "localhost"
-        or host.endswith((".local", ".internal", ".localhost"))
-        or "." not in host
-    ):
-        return False
-    try:
-        return ipaddress.ip_address(host).is_global
-    except ValueError:
-        return True
-
-
 async def _download(client: httpx.AsyncClient, url: str) -> bytes | None:
-    if not _public_url(url):
-        return None
-    limit = max_pdf_bytes()
+    """Baixa um PDF de uma URL que veio de uma base externa, sem alcançar a rede interna."""
     try:
-        async with client.stream("GET", url, follow_redirects=True, timeout=60) as resp:
-            if resp.status_code != 200:
-                return None
-            chunks, size = [], 0
-            async for chunk in resp.aiter_bytes():
-                size += len(chunk)
-                if size > limit:
-                    return None
-                chunks.append(chunk)
-    except httpx.HTTPError:
+        got = await safefetch.get_bytes(client, url, max_bytes=max_pdf_bytes())
+    except safefetch.FetchError:
         return None
-    data = b"".join(chunks)
-    return data if data[:1024].lstrip().startswith(b"%PDF-") else None
+    return got.data if got.data[:1024].lstrip().startswith(b"%PDF-") else None
 
 
 async def find_open_access(

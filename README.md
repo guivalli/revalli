@@ -41,11 +41,12 @@ Versão **0.1.0.dev0 (M0 a M5, M6 em andamento)**. O que já funciona:
 - Codificação qualitativa para revisões integrativas e de escopo: árvore de códigos, trechos marcados direto no PDF, matriz de códigos por estudo e exportação em CSV. Veja [docs/sintese.md](docs/sintese.md).
 - Meta-análise (RR, OR, RD, MD, SMD, HR ou genérica; efeito fixo ou aleatório, subgrupos, forest plot, funil e Egger) e tabela GRADE de sumário de achados. Veja [docs/sintese.md](docs/sintese.md).
 - Checklists PRISMA 2020 e PRISMA-ScR no relatório, com o local de cada item no manuscrito e os dados do projeto que ajudam a escrevê-lo.
+- Atualizações automáticas (revisões vivas): repete uma busca ou relê um arquivo de referências numa URL e importa só o que é novo, com aviso na visão geral. Também lê e exporta CSL JSON. Veja [docs/atualizacoes.md](docs/atualizacoes.md).
 - Conversa com os PDFs: perguntas sobre os estudos com resposta só a partir do texto, cada afirmação com trecho e página, e cada citação conferida no PDF. Veja [docs/conversa.md](docs/conversa.md).
 - API pública somente leitura (chaves por pessoa ou por projeto, em Minha conta) e servidor MCP para consultar os projetos de um assistente de IA. Veja [docs/api.md](docs/api.md).
 - Relatório da revisão em DOCX ou PDF (português ou inglês): rascunho de métodos e resultados com fluxograma PRISMA, estudos incluídos, risco de viés, forest plots, GRADE e códigos, mais apêndices com as estratégias de busca, o registro de uso da IA e o checklist. Veja [docs/relatorio.md](docs/relatorio.md).
 
-Sincronização com gerenciadores de referências, revisões vivas, login único e o mapa de lacunas de evidência vêm a seguir (veja o [roteiro](docs/roteiro.md)).
+Login único e o mapa de lacunas de evidência vêm a seguir (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 

@@ -4,10 +4,10 @@ import zipfile
 
 import httpx
 import pymupdf
+import pytest
 
 from revalli.modules.fulltext import service as ft_service
 from revalli.modules.fulltext import storage
-from revalli.modules.fulltext.service import _public_url
 from revalli.modules.fulltext.studies import trial_ids
 from tests.conftest import invite_and_join
 from tests.test_records import UPLOAD_HEADERS, _import, _ris
@@ -135,17 +135,22 @@ async def test_zip_matches_by_doi_and_title(admin):
         assert len(files) == 1 and files[0]["source"] == "zip"
 
 
-def test_public_url_guard():
-    assert _public_url("https://europepmc.org/a.pdf")
-    for bad in (
-        "http://localhost/a.pdf",
-        "http://127.0.0.1/a.pdf",
-        "http://10.0.0.5/a.pdf",
-        "http://db:5432/x",
-        "file:///etc/passwd",
-        "http://169.254.169.254/latest",
-    ):
-        assert not _public_url(bad), bad
+async def test_public_url_guard():
+    from revalli.core import safefetch
+
+    ok = await safefetch.public_ips("europepmc.org", 443)
+    assert ok == ["93.184.216.34"]
+    for bad in ("localhost", "127.0.0.1", "10.0.0.5", "db", "169.254.169.254", "::1", "x.internal"):
+        with pytest.raises(safefetch.FetchError):
+            await safefetch.public_ips(bad, 80)
+
+    # Um nome público que resolve para a rede interna também é recusado
+    async def internal(host: str, port: int) -> list[str]:
+        return ["192.168.1.10"]
+
+    safefetch.set_resolver(internal)
+    with pytest.raises(safefetch.FetchError):
+        await safefetch.public_ips("evil.example.org", 80)
 
 
 async def test_open_access_download(admin, monkeypatch):
@@ -172,7 +177,8 @@ async def test_open_access_download(admin, monkeypatch):
                     ]
                 },
             )
-        if request.url.host == "repo.example.org":
+        # A conexão vai para o IP já conferido; o nome segue no cabeçalho Host
+        if request.headers.get("host") == "repo.example.org":
             return httpx.Response(200, content=pdf)
         raise AssertionError(f"unexpected request {request.url}")
 

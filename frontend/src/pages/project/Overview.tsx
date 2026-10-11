@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useActiveJobs, useRecentJobs, useRecordActions, useSummary } from '../../api/records'
+import { useWatches } from '../../api/watches'
 import { Button, Card, ErrorText } from '../../components/ui'
 import { useProjectContext } from './context'
 
@@ -24,6 +25,8 @@ export default function Overview() {
   const jobs = useActiveJobs(project.id)
   const { enrich, dedup } = useRecordActions(project.id)
   const recent = useRecentJobs(project.id)
+  const watches = useWatches(project.id)
+  const news = (watches.data ?? []).filter((w) => w.last_status === 'ok' && w.last_new > 0)
   const busy = (jobs.data?.length ?? 0) > 0
   // Mostra a falha só se a última execução daquele tipo falhou
   const failed = [...new Map([...(recent.data ?? [])].reverse().map((j) => [j.kind, j])).values()].filter(
@@ -47,6 +50,15 @@ export default function Overview() {
   return (
     <div className="space-y-6">
       {project.description && <p className="whitespace-pre-line">{project.description}</p>}
+      {news.map((w) => (
+        <Link
+          key={w.id}
+          to="triagem"
+          className="block rounded-md bg-brand-50 px-4 py-3 text-sm text-brand-700 hover:underline dark:bg-brand-900/30 dark:text-brand-100"
+        >
+          {t('watches.news', { count: w.last_new, name: w.name || w.query || w.url })}
+        </Link>
+      ))}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label={t('summary.identified')} value={s.records_total} />
         <Stat label={t('summary.duplicates_removed')} value={s.duplicates_removed} />

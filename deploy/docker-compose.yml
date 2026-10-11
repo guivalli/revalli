@@ -78,6 +78,17 @@ services:
       api:
         condition: service_healthy
 
+  # Dispara as atualizações automáticas (revisões vivas). Precisa existir uma única cópia.
+  scheduler:
+    build: ../backend
+    image: ${REVALLI_IMAGE_PREFIX:-ghcr.io/guivalli}/revalli-api:${REVALLI_VERSION:-latest}
+    restart: unless-stopped
+    command: celery -A revalli.workers.celery_app beat --loglevel=info --schedule /tmp/celerybeat-schedule
+    environment: *backend-env
+    depends_on:
+      api:
+        condition: service_healthy
+
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped

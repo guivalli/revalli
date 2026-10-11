@@ -22,6 +22,7 @@ from revalli.modules.reports.service import (
     prisma_counts,
     reason_labels,
     study_labels,
+    to_csl_json,
     to_csv,
     to_ris,
 )
@@ -55,7 +56,7 @@ def _slug(text: str) -> str:
 @router.get("/export")
 async def export(
     project_id: uuid.UUID,
-    format: str = Query("ris", pattern="^(ris|csv)$"),
+    format: str = Query("ris", pattern="^(ris|csv|csl)$"),
     phase: Phase = Phase.title_abstract,
     state: str = Query("all", pattern="^(all|included|excluded|conflict|pending)$"),
     user: User = Depends(current_user),
@@ -133,12 +134,16 @@ async def export(
     name = f"{_slug(project.title)}-{phase.value}-{state}"
     if format == "csv":
         body, media = to_csv(rows), "text/csv; charset=utf-8"
+    elif format == "csl":
+        body, media = to_csl_json(rows), "application/vnd.citationstyles.csl+json; charset=utf-8"
     else:
         body, media = to_ris(rows), "application/x-research-info-systems; charset=utf-8"
     return Response(
         content=body.encode("utf-8"),
         media_type=media,
-        headers={"Content-Disposition": f'attachment; filename="{name}.{format}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{name}.{"json" if format == "csl" else format}"'
+        },
     )
 
 

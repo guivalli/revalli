@@ -76,9 +76,9 @@ docker run --rm -v revalli_revalli_data:/data -v "$PWD/backups:/backups:ro" alpi
 Restaurar um dump:
 
 ```bash
-docker compose stop api worker
+docker compose stop api worker scheduler
 docker compose exec -T db pg_restore --clean --if-exists -U revalli -d revalli < backups/ARQUIVO.dump
-docker compose start api worker
+docker compose start api worker scheduler
 ```
 
 ## 6. Atualizar
@@ -94,6 +94,6 @@ As migrações do banco rodam automaticamente quando a API sobe. Faça um backup
 
 ```bash
 docker compose ps
-docker compose logs -f api worker
+docker compose logs -f api worker scheduler
 curl http://localhost:8080/api/health
 ```

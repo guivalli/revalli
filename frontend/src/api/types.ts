@@ -102,7 +102,7 @@ export interface DuplicateGroup {
 
 export interface Job {
   id: string
-  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa' | 'ai_extract' | 'api_search' | 'snowball' | 'corpus_index'
+  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa' | 'ai_extract' | 'api_search' | 'snowball' | 'corpus_index' | 'watch_run'
   status: 'queued' | 'running' | 'done' | 'failed'
   progress: number
   total: number
@@ -714,4 +714,35 @@ export interface ApiTokenInfo {
 
 export interface ApiTokenCreated extends ApiTokenInfo {
   token: string
+}
+
+export interface Watch {
+  id: string
+  kind: 'api_search' | 'feed_url'
+  name: string
+  source: string
+  query: string
+  url: string
+  has_secret: boolean
+  every_days: number
+  enabled: boolean
+  next_run_at: string | null
+  last_run_at: string | null
+  last_status: '' | 'ok' | 'error'
+  last_error: string
+  last_new: number
+  last_found: number
+  total_new: number
+}
+
+export interface WatchInput {
+  kind: 'api_search' | 'feed_url'
+  name: string
+  source: string
+  query: string
+  url: string
+  secret: string
+  clear_secret: boolean
+  every_days: number
+  enabled: boolean
 }

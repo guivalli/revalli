@@ -35,6 +35,19 @@ def migrated_db():
 
 
 @pytest.fixture(autouse=True)
+def public_dns():
+    """Nenhum teste depende de DNS: todo nome resolve para um endereço público."""
+    from revalli.core import safefetch
+
+    async def resolve(host: str, port: int) -> list[str]:
+        return ["93.184.216.34"]
+
+    safefetch.set_resolver(resolve)
+    yield
+    safefetch.set_resolver(None)
+
+
+@pytest.fixture(autouse=True)
 async def clean_db():
     yield
     async with engine.begin() as conn:
@@ -46,7 +59,7 @@ async def clean_db():
                 " record_embeddings, record_files, file_pages, studies, study_reports,"
                 " extraction_forms, extraction_form_versions, extractions, codes, excerpts,"
                 " excerpt_codes, checklist_entries, meta_analyses, grade_rows,"
-                " corpus_chunks, corpus_chunk_embeddings, corpus_messages, api_tokens CASCADE"
+                " corpus_chunks, corpus_chunk_embeddings, corpus_messages, api_tokens, watches CASCADE"
             )
         )
     login_limiter._hits.clear()

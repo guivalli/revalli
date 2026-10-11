@@ -138,7 +138,8 @@
     "corpus_not_indexed": "Indexe os PDFs antes de perguntar.",
     "token_read_only": "Esta chave só lê.",
     "token_scope": "Esta chave não acessa esta rota.",
-    "too_many_tokens": "Limite de chaves atingido. Revogue alguma."
+    "too_many_tokens": "Limite de chaves atingido. Revogue alguma.",
+    "too_many_watches": "Limite de atualizações automáticas atingido."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -1124,5 +1125,38 @@
     "last_used": "último uso: {{date}}",
     "expires": "expira em {{date}}",
     "revoke": "Revogar"
+  },
+  "watches": {
+    "title": "Atualizações automáticas",
+    "hint": "Repete uma busca, ou relê um arquivo numa URL (RIS, BibTeX, CSL JSON...), no intervalo escolhido e importa só o que o projeto ainda não tem. Cada rodada com novidades fica registrada como uma busca “(atualização)” para o PRISMA-S. Os novos registros entram na triagem.",
+    "none": "Nenhuma atualização automática.",
+    "add": "Nova atualização",
+    "kind": "Tipo",
+    "kind_api_search": "Busca numa base",
+    "kind_feed_url": "Arquivo numa URL",
+    "name": "Nome (opcional)",
+    "every_label": "A cada (dias)",
+    "every": "a cada {{count}} dias",
+    "url": "URL do arquivo",
+    "url_hint": "Endereços internos da rede do servidor são recusados.",
+    "secret": "Cabeçalho de autorização (opcional)",
+    "secret_hint": "Ex.: Bearer abc123. Fica cifrado e não é mostrado de novo.",
+    "create": "Criar",
+    "run_now": "Rodar agora",
+    "running": "Rodando…",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "paused": "pausada",
+    "remove": "Apagar",
+    "last_run": "última: {{date}}",
+    "next_run": "próxima: {{date}}",
+    "last_result": "Última rodada: {{new}} novos de {{found}} encontrados (total acumulado: {{total}}).",
+    "last_error": "Falhou",
+    "news": "{{count}} novos registros de “{{name}}” aguardam triagem.",
+    "error_blocked_address": "o endereço aponta para a rede interna",
+    "error_unknown_format": "o arquivo não é um formato de referências conhecido",
+    "error_dns_failed": "o nome do servidor não foi encontrado",
+    "error_too_large": "o arquivo é grande demais",
+    "error_invalid_url": "a URL é inválida"
   }
 }
