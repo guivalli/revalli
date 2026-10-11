@@ -37,7 +37,8 @@ async def clean_db():
         await conn.execute(
             text(
                 "TRUNCATE users, sessions, invitations, projects, project_members, searches,"
-                " records, duplicate_groups, not_duplicates, jobs CASCADE"
+                " records, duplicate_groups, not_duplicates, jobs, exclusion_reasons,"
+                " decision_events CASCADE"
             )
         )
     login_limiter._hits.clear()

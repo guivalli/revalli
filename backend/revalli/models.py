@@ -9,9 +9,12 @@ from revalli.modules.records.models import (
     Record,
     Search,
 )
+from revalli.modules.screening.models import DecisionEvent, ExclusionReason
 
 __all__ = [
+    "DecisionEvent",
     "DuplicateGroup",
+    "ExclusionReason",
     "Invitation",
     "Job",
     "NotDuplicate",

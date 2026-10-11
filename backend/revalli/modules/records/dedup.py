@@ -204,8 +204,16 @@ async def run_dedup(db: AsyncSession, project_id: uuid.UUID) -> dict:
             uf.union(ids[0], other)
 
     edges_found = find_edges(recs, blocked)
-    for a, b, *_ in edges_found:
+    # Segunda estrutura só com ligações automáticas (e grupos já confirmados): um grupo é
+    # confirmado sozinho quando essas ligações bastam para unir todos os registros
+    uf_auto = _UnionFind()
+    for ids in members.values():
+        for other in ids[1:]:
+            uf_auto.union(ids[0], other)
+    for a, b, _method, _score, auto in edges_found:
         uf.union(a, b)
+        if auto:
+            uf_auto.union(a, b)
 
     components: dict = defaultdict(list)
     for r in recs:
@@ -230,7 +238,7 @@ async def run_dedup(db: AsyncSession, project_id: uuid.UUID) -> dict:
         edges = edges_by_comp.get(root, [])
         existing = {by_id[i].group_id for i in ids if by_id[i].group_id}
         new_ids = [i for i in ids if by_id[i].group_id is None]
-        all_auto = all(e[4] for e in edges)
+        all_auto = len({uf_auto.find(i) for i in ids}) == 1
         if existing:
             # Junta tudo no primeiro grupo confirmado; se algo novo não for automático, volta para revisão
             gid = sorted(existing, key=str)[0]

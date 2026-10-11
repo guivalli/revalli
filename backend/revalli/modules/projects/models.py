@@ -2,6 +2,7 @@ import enum
 import uuid
 
 from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from revalli.core.db import Base, IdMixin, TimestampMixin
@@ -31,6 +32,8 @@ class Project(IdMixin, TimestampMixin, Base):
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    # Protocolo e configuração da triagem (ver modules/screening/settings.py)
+    settings: Mapped[dict] = mapped_column(JSONB, default=dict, server_default="{}")
 
 
 class ProjectMember(TimestampMixin, Base):
