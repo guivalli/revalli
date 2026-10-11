@@ -216,6 +216,13 @@ function ModelsForm({ initial, providers }: { initial: InstanceAISettings; provi
         providers={providers}
         onChange={(v) => setS({ ...s, embeddings: v })}
       />
+      <TaskForm
+        label={t('ai.task_extraction')}
+        hint={t('ai.task_extraction_hint')}
+        value={s.extraction}
+        providers={providers}
+        onChange={(v) => setS({ ...s, extraction: v })}
+      />
       <ErrorText error={saveSettings.error} />
       {saveSettings.isSuccess && (
         <p role="status" className="text-sm text-brand-700 dark:text-brand-100">

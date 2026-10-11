@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fileUrl, useFileActions, useRecordFiles } from '../api/files'
-import { PdfViewer } from './PdfViewer'
+import { PdfViewer, type PdfFocus } from './PdfViewer'
 import { Button, Card, ErrorText } from './ui'
 
 export function FullTextPanel({
@@ -10,19 +10,25 @@ export function FullTextPanel({
   include,
   exclude,
   canUpload,
+  focus,
+  onClearFocus,
 }: {
   pid: string
   rid: string
   include: string[]
   exclude: string[]
   canUpload: boolean
+  /** Página e trecho a destacar, num arquivo específico */
+  focus?: (PdfFocus & { fileId: string | null }) | null
+  onClearFocus?: () => void
 }) {
   const { t } = useTranslation()
   const files = useRecordFiles(pid, rid)
   const { upload, remove, makeMain } = useFileActions(pid)
   const [chosen, setChosen] = useState<string | null>(null)
   const list = files.data ?? []
-  const current = list.find((f) => f.id === chosen) ?? list.find((f) => f.is_main) ?? list[0]
+  const current =
+    list.find((f) => f.id === (focus?.fileId ?? chosen)) ?? list.find((f) => f.is_main) ?? list[0]
 
   const uploader = canUpload && (
     <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-brand-600 hover:underline">
@@ -59,7 +65,10 @@ export function FullTextPanel({
             aria-label={t('pdf.file')}
             className="rounded border border-stone-300 bg-transparent px-2 py-1 dark:border-stone-700"
             value={current.id}
-            onChange={(e) => setChosen(e.target.value)}
+            onChange={(e) => {
+              setChosen(e.target.value)
+              onClearFocus?.()
+            }}
           >
             {list.map((f) => (
               <option key={f.id} value={f.id}>
@@ -92,7 +101,13 @@ export function FullTextPanel({
       </div>
       <ErrorText error={upload.error ?? remove.error ?? makeMain.error} />
       <div className="h-[80vh]">
-        <PdfViewer key={current.id} url={fileUrl(pid, current.id)} include={include} exclude={exclude} />
+        <PdfViewer
+          key={current.id}
+          url={fileUrl(pid, current.id)}
+          include={include}
+          exclude={exclude}
+          focus={focus && (!focus.fileId || focus.fileId === current.id) ? focus : null}
+        />
       </div>
     </Card>
   )

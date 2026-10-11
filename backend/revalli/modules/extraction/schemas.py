@@ -4,6 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from revalli.modules.fulltext.schemas import FileOut
+
 FieldType = Literal[
     "section",
     "text",
@@ -145,14 +147,19 @@ class UnitOut(BaseModel):
     mine: str | None
     has_ai: bool
     consensus: bool
-    # pending, in_progress, ready (todas as extrações feitas), conflict, agreed, resolved
+    # pending, in_progress, complete (uma pessoa por estudo), conflict, agreed, resolved
     state: str
 
 
 class UnitDetail(BaseModel):
     unit: UnitOut
+    # PDFs de todos os relatórios do estudo
+    files: list[FileOut]
     form: FormOut
     mine: ExtractionOut | None
+    # A extração da IA aparece sempre: serve de apoio a quem extrai
+    ai: ExtractionOut | None
+    # Extrações das outras pessoas: só depois de concluir a sua (ou para quem resolve)
     others: list[ExtractionOut]
     consensus: ExtractionOut | None
     can_see_others: bool

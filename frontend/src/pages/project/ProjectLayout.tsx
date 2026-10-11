@@ -50,6 +50,7 @@ export default function ProjectLayout() {
     ...(canManage ? [{ to: 'importar', label: t('tabs.import') }] : []),
     { to: 'duplicatas', label: t('tabs.duplicates'), badge: pending },
     { to: 'triagem', label: t('tabs.screening') },
+    { to: 'extracao', label: t('tabs.extraction') },
     { to: 'protocolo', label: t('tabs.protocol') },
     { to: 'ia', label: t('tabs.ai') },
     { to: 'relatorio', label: t('tabs.report') },

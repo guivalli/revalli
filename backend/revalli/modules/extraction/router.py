@@ -26,6 +26,7 @@ from revalli.modules.extraction.schemas import (
     UnitOut,
 )
 from revalli.modules.extraction.templates import TEMPLATES
+from revalli.modules.fulltext.models import RecordFile
 from revalli.modules.projects.models import Role
 from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.schemas import JobOut
@@ -230,12 +231,20 @@ async def get_unit(
     names = await service.user_names(db, {e.user_id for e in u.extractions})
     mine = next((e for e in u.extractions if e.kind == "reviewer" and e.user_id == user.id), None)
     see = _can_resolve(user, role) or (mine is not None and mine.status == "done")
-    others = [e for e in u.extractions if e.kind != "consensus" and e is not mine]
+    others = [e for e in u.extractions if e.kind == "reviewer" and e is not mine]
+    ai_ext = next((e for e in u.extractions if e.kind == "ai"), None)
     cons = next((e for e in u.extractions if e.kind == "consensus"), None)
+    files = await db.execute(
+        select(RecordFile)
+        .where(RecordFile.record_id.in_(u.report_ids))
+        .order_by(RecordFile.is_main.desc(), RecordFile.created_at)
+    )
     return {
         "unit": _unit_out(form, u, user),
+        "files": files.scalars().all(),
         "form": form,
         "mine": service.extraction_out(form, mine, names) if mine else None,
+        "ai": service.extraction_out(form, ai_ext, names) if ai_ext else None,
         "others": [service.extraction_out(form, e, names) for e in others] if see else [],
         "consensus": service.extraction_out(form, cons, names) if cons and see else None,
         "can_see_others": see,

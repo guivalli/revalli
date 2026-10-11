@@ -193,6 +193,7 @@ async def test_rob2_template_and_summary(admin):
     # Julgamento escolhido pela pessoa vale mais que o calculado
     some = {**low, "d3_j": "some"}
     await admin.put(f"{base}/units/{c}/mine", json={"values": some, "status": "done"})
+    assert {u["state"] for u in (await admin.get(f"{base}/units")).json()} == {"complete"}
     summary = (await admin.get(f"{base}/rob")).json()
     assert [d["domain"] for d in summary["domains"]] == ["d1", "d2", "d3", "d4", "d5", "overall"]
     assert summary["scale"] == ["low", "some", "high"]
@@ -306,7 +307,7 @@ async def test_ai_extraction_with_verified_quotes(admin):
     assert r.status_code == 202, r.text
     assert r.json()["result"] == {"total": 3, "done": 1, "no_pdf": 2, "errors": 0, "stopped": None}
     detail = (await admin.get(f"{base}/units/{a}")).json()
-    ai_ext = next(e for e in detail["others"] if e["kind"] == "ai")
+    ai_ext = detail["ai"]
     assert ai_ext["values"] == {"n": 120, "country": "Brasil"}  # opção inválida descartada
     assert ai_ext["quotes"]["n"]["verified"] is True and ai_ext["quotes"]["n"]["page"] == 1
     assert ai_ext["quotes"]["country"]["verified"] is False

@@ -47,8 +47,10 @@ Com uma GPU de 11 GB, um modelo de 7 a 9B em Q4 e o modelo de embeddings cabem j
 Depois, entre como administrador e abra **IA** no topo da página:
 
 1. Em **Provedores**, clique em **Adicionar provedor**, escolha **Ollama (local)** e salve. O endereço já vem preenchido (`http://ollama:11434/v1`). Use **Testar** para ver os modelos baixados.
-2. Em **Modelos por tarefa**, escolha o provedor e escreva o nome do modelo: `qwen3:8b` para a triagem e `bge-m3` para os embeddings.
+2. Em **Modelos por tarefa**, escolha o provedor e escreva o nome do modelo: `qwen3:8b` para a triagem e para a extração de dados, e `bge-m3` para os embeddings.
 3. Em cada projeto, a aba **IA** liga a IA, define se ela só sugere ou se atua como segunda revisora, e permite rodar uma calibração antes de confiar nela.
+
+A extração de dados manda o texto do PDF para o modelo. O compose sobe o Ollama com contexto de 16 mil tokens (`OLLAMA_CONTEXT_LENGTH`) e o ReValli manda até 40 mil caracteres de cada estudo (`AI_EXTRACT_MAX_CHARS`). Se aumentar um, aumente o outro na mesma proporção (cerca de 4 caracteres por token) e confira se a memória da GPU aguenta.
 
 Se você já tem um Ollama rodando fora do Docker no mesmo servidor, não ative o profile e cadastre o endereço `http://host.docker.internal:11434/v1`.
 

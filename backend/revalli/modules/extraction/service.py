@@ -201,18 +201,21 @@ def _norm(v: Any) -> Any:
 
 
 def compare(fields: list[dict], extractions: list[Extraction]) -> tuple[list[dict], dict]:
-    """Campo a campo: o valor de cada extração e se todos concordam. Também devolve os valores
-    em que houve acordo, para começar o consenso."""
+    """Campo a campo: o valor de cada extração e se as pessoas concordam. A extração da IA
+    aparece para referência, mas não conta na concordância. Também devolve os valores em que
+    houve acordo, para começar o consenso."""
     rows, agreed = [], {}
     eff = {e.id: effective_values(fields, e.values) for e in extractions}
+    humans = [e for e in extractions if e.kind == "reviewer"]
     for f in fields:
         if f["type"] == "section":
             continue
         vals = {str(e.id): eff[e.id].get(f["id"]) for e in extractions}
-        normed = [_norm(v) for v in vals.values()]
+        human_vals = [eff[e.id].get(f["id"]) for e in humans]
+        normed = [_norm(v) for v in human_vals]
         agree = all(n == normed[0] for n in normed) if normed else True
         if agree and normed and normed[0] is not None:
-            agreed[f["id"]] = next(iter(vals.values()))
+            agreed[f["id"]] = human_vals[0]
         if any(v is not None for v in vals.values()):
             rows.append({"field_id": f["id"], "values": vals, "agree": agree})
     return rows, agreed
@@ -228,9 +231,9 @@ def unit_state(form: ExtractionForm, exts: list[Extraction]) -> str:
     humans_done = [e for e in done if e.kind == "reviewer"]
     if len(humans_done) < form.extractors:
         return "in_progress"
-    if len(done) < 2:
-        return "ready"
-    rows, _ = compare(form.fields, done)
+    if len(humans_done) < 2:
+        return "complete"
+    rows, _ = compare(form.fields, humans_done)
     return "agreed" if all(r["agree"] for r in rows) else "conflict"
 
 

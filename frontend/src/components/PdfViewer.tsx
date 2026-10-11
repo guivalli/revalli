@@ -44,6 +44,45 @@ function markTerms(container: HTMLElement, include: string[], exclude: string[])
   return hits
 }
 
+const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
+
+/** Destaca os trechos da camada de texto que formam a citação. Devolve o primeiro, para rolar
+ * até ele. Procura a citação inteira e, se não achar, o começo dela. */
+function markQuote(container: HTMLElement, quote: string): HTMLElement | null {
+  const spans = [...container.querySelectorAll<HTMLSpanElement>('span:not(.markedContent)')].filter(
+    (s) => s.childElementCount === 0 || s.querySelector('mark'),
+  )
+  let text = ''
+  const starts: number[] = []
+  for (const s of spans) {
+    starts.push(text.length)
+    text += norm(s.textContent ?? '') + ' '
+  }
+  const q = norm(quote)
+  let at = text.indexOf(q)
+  let len = q.length
+  if (at < 0 && q.length > 40) {
+    at = text.indexOf(q.slice(0, 40))
+    len = 40
+  }
+  if (at < 0) return null
+  let first: HTMLElement | null = null
+  spans.forEach((s, i) => {
+    const end = (starts[i + 1] ?? text.length) - 1
+    if (starts[i] < at + len && end > at) {
+      s.style.background = 'rgb(250 204 21 / 0.45)'
+      s.style.borderRadius = '2px'
+      first ??= s
+    }
+  })
+  return first
+}
+
+export interface PdfFocus {
+  page: number
+  text: string
+}
+
 function Page({
   doc,
   number,
@@ -51,6 +90,7 @@ function Page({
   include,
   exclude,
   onHits,
+  focus,
 }: {
   doc: PDFDocumentProxy
   number: number
@@ -58,11 +98,13 @@ function Page({
   include: string[]
   exclude: string[]
   onHits: (page: number, n: number) => void
+  focus?: string
 }) {
   const wrap = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const text = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(number <= 2)
+  const [seen, setVisible] = useState(number <= 2)
+  const visible = seen || !!focus
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
 
   useEffect(() => {
@@ -120,13 +162,22 @@ function Page({
         viewport: vp,
       })
       await layer.render()
-      if (!cancelled) onHits(number, markTerms(textEl, include, exclude))
+      if (cancelled) return
+      onHits(number, markTerms(textEl, include, exclude))
+      if (focus) {
+        const el = markQuote(textEl, focus) ?? wrap.current
+        el?.scrollIntoView({ block: 'center' })
+      }
     })()
     return () => {
       cancelled = true
       task?.cancel()
     }
-  }, [visible, doc, number, scale, include, exclude, onHits])
+  }, [visible, doc, number, scale, include, exclude, onHits, focus])
+
+  useEffect(() => {
+    if (focus) wrap.current?.scrollIntoView({ block: 'start' })
+  }, [focus])
 
   return (
     <div
@@ -146,10 +197,12 @@ export function PdfViewer({
   url,
   include,
   exclude,
+  focus,
 }: {
   url: string
   include: string[]
   exclude: string[]
+  focus?: PdfFocus | null
 }) {
   const { t } = useTranslation()
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
@@ -216,6 +269,7 @@ export function PdfViewer({
               include={include}
               exclude={exclude}
               onHits={onHits}
+              focus={focus?.page === i + 1 ? focus.text : undefined}
             />
           ))}
       </div>

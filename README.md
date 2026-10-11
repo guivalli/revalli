@@ -7,7 +7,7 @@ Plataforma open source e auto-hospedada para conduzir revisões de literatura (s
 
 ## Estado atual
 
-Versão **0.3.0-dev (M0 a M4)**. O que já funciona:
+Versão **0.4.0-dev (M0 a M5)**. O que já funciona:
 
 - Instalação com Docker Compose (banco, fila, API, worker e servidor web).
 - Configuração inicial com criação do administrador.
@@ -31,8 +31,11 @@ Versão **0.3.0-dev (M0 a M4)**. O que já funciona:
 - Benchmark da IA sobre conjuntos já rotulados (veja [docs/benchmark.md](docs/benchmark.md)).
 - Texto completo: PDFs enviados um a um ou num ZIP (ligados às referências pelo DOI ou pelo título), busca automática de versões de acesso aberto pelo OpenAlex e visualizador de PDF na tela de triagem, com as palavras do protocolo destacadas no próprio documento.
 - Estudos com vários relatórios: agrupamento à mão ou por sugestão (referências que citam o mesmo número de registro de ensaio, como NCT ou ISRCTN), com contagem de estudos e de relatórios no PRISMA.
+- Extração de dados: formulários próprios (texto, número, escolha, tabelas por grupo, perguntas condicionais), versionados, com extração em dupla, comparação campo a campo e consenso. Exportação em CSV (uma linha por estudo ou formato longo para R e meta-análise). Veja [docs/extracao.md](docs/extracao.md).
+- Extração por IA com citação literal: cada valor vem com o trecho do artigo, que é conferido no texto do PDF e destacado no visualizador. Trechos que não aparecem no PDF ficam marcados para conferência.
+- Risco de viés com modelos de RoB 2 (julgamento de cada domínio calculado pelo algoritmo do instrumento) e ROBINS-I, com gráficos de semáforo e de resumo em SVG e PNG.
 
-A extração de dados e o risco de viés vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
+Síntese, snowballing e os demais recursos vêm no próximo marco (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 

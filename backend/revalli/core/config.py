@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     data_dir: str = "/data"
     # Tempo máximo de uma chamada a um modelo de IA, em segundos
     ai_timeout: int = 120
+    # Quanto texto do PDF vai para a IA na extração (~4 caracteres por token)
+    ai_extract_max_chars: int = 40_000
 
 
 @lru_cache

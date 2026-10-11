@@ -3,37 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { exportUrl, usePrisma } from '../../api/reports'
 import { Button, Card, Field, Select } from '../../components/ui'
 import { PrismaDiagram } from '../../components/PrismaDiagram'
+import { savePng, saveSvg } from '../../lib/download'
 import { useProjectContext } from './context'
 
 const STATES = ['all', 'included', 'excluded', 'conflict', 'pending'] as const
-
-function download(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-function svgText(svg: SVGSVGElement) {
-  return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg)
-}
-
-async function svgToPng(svg: SVGSVGElement): Promise<Blob | null> {
-  const box = svg.viewBox.baseVal
-  const scale = 2
-  const img = new Image()
-  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText(svg))
-  await img.decode()
-  const canvas = document.createElement('canvas')
-  canvas.width = box.width * scale
-  canvas.height = box.height * scale
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
-}
 
 export default function Report() {
   const { t } = useTranslation()
@@ -43,25 +16,16 @@ export default function Report() {
   const [phase, setPhase] = useState('title_abstract')
   const [state, setState] = useState<(typeof STATES)[number]>('included')
 
-  const saveSvg = () => {
-    if (svgRef.current)
-      download(new Blob([svgText(svgRef.current)], { type: 'image/svg+xml' }), 'prisma-2020.svg')
-  }
-  const savePng = async () => {
-    if (!svgRef.current) return
-    const blob = await svgToPng(svgRef.current)
-    if (blob) download(blob, 'prisma-2020.png')
-  }
 
   return (
     <div className="space-y-6">
       <Card className="space-y-4 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="mr-auto font-semibold">{t('prisma.title')}</h2>
-          <Button variant="ghost" onClick={saveSvg} disabled={!data}>
+          <Button variant="ghost" onClick={() => saveSvg(svgRef.current, 'prisma-2020')} disabled={!data}>
             {t('prisma.download_svg')}
           </Button>
-          <Button variant="ghost" onClick={() => void savePng()} disabled={!data}>
+          <Button variant="ghost" onClick={() => void savePng(svgRef.current, 'prisma-2020')} disabled={!data}>
             {t('prisma.download_png')}
           </Button>
         </div>

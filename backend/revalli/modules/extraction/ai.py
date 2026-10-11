@@ -14,6 +14,7 @@ from rapidfuzz import fuzz
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from revalli.core.config import get_settings
 from revalli.models import AIUsage, Project
 from revalli.modules.ai import client
 from revalli.modules.ai.prompts import estimate_tokens
@@ -23,7 +24,6 @@ from revalli.modules.extraction.models import Extraction, ExtractionForm
 from revalli.modules.fulltext.models import FilePage, RecordFile
 
 QUOTE_MIN_SCORE = 90
-MAX_DOC_CHARS = 60_000
 FIELDS_PER_CALL = 12
 OUTPUT_TOKENS_PER_FIELD = 120
 
@@ -91,7 +91,8 @@ async def unit_pages(db: AsyncSession, report_ids: list[uuid.UUID]) -> list[Page
     return [Page(fid, page, text) for fid, _, page, text in found]
 
 
-def document_text(pages: list[Page], limit: int = MAX_DOC_CHARS) -> str:
+def document_text(pages: list[Page], limit: int | None = None) -> str:
+    limit = limit or get_settings().ai_extract_max_chars
     parts, size, last_file = [], 0, None
     for p in pages:
         if p.file_id != last_file:
@@ -247,7 +248,7 @@ async def run(
     used = await spent(db, project.id)
     for i, u in enumerate(todo, 1):
         if ai.budget_usd is not None:
-            inp, out = estimate(form, MAX_DOC_CHARS)
+            inp, out = estimate(form, get_settings().ai_extract_max_chars)
             if used + res.cost(inp, out) > ai.budget_usd:
                 stats["stopped"] = "budget"
                 break

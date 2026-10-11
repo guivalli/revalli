@@ -14,6 +14,9 @@ x-backend-env: &backend-env
   ENRICHMENT_ENABLED: ${ENRICHMENT_ENABLED:-true}
   ENRICHMENT_CONTACT_EMAIL: ${ENRICHMENT_CONTACT_EMAIL:-}
   MAX_IMPORT_MB: ${MAX_IMPORT_MB:-50}
+  MAX_PDF_MB: ${MAX_PDF_MB:-100}
+  MAX_ZIP_MB: ${MAX_ZIP_MB:-2000}
+  AI_EXTRACT_MAX_CHARS: ${AI_EXTRACT_MAX_CHARS:-40000}
 
 services:
   web:
@@ -106,6 +109,8 @@ services:
       OLLAMA_MAX_LOADED_MODELS: "2"
       OLLAMA_NUM_PARALLEL: "2"
       OLLAMA_KEEP_ALIVE: 30m
+      # A extração lê o texto do PDF inteiro: precisa de um contexto maior que o padrão
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-16384}
     volumes:
       - ollama_models:/root/.ollama
     deploy:

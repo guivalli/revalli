@@ -97,7 +97,7 @@ export interface DuplicateGroup {
 
 export interface Job {
   id: string
-  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa'
+  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa' | 'ai_extract'
   status: 'queued' | 'running' | 'done' | 'failed'
   progress: number
   total: number
@@ -231,6 +231,7 @@ export interface TaskModel {
 export interface InstanceAISettings {
   screening: TaskModel
   embeddings: TaskModel
+  extraction: TaskModel
 }
 export interface ProjectAISettings {
   enabled: boolean
@@ -339,4 +340,114 @@ export interface StudyCandidate {
   authors: string[]
   year: number | null
   study_id: string | null
+}
+
+// --- Extração de dados ---------------------------------------------------------------
+
+export type FieldType =
+  | 'section'
+  | 'text'
+  | 'long_text'
+  | 'number'
+  | 'integer'
+  | 'choice'
+  | 'multi'
+  | 'boolean'
+  | 'table'
+  | 'signal'
+  | 'judgement'
+
+export interface ColumnDef {
+  id: string
+  label: string
+  type: 'text' | 'number' | 'integer'
+}
+
+export interface FieldDef {
+  id: string
+  label: string
+  type: FieldType
+  help: string
+  required: boolean
+  options: string[]
+  columns: ColumnDef[]
+  rows: string[]
+  ai: boolean
+  ai_hint: string
+  domain: string
+  algorithm: string
+  show_if: { field: string; values: string[] }[]
+}
+
+export interface ExtractionFormT {
+  id: string
+  name: string
+  kind: 'extraction' | 'rob'
+  template: string
+  fields: FieldDef[]
+  version: number
+  extractors: number
+  created_at: string
+}
+
+export type FieldValue = string | number | boolean | string[] | Record<string, string | number | null>[] | null
+
+export interface QuoteT {
+  text: string
+  page: number | null
+  file_id: string | null
+  score: number | null
+  verified: boolean
+}
+
+export interface ExtractionT {
+  id: string
+  kind: 'reviewer' | 'ai' | 'consensus'
+  user_id: string | null
+  user_name: string
+  values: Record<string, FieldValue>
+  quotes: Record<string, QuoteT>
+  status: 'draft' | 'done'
+  form_version: number
+  updated_at: string
+  suggested: Record<string, string>
+}
+
+export type UnitState = 'pending' | 'in_progress' | 'complete' | 'conflict' | 'agreed' | 'resolved'
+
+export interface UnitT {
+  record_id: string
+  report_ids: string[]
+  label: string
+  title: string
+  year: number | null
+  done: number
+  mine: 'draft' | 'done' | null
+  has_ai: boolean
+  consensus: boolean
+  state: UnitState
+}
+
+export interface UnitDetailT {
+  unit: UnitT
+  files: RecordFile[]
+  form: ExtractionFormT
+  mine: ExtractionT | null
+  ai: ExtractionT | null
+  others: ExtractionT[]
+  consensus: ExtractionT | null
+  can_see_others: boolean
+  can_resolve: boolean
+}
+
+export interface ComparisonT {
+  extractions: ExtractionT[]
+  fields: { field_id: string; values: Record<string, FieldValue>; agree: boolean }[]
+  agreed_values: Record<string, FieldValue>
+}
+
+export interface RobSummaryT {
+  domains: { id: string; domain: string; label: string }[]
+  scale: string[]
+  rows: { record_id: string; label: string; judgements: Record<string, string | null> }[]
 }
