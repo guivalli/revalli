@@ -4,6 +4,9 @@ os.environ.setdefault(
     "DATABASE_URL", "postgresql+asyncpg://revalli:revalli@localhost:5432/revalli_test"
 )
 
+os.environ["JOBS_INLINE"] = "true"
+os.environ["ENRICHMENT_ENABLED"] = "true"
+
 import pytest  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
@@ -32,7 +35,10 @@ async def clean_db():
     yield
     async with engine.begin() as conn:
         await conn.execute(
-            text("TRUNCATE users, sessions, invitations, projects, project_members CASCADE")
+            text(
+                "TRUNCATE users, sessions, invitations, projects, project_members, searches,"
+                " records, duplicate_groups, not_duplicates, jobs CASCADE"
+            )
         )
     login_limiter._hits.clear()
 

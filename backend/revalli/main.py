@@ -6,6 +6,7 @@ from revalli import __version__
 from revalli.core.db import SessionLocal
 from revalli.modules.auth.router import router as auth_router
 from revalli.modules.projects.router import router as projects_router
+from revalli.modules.records.router import router as records_router
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -25,8 +26,14 @@ async def require_json_for_writes(request: Request, call_next):
     if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/"):
         content_type = request.headers.get("content-type", "")
         has_body = request.headers.get("content-length", "0") not in ("", "0")
-        if (has_body or request.method != "DELETE") and not content_type.startswith(
-            "application/json"
+        # Uploads (multipart) precisam de um cabeçalho próprio, que também força o preflight
+        is_upload = content_type.startswith("multipart/form-data") and (
+            request.headers.get("x-requested-with") == "ReValli"
+        )
+        if (
+            (has_body or request.method != "DELETE")
+            and not content_type.startswith("application/json")
+            and not is_upload
         ):
             return JSONResponse({"detail": "json_required"}, status_code=415)
     response = await call_next(request)
@@ -50,3 +57,4 @@ async def health():
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
+app.include_router(records_router, prefix="/api")

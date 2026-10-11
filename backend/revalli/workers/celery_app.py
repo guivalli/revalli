@@ -18,3 +18,13 @@ celery_app.conf.update(
 @celery_app.task(name="revalli.ping")
 def ping() -> str:
     return "pong"
+
+
+@celery_app.task(name="revalli.run_job")
+def run_job(job_id: str) -> None:
+    import asyncio
+    import uuid
+
+    from revalli.modules.records.jobs import execute_isolated
+
+    asyncio.run(execute_isolated(uuid.UUID(job_id)))

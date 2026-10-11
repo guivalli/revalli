@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2019//EN" "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_190101.dtd">
+<PubmedArticleSet>
+<PubmedArticle>
+  <MedlineCitation>
+    <PMID Version="1">11122233</PMID>
+    <Article>
+      <Journal><JournalIssue><Volume>9</Volume><Issue>1</Issue><PubDate><Year>2017</Year></PubDate></JournalIssue><Title>Sleep Medicine</Title></Journal>
+      <ArticleTitle>Sleep and <i>anxiety</i> in adolescents.</ArticleTitle>
+      <Pagination><MedlinePgn>1-9</MedlinePgn></Pagination>
+      <ELocationID EIdType="doi" ValidYN="Y">10.3000/sleep.17</ELocationID>
+      <Abstract>
+        <AbstractText Label="BACKGROUND">Sleep matters.</AbstractText>
+        <AbstractText Label="RESULTS">It does.</AbstractText>
+      </Abstract>
+      <AuthorList><Author><LastName>Rocha</LastName><ForeName>Bia</ForeName></Author><Author><CollectiveName>Study Group</CollectiveName></Author></AuthorList>
+      <Language>eng</Language>
+      <PublicationTypeList><PublicationType>Journal Article</PublicationType></PublicationTypeList>
+    </Article>
+    <MeshHeadingList><MeshHeading><DescriptorName>Anxiety</DescriptorName></MeshHeading></MeshHeadingList>
+  </MedlineCitation>
+</PubmedArticle>
+</PubmedArticleSet>

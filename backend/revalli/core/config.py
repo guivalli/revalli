@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     login_max_attempts: int = 10
     login_window_seconds: int = 300
 
+    # Roda tarefas de fundo na própria requisição (testes e depuração)
+    jobs_inline: bool = False
+    max_import_mb: int = 50
+
+    # Enriquecimento de metadados pela API pública do OpenAlex
+    enrichment_enabled: bool = True
+    enrichment_contact_email: str = ""
+    openalex_url: str = "https://api.openalex.org"
+
 
 @lru_cache
 def get_settings() -> Settings:

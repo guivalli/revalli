@@ -1,0 +1,74 @@
+"""Execução de tarefas em segundo plano.
+
+A API cria um Job e o despacha para o worker (Celery). Nos testes, ou com
+JOBS_INLINE=true, a tarefa roda na própria requisição.
+"""
+
+import uuid
+from collections.abc import Awaitable, Callable
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
+
+from revalli.core.config import get_settings
+from revalli.core.db import utcnow
+from revalli.modules.records.models import Job, JobStatus
+
+JobHandler = Callable[[AsyncSession, Job], Awaitable[dict]]
+HANDLERS: dict[str, JobHandler] = {}
+
+
+def handler(kind: str):
+    def register(fn: JobHandler) -> JobHandler:
+        HANDLERS[kind] = fn
+        return fn
+
+    return register
+
+
+async def create_job(db: AsyncSession, project_id: uuid.UUID, kind: str) -> Job:
+    job = Job(project_id=project_id, kind=kind)
+    db.add(job)
+    await db.commit()
+    return job
+
+
+async def execute(db: AsyncSession, job_id: uuid.UUID) -> None:
+    # Garante que os handlers foram registrados
+    from revalli.modules.records import tasks  # noqa: F401
+
+    job = await db.get(Job, job_id)
+    if job is None or job.status not in (JobStatus.queued, JobStatus.running):
+        return
+    job.status = JobStatus.running
+    await db.commit()
+    try:
+        job.result = await HANDLERS[job.kind](db, job)
+        job.status = JobStatus.done
+    except Exception as exc:  # registra a falha para a interface mostrar
+        await db.rollback()
+        job = await db.get(Job, job_id)
+        job.status = JobStatus.failed
+        job.error = f"{type(exc).__name__}: {exc}"[:2000]
+    job.finished_at = utcnow()
+    await db.commit()
+
+
+async def execute_isolated(job_id: uuid.UUID) -> None:
+    """Roda um job com engine própria (usado pelo worker, que abre um loop por tarefa)."""
+    engine = create_async_engine(get_settings().database_url, poolclass=NullPool)
+    try:
+        async with async_sessionmaker(engine, expire_on_commit=False)() as db:
+            await execute(db, job_id)
+    finally:
+        await engine.dispose()
+
+
+async def dispatch(db: AsyncSession, job: Job, queue: str = "default") -> None:
+    if get_settings().jobs_inline:
+        await execute(db, job.id)
+        await db.refresh(job)
+        return
+    from revalli.workers.celery_app import run_job
+
+    run_job.apply_async(args=[str(job.id)], queue=queue)

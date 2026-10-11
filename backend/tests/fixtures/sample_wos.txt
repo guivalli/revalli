@@ -1,0 +1,21 @@
+FN Clarivate Analytics Web of Science
+VR 1.0
+PT J
+AU Silva, J
+   Souza, M
+AF Silva, Joao
+   Souza, Maria
+TI Physical exercise and anxiety in older adults: a randomized
+   trial
+SO JOURNAL OF AGING STUDIES
+DE exercise; anxiety
+AB Background: Anxiety is common.
+PY 2021
+VL 12
+BP 101
+EP 110
+DI 10.1000/abc.123
+PM 30000001
+ER
+
+EF
