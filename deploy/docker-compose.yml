@@ -11,6 +11,9 @@ x-backend-env: &backend-env
   PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
   OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+  ENRICHMENT_ENABLED: ${ENRICHMENT_ENABLED:-true}
+  ENRICHMENT_CONTACT_EMAIL: ${ENRICHMENT_CONTACT_EMAIL:-}
+  MAX_IMPORT_MB: ${MAX_IMPORT_MB:-50}
 
 services:
   web:

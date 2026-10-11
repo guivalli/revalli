@@ -5,4 +5,5 @@
 - Documentação e textos de interface em português (pt-BR), com tradução em inglês no i18n. Código e identificadores em inglês.
 - Antes de concluir: `ruff check`, `ruff format --check` e `pytest` no backend; `npm run lint`, `npm run typecheck`, `npm test` e `npm run build` no frontend.
 - Toda mudança de modelo exige migração Alembic.
-- Toda escrita na API usa JSON; não relaxe o middleware `require_json_for_writes`.
+- Toda escrita na API usa JSON; uploads multipart exigem o cabeçalho `X-Requested-With: ReValli`. Não relaxe o middleware `require_json_for_writes`.
+- Tarefas pesadas viram `Job` (ver `modules/records/jobs.py`) e rodam no worker; nos testes rodam inline (`JOBS_INLINE=true`).

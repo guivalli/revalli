@@ -1,6 +1,6 @@
 [project]
 name = "revalli"
-version = "0.0.1"
+version = "0.1.0.dev0"
 description = "ReValli: plataforma open source e auto-hospedada para triagem de revisões de literatura"
 requires-python = ">=3.12"
 license = "AGPL-3.0-only"

@@ -7,6 +7,7 @@ JOBS_INLINE=true, a tarefa roda na própria requisição.
 import uuid
 from collections.abc import Awaitable, Callable
 
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -27,6 +28,16 @@ def handler(kind: str):
 
 
 async def create_job(db: AsyncSession, project_id: uuid.UUID, kind: str) -> Job:
+    """Cria um job; se já houver um igual na fila (ainda não iniciado), reaproveita."""
+    queued = (
+        await db.execute(
+            select(Job).where(
+                Job.project_id == project_id, Job.kind == kind, Job.status == JobStatus.queued
+            )
+        )
+    ).scalar_one_or_none()
+    if queued is not None and not get_settings().jobs_inline:
+        return queued
     job = Job(project_id=project_id, kind=kind)
     db.add(job)
     await db.commit()
@@ -37,11 +48,18 @@ async def execute(db: AsyncSession, job_id: uuid.UUID) -> None:
     # Garante que os handlers foram registrados
     from revalli.modules.records import tasks  # noqa: F401
 
-    job = await db.get(Job, job_id)
-    if job is None or job.status not in (JobStatus.queued, JobStatus.running):
-        return
-    job.status = JobStatus.running
+    # Reivindica o job de forma atômica para que duas execuções não rodem o mesmo
+    claimed = await db.execute(
+        update(Job)
+        .where(Job.id == job_id, Job.status == JobStatus.queued)
+        .values(status=JobStatus.running)
+        .returning(Job.id)
+    )
+    got_it = claimed.first() is not None
     await db.commit()
+    if not got_it:
+        return
+    job = await db.get(Job, job_id, populate_existing=True)
     try:
         job.result = await HANDLERS[job.kind](db, job)
         job.status = JobStatus.done
@@ -56,6 +74,8 @@ async def execute(db: AsyncSession, job_id: uuid.UUID) -> None:
 
 async def execute_isolated(job_id: uuid.UUID) -> None:
     """Roda um job com engine própria (usado pelo worker, que abre um loop por tarefa)."""
+    import revalli.models  # noqa: F401  (registra todas as tabelas no metadata)
+
     engine = create_async_engine(get_settings().database_url, poolclass=NullPool)
     try:
         async with async_sessionmaker(engine, expire_on_commit=False)() as db:

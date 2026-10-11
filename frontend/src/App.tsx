@@ -5,7 +5,12 @@ import { useMe, useSetupStatus } from './api/hooks'
 import { Layout } from './components/Layout'
 import AcceptInvite from './pages/AcceptInvite'
 import Login from './pages/Login'
-import ProjectDetail from './pages/ProjectDetail'
+import Duplicates from './pages/project/Duplicates'
+import Import from './pages/project/Import'
+import Members from './pages/project/Members'
+import Overview from './pages/project/Overview'
+import ProjectLayout from './pages/project/ProjectLayout'
+import Records from './pages/project/Records'
 import Projects from './pages/Projects'
 import Setup from './pages/Setup'
 
@@ -40,7 +45,13 @@ export default function App() {
         }
       >
         <Route index element={<Projects />} />
-        <Route path="/projetos/:id" element={<ProjectDetail />} />
+        <Route path="/projetos/:id" element={<ProjectLayout />}>
+          <Route index element={<Overview />} />
+          <Route path="referencias" element={<Records />} />
+          <Route path="importar" element={<Import />} />
+          <Route path="duplicatas" element={<Duplicates />} />
+          <Route path="membros" element={<Members />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

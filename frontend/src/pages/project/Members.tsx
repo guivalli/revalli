@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
-import { useMe, useMemberActions, useMembers, useProject } from '../api/hooks'
-import { ROLES, type Role } from '../api/types'
-import { Button, Card, ErrorText, Field, Input, Select } from '../components/ui'
+import { useMemberActions, useMembers } from '../../api/hooks'
+import { ROLES, type Role } from '../../api/types'
+import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
+import { useProjectContext } from './context'
 
 function InviteForm({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
@@ -60,31 +60,14 @@ function InviteForm({ projectId }: { projectId: string }) {
   )
 }
 
-export default function ProjectDetail() {
-  const { id = '' } = useParams()
+export default function Members() {
   const { t } = useTranslation()
-  const { data: me } = useMe()
-  const project = useProject(id)
-  const members = useMembers(id)
-  const { changeRole, remove } = useMemberActions(id)
-
-  if (project.isLoading) return <p className="text-stone-500">{t('app.loading')}</p>
-  if (!project.data) return <p>{t('projects.not_found')}</p>
-
-  const p = project.data
-  const canManage = p.my_role === 'lead' || !!me?.is_admin
+  const { project, canManage } = useProjectContext()
+  const members = useMembers(project.id)
+  const { changeRole, remove } = useMemberActions(project.id)
 
   return (
     <div className="space-y-6">
-      <Link to="/" className="text-sm text-brand-600 hover:underline">
-        ← {t('projects.back')}
-      </Link>
-      <div>
-        <h1 className="text-2xl font-semibold">{p.title}</h1>
-        <p className="text-sm text-stone-500">{t(`review_type.${p.review_type}`)}</p>
-        {p.description && <p className="mt-3 whitespace-pre-line">{p.description}</p>}
-      </div>
-
       <Card className="space-y-3">
         <h2 className="font-semibold">{t('members.title')}</h2>
         <ErrorText error={changeRole.error ?? remove.error} />
@@ -122,8 +105,7 @@ export default function ProjectDetail() {
           ))}
         </ul>
       </Card>
-
-      {canManage && <InviteForm projectId={id} />}
+      {canManage && <InviteForm projectId={project.id} />}
     </div>
   )
 }

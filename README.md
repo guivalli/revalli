@@ -7,7 +7,7 @@ Plataforma open source e auto-hospedada para conduzir revisões de literatura (s
 
 ## Estado atual
 
-Versão **0.0.x (M0, fundação)**. O que já funciona:
+Versão **0.1.0-dev (M0 e M1)**. O que já funciona:
 
 - Instalação com Docker Compose (banco, fila, API, worker e servidor web).
 - Configuração inicial com criação do administrador.
@@ -15,8 +15,12 @@ Versão **0.0.x (M0, fundação)**. O que já funciona:
 - Projetos de revisão com papéis (líder, revisor, árbitro, extrator, observador).
 - Convites por link, para a instalação ou para um projeto.
 - Interface em português e inglês.
+- Importação de referências em RIS, PubMed (MEDLINE e XML), BibTeX, Web of Science e CSV, com registro da estratégia de busca, data e número de resultados de cada base.
+- Detecção de duplicatas por DOI, PMID e título parecido, com tela de revisão lado a lado.
+- Preenchimento automático de resumos, DOIs e PMIDs faltantes pela API pública do [OpenAlex](https://openalex.org).
+- Contagens de identificação (registros por fonte, duplicatas removidas, registros únicos).
 
-A importação de referências, a triagem e os recursos de IA vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
+A triagem e os recursos de IA vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 
