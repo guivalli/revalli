@@ -40,6 +40,8 @@ class PreviewOut(BaseModel):
     count: int
     max: int
     sample: list[SampleRecord]
+    translation: str = ""
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SnowballIn(BaseModel):

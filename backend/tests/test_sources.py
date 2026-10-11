@@ -89,6 +89,13 @@ def _pubmed(request: httpx.Request) -> httpx.Response:
         if q["term"] == "bad[[":
             return httpx.Response(200, json={"esearchresult": {"ERROR": "Invalid query"}})
         ids = [p for p, _ in PUBMED][: int(q["retmax"])]
+        extra = {}
+        if q["term"] == "anxiety zzz":
+            extra = {
+                "querytranslation": '"anxiety"[All Fields]',
+                "warninglist": {"quotedphrasesnotfound": ['"zzz"'], "phrasesignored": []},
+                "errorlist": {"phrasesnotfound": [], "fieldsnotfound": ["Nope"]},
+            }
         return httpx.Response(
             200,
             json={
@@ -97,6 +104,7 @@ def _pubmed(request: httpx.Request) -> httpx.Response:
                     "idlist": ids,
                     "webenv": "ENV",
                     "querykey": "1",
+                    **extra,
                 }
             },
         )
@@ -247,6 +255,11 @@ async def test_api_search_preview_and_import(admin):
         "doi": None,
         "pmid": "901",
     }
+    assert p["translation"] == "" and p["warnings"] == []
+    r = await admin.post(f"{base}/preview", json={"source": "pubmed", "query": "anxiety zzz"})
+    p = r.json()
+    assert p["translation"] == '"anxiety"[All Fields]'
+    assert p["warnings"] == ["Nope", '"zzz"']
     r = await admin.post(f"{base}/preview", json={"source": "pubmed", "query": "bad[["})
     assert r.status_code == 502 and r.json()["detail"] == "source_unavailable"
 

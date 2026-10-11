@@ -6,7 +6,7 @@ string antes de importar) e trazer os registros em lotes, já no formato do impo
 
 import asyncio
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -57,6 +57,9 @@ async def get(client: httpx.AsyncClient, url: str, params: dict) -> httpx.Respon
 class Preview:
     count: int
     sample: list[ParsedRecord]
+    # Como a base interpretou a estratégia e o que ela descartou (só o PubMed informa)
+    translation: str = ""
+    warnings: list[str] = field(default_factory=list)
 
 
 # --- OpenAlex ------------------------------------------------------------------
@@ -162,6 +165,21 @@ async def pubmed_search(client: httpx.AsyncClient, query: str, retmax: int, hist
     return data
 
 
+def pubmed_warnings(data: dict) -> list[str]:
+    """Frases ou campos que o PubMed não reconheceu e ignorou; a busca roda sem eles."""
+    out: list[str] = []
+    warn, err = data.get("warninglist") or {}, data.get("errorlist") or {}
+    for part in (
+        err.get("phrasesnotfound"),
+        err.get("fieldsnotfound"),
+        warn.get("phrasesignored"),
+        warn.get("quotedphrasesnotfound"),
+        warn.get("outputmessages"),
+    ):
+        out.extend(str(x) for x in part or [] if x)
+    return list(dict.fromkeys(out))
+
+
 async def pubmed_efetch(client: httpx.AsyncClient, params: dict) -> list[ParsedRecord]:
     url = get_settings().pubmed_url.rstrip("/") + "/efetch.fcgi"
     resp = await get(client, url, {**pubmed_params(), **params, "retmode": "xml"})
@@ -175,7 +193,12 @@ async def pubmed_preview(client: httpx.AsyncClient, query: str) -> Preview:
     if ids:
         await pause()
         sample = await pubmed_efetch(client, {"id": ",".join(ids)})
-    return Preview(int(data.get("count") or 0), sample)
+    return Preview(
+        int(data.get("count") or 0),
+        sample,
+        translation=str(data.get("querytranslation") or ""),
+        warnings=pubmed_warnings(data),
+    )
 
 
 async def pubmed_fetch(

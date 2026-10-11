@@ -66,6 +66,8 @@ async def preview(
     return PreviewOut(
         count=result.count,
         max=get_settings().api_search_max,
+        translation=result.translation,
+        warnings=result.warnings,
         sample=[
             SampleRecord(
                 title=r.title,

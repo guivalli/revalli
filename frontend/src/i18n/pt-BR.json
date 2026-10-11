@@ -715,6 +715,8 @@
     "found_other": "{{n}} resultados na base.",
     "over_limit": "Só os primeiros {{limit}} serão importados. Refine a estratégia ou aumente o limite.",
     "sample": "Primeiros resultados:",
+    "ignored": "A base ignorou estes termos e buscou o resto da estratégia:",
+    "translation": "Como a base interpretou a estratégia",
     "last_search": "Última busca: {{imported}} de {{found}} resultados importados de {{source}}.",
     "last_truncated": "Parte dos resultados ficou de fora pelo limite.",
     "translate_title": "Traduzir a estratégia para outra base (IA)",

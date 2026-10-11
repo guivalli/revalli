@@ -473,6 +473,8 @@ export type ApiSource = 'pubmed' | 'openalex' | 'europepmc'
 export interface SourcePreview {
   count: number
   max: number
+  translation: string
+  warnings: string[]
   sample: {
     title: string
     authors: string[]

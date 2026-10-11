@@ -221,6 +221,22 @@ export function ApiSearchCard() {
               {t('sources.over_limit', { limit: fmt(Math.min(limit, p.max)) })}
             </p>
           )}
+          {p.warnings.length > 0 && (
+            <div className="text-amber-700 dark:text-amber-300">
+              <p>{t('sources.ignored')}</p>
+              <ul className="list-disc pl-5">
+                {p.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {p.translation && (
+            <details>
+              <summary className="cursor-pointer text-stone-500">{t('sources.translation')}</summary>
+              <p className="mt-1 break-words font-mono text-xs">{p.translation}</p>
+            </details>
+          )}
           {p.sample.length > 0 && (
             <>
               <p className="text-stone-500">{t('sources.sample')}</p>

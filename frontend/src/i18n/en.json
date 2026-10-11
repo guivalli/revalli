@@ -715,6 +715,8 @@
     "found_other": "{{n}} results in the database.",
     "over_limit": "Only the first {{limit}} will be imported. Refine the strategy or raise the limit.",
     "sample": "First results:",
+    "ignored": "The database ignored these terms and ran the rest of the strategy:",
+    "translation": "How the database interpreted the strategy",
     "last_search": "Last search: {{imported}} of {{found}} results imported from {{source}}.",
     "last_truncated": "Some results were left out by the limit.",
     "translate_title": "Translate the strategy to another database (AI)",
