@@ -72,7 +72,12 @@ function Message({
       {message.answer ? (
         <>
           <AnswerText message={message} onOpen={onOpen} />
-          {!message.grounded && (
+          {message.unsupported_numbers.length > 0 && (
+            <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">
+              {t('corpus.numbers', { list: message.unsupported_numbers.join(', ') })}
+            </p>
+          )}
+          {message.answerable && !message.grounded && (
             <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">
               {t('corpus.not_grounded')}
             </p>

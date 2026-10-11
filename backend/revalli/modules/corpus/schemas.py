@@ -35,6 +35,8 @@ class MessageOut(BaseModel):
     answer: str
     sources: list[SourceOut]
     grounded: bool
+    answerable: bool
+    unsupported_numbers: list[str]
     scope: str
     model: str
     created_at: datetime

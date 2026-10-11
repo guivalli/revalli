@@ -69,6 +69,10 @@ class CorpusMessage(IdMixin, Base):
     sources: Mapped[list] = mapped_column(JSONB, default=list)
     # Pelo menos uma citação conferida no texto do PDF
     grounded: Mapped[bool] = mapped_column(Boolean, default=False)
+    # False quando o modelo disse que os trechos não respondem à pergunta
+    answerable: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Números da resposta que não aparecem nos trechos citados
+    unsupported_numbers: Mapped[list] = mapped_column(JSONB, default=list)
     # included (estudos incluídos) ou all (todos os PDFs do projeto)
     scope: Mapped[str] = mapped_column(String(10), default="included")
     model: Mapped[str] = mapped_column(String(200), default="")

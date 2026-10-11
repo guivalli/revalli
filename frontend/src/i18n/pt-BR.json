@@ -1102,6 +1102,7 @@
     "open_pdf": "Abrir no PDF",
     "close_pdf": "Fechar PDF",
     "remove": "Apagar",
-    "model": "Modelo: {{model}}"
+    "model": "Modelo: {{model}}",
+    "numbers": "Números da resposta que não aparecem nos trechos citados: {{list}}. Confira no PDF antes de usar."
   }
 }

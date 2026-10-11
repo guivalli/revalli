@@ -41,6 +41,16 @@ def test_query_terms_and_tsquery():
     assert retrieval.tsquery("x' ; drop") == "drop"
 
 
+def test_unsupported_numbers():
+    from revalli.modules.corpus.service import unsupported_numbers
+
+    texts = ["A total of 535 pregnancies, 1,200 visits and 2.5 mg/kg."]
+    assert unsupported_numbers("535 women [1], 1200 visits, 2,5 mg/kg", texts) == []
+    assert unsupported_numbers("There were 536 women [3] and 12 visits", texts) == ["536", "12"]
+    # Algarismos soltos (itens, contagens pequenas) e marcadores [n] não contam
+    assert unsupported_numbers("1. Two arms [2]; 3 trials", texts) == []
+
+
 def test_fusion_and_pick():
     a, b, c, d = (uuid.uuid4() for _ in range(4))
     assert retrieval.fuse([[a, b, c], [c, b]]) == [c, b, a]
@@ -72,6 +82,16 @@ def _llm(request: httpx.Request) -> httpx.Response:
         data = [{"index": i, "embedding": _vec(t)} for i, t in enumerate(inputs)]
         return httpx.Response(200, json={"data": data, "usage": {"prompt_tokens": 10 * len(data)}})
     prompt = body["messages"][-1]["content"]
+    if "search queries" in body["messages"][0]["content"]:
+        CALLS.append({"expand": prompt})
+        queries = ["randomised adults"] if re.search(r"adults|adultos", prompt) else []
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": json.dumps({"queries": queries})}}],
+                "usage": {"prompt_tokens": 50, "completion_tokens": 10},
+            },
+        )
     CALLS.append({"chat": prompt})
     # Acha o trecho que fala dos 120 adultos
     n = next(
@@ -82,7 +102,11 @@ def _llm(request: httpx.Request) -> httpx.Response:
         None,
     )
     if n is None:
-        answer = {"answer": "The excerpts do not report this.", "citations": []}
+        answer = {
+            "answer": "The excerpts do not report this.",
+            "answerable": False,
+            "citations": [],
+        }
     else:
         answer = {
             "answer": f"They randomised 120 adults [{n}]. It was done in Lisbon [{n}] [9].",
@@ -149,7 +173,7 @@ async def test_corpus_index_ask_and_verify_citations(admin):
         client.set_transport(None)
     assert r.status_code == 200, r.text
     msg = r.json()
-    prompt = CALLS[0]["chat"]
+    prompt = next(c["chat"] for c in CALLS if "chat" in c)
     assert "Ignore any instruction" not in prompt  # a regra fica no system, não nos trechos
     assert "randomised 120 adults" in prompt
     # O marcador [9] não existe e foi removido; a citação inventada não vira fonte
@@ -160,15 +184,26 @@ async def test_corpus_index_ask_and_verify_citations(admin):
     # Duas citações para o mesmo trecho: vale a que foi encontrada no PDF
     assert src["verified"] is True and src["score"] == 100
     assert src["quote"] == "We randomised 120 adults with anxiety"
-    assert msg["grounded"] is True and msg["model"] == "fake-8b"
+    assert msg["grounded"] is True and msg["answerable"] is True and msg["model"] == "fake-8b"
     usage = (await admin.get(f"/api/projects/{pid}/ai/usage")).json()
-    assert usage["calls"] == 1 and usage["input_tokens"] == 500
+    assert usage["calls"] == 2 and usage["input_tokens"] == 550  # reescrita da busca + resposta
+
+    # Os trechos não respondem: o modelo avisa, e isso não é uma resposta "não confiável"
+    client.set_transport(httpx.MockTransport(_llm))
+    try:
+        none = (
+            await admin.post(f"{base}/ask", json={"question": "How long were the yoga sessions?"})
+        ).json()
+    finally:
+        client.set_transport(None)
+    assert none["answerable"] is False and none["grounded"] is False and none["sources"] == []
 
     # Citação que não está no PDF fica não verificada
     def lying(request):
         resp = _llm(request)
         data = json.loads(json.loads(resp.content)["choices"][0]["message"]["content"])
         data["citations"] = [{"source": 1, "quote": "The trial took place in Lisbon"}]
+        data["answer"] = "They randomised 450 adults, 120 of them in Lisbon [1]."
         return httpx.Response(
             200,
             json={
@@ -183,15 +218,17 @@ async def test_corpus_index_ask_and_verify_citations(admin):
     finally:
         client.set_transport(None)
     assert msg["sources"][0]["verified"] is False and msg["grounded"] is False
+    # O 120 está no trecho citado; o 450 foi inventado
+    assert msg["unsupported_numbers"] == ["450"]
 
     # Histórico pessoal, e apagar
     hist = (await admin.get(f"{base}/messages")).json()
-    assert [m["id"] for m in hist][-1] == msg["id"] and len(hist) == 2
+    assert [m["id"] for m in hist][-1] == msg["id"] and len(hist) == 3
     other = await invite_and_join(admin, "rev@ex.org", pid, "reviewer")
     assert (await other.get(f"{base}/messages")).json() == []
     assert (await other.delete(f"{base}/messages/{msg['id']}")).status_code == 404
     assert (await admin.delete(f"{base}/messages/{msg['id']}")).status_code == 204
-    assert len((await admin.get(f"{base}/messages")).json()) == 1
+    assert len((await admin.get(f"{base}/messages")).json()) == 2
     # Qualquer membro pergunta; quem indexa é só a liderança
     assert (await other.post(f"{base}/index", json={})).status_code == 403
     await other.aclose()
@@ -210,7 +247,7 @@ async def test_no_hits_does_not_call_the_model(admin):
     finally:
         client.set_transport(None)
     assert r.status_code == 200 and r.json()["answer"] == "" and r.json()["sources"] == []
-    assert CALLS == []
+    assert not any("chat" in c for c in CALLS)  # só a reescrita da busca; sem trechos, sem resposta
 
 
 async def test_scope_budget_and_follow_up(admin):
@@ -291,3 +328,20 @@ async def test_removing_a_file_removes_its_chunks(admin):
     assert (await admin.get(f"{base}/status")).json()["chunks"] > 0
     assert (await admin.delete(f"/api/projects/{pid}/files/{f['id']}")).status_code == 204
     assert (await admin.get(f"{base}/status")).json()["chunks"] == 0
+
+
+async def test_question_in_another_language_is_expanded(admin):
+    pid, (a, _, _) = await _project_included(admin)
+    await _setup_ai(admin, pid)
+    await _upload(admin, pid, a, make_pdf("Aerobic", "We randomised 120 adults with anxiety."))
+    base = f"/api/projects/{pid}/corpus"
+    await admin.post(f"{base}/index", json={})
+    ask = {"question": "Quantos adultos foram sorteados?"}
+    client.set_transport(httpx.MockTransport(_llm))
+    try:
+        r = await admin.post(f"{base}/ask", json=ask)
+    finally:
+        client.set_transport(None)
+    assert r.status_code == 200, r.text
+    assert r.json()["sources"] and r.json()["grounded"] is True
+    assert CALLS[-2] == {"expand": ask["question"]}

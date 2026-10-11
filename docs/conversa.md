@@ -18,13 +18,25 @@ Na aba **Conversa**, você faz perguntas sobre os estudos do projeto e recebe um
 
 ## Como a resposta é montada
 
-1. A pergunta busca os trechos mais parecidos: busca de texto do próprio Postgres (qualquer idioma) e, quando há embeddings, similaridade de vetores. As duas listas são combinadas por fusão de posições (RRF).
-2. No máximo 8 trechos entram, com no máximo 3 por artigo e cerca de 9.000 caracteres, para um artigo não dominar a resposta.
-3. O modelo recebe os trechos numerados e é instruído a usar só eles, citar `[n]` depois de cada afirmação e copiar uma frase literal de cada fonte. Se os trechos não respondem, ele deve dizer isso.
-4. Para cada citação, o ReValli procura a frase no texto do trecho. Com semelhança de 90 ou mais, a citação fica **conferida** (✓). Caso contrário, fica **não encontrada** (⚠). Marcadores `[n]` que apontam para fontes que não existem são removidos.
-5. Se nenhuma citação for conferida, a resposta é marcada como não confiável.
+1. O modelo reescreve a pergunta como até 3 consultas curtas de palavras-chave (em inglês e, se for outro o idioma da pergunta, nele). Isso importa porque os artigos costumam estar em inglês e a pergunta, em português. Se essa chamada falhar, a pergunta original basta.
+2. A pergunta e as consultas buscam os trechos mais parecidos: busca de texto do próprio Postgres (qualquer idioma) e, quando há embeddings, similaridade de vetores. As listas são combinadas por fusão de posições (RRF).
+3. No máximo 8 trechos entram, com no máximo 3 por artigo e cerca de 9.000 caracteres, para um artigo não dominar a resposta.
+4. O modelo recebe os trechos numerados e é instruído a usar só eles, citar `[n]` depois de cada afirmação e copiar uma frase literal de cada fonte. Se os trechos não respondem, ele deve dizer isso (a resposta fica marcada como “sem resposta nos trechos”).
+5. Para cada citação, o ReValli procura a frase no texto do trecho. Com semelhança de 90 ou mais, a citação fica **conferida** (✓). Caso contrário, fica **não encontrada** (⚠). Marcadores `[n]` que apontam para fontes que não existem são removidos.
+6. Todo número da resposta (exceto algarismos soltos) precisa aparecer nos trechos citados. Os que não aparecem são listados num aviso.
+7. Se a resposta afirma algo e nenhuma citação for conferida, ela é marcada como não confiável.
 
-Se nenhum trecho combina com a pergunta, o modelo nem é chamado.
+Se nenhum trecho combina com a pergunta, o modelo nem é chamado para responder.
+
+## O que foi verificado com um modelo real
+
+Em 2026-10-11, com o Ollama (llama3.1 de 8 bilhões de parâmetros, e bge-m3 para os embeddings) e o texto completo de 3 artigos reais de acesso aberto sobre metformina no diabetes gestacional (os PDFs foram gerados a partir do texto completo obtido pela API do Europe PMC), 5 perguntas:
+
+- As duas perguntas em inglês com números (535 randomizadas, 268 e 267 por grupo; 110 e 107 no ensaio original, 109 e 107 na análise secundária) saíram corretas, com citação conferida.
+- Uma pergunta em português sobre um corpus em inglês só foi respondida corretamente com os embeddings (bge-m3); só com busca de texto, o modelo respondeu outra coisa (“98%”), a partir de um trecho que realmente existe no PDF. É o limite descrito abaixo: a citação existe, mas não responde à pergunta.
+- Uma pergunta sem resposta nos PDFs foi recusada (“sem resposta nos trechos”).
+
+É uma amostra pequena, de um único modelo, e não mede nada de forma estatística. Em geral, **ligue os embeddings** quando o corpus e as perguntas estiverem em idiomas diferentes.
 
 ## Limites que importam
 

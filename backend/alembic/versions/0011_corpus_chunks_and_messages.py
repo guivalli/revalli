@@ -27,6 +27,8 @@ def upgrade() -> None:
         sa.Column("answer", sa.Text(), nullable=False),
         sa.Column("sources", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("grounded", sa.Boolean(), nullable=False),
+        sa.Column("answerable", sa.Boolean(), nullable=False),
+        sa.Column("unsupported_numbers", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("scope", sa.String(length=10), nullable=False),
         sa.Column("model", sa.String(length=200), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),

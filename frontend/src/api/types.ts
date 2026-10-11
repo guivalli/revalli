@@ -694,6 +694,8 @@ export interface CorpusMessage {
   answer: string
   sources: CorpusSource[]
   grounded: boolean
+  answerable: boolean
+  unsupported_numbers: string[]
   scope: 'included' | 'all'
   model: string
   created_at: string

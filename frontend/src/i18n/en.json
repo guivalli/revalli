@@ -1102,6 +1102,7 @@
     "open_pdf": "Open in PDF",
     "close_pdf": "Close PDF",
     "remove": "Delete",
-    "model": "Model: {{model}}"
+    "model": "Model: {{model}}",
+    "numbers": "Numbers in the answer that do not appear in the cited passages: {{list}}. Check the PDF before using them."
   }
 }
