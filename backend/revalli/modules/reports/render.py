@@ -51,11 +51,13 @@ def to_docx(report: Report) -> bytes:
     sub = doc.add_paragraph(report.subtitle)
     sub.runs[0].font.color.rgb = GRAY
 
-    def caption(text: str) -> None:
+    def caption(text: str, *, keep_with_next: bool = False) -> None:
         par = doc.add_paragraph()
         run = par.add_run(text)
         run.italic = True
         run.font.size = Pt(9)
+        # A legenda de tabela fica acima dela: não pode ficar sozinha no fim da página
+        par.paragraph_format.keep_with_next = keep_with_next
 
     for b in report.blocks:
         if isinstance(b, Heading):
@@ -73,7 +75,7 @@ def to_docx(report: Report) -> bytes:
             elif b.style == "label":
                 run.bold = True
         elif isinstance(b, Table):
-            caption(b.caption)
+            caption(b.caption, keep_with_next=True)
             table = doc.add_table(rows=1, cols=len(b.head))
             table.style = "Table Grid"
             for cell, text in zip(table.rows[0].cells, b.head, strict=True):
@@ -91,6 +93,7 @@ def to_docx(report: Report) -> bytes:
             doc.add_paragraph()
         elif isinstance(b, Figure):
             doc.add_picture(io.BytesIO(b.png), width=_fit(b.png, width))
+            doc.paragraphs[-1].paragraph_format.keep_with_next = True  # legenda junto da figura
             caption(b.caption)
         elif isinstance(b, PageBreak):
             doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
