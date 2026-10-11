@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from revalli.core.db import get_db
 from revalli.core.deps import current_user, get_membership, require_lead
 from revalli.models import DecisionEvent, ExclusionReason, Project, ProjectMember, Record, User
+from revalli.modules.ai.active import order_by_scores, relevance_scores
 from revalli.modules.projects.models import Role
 from revalli.modules.screening.models import Decision, Phase
 from revalli.modules.screening.schemas import (
@@ -208,18 +209,20 @@ async def queue(
     todo = [rid for rid, st in states.items() if _needs_me(st, user.id, required)]
     if not todo:
         return Queue(items=[], remaining=0)
-    records = (
-        (
-            await db.execute(
-                select(Record)
-                .where(Record.id.in_(todo))
-                .order_by(Record.created_at, Record.id)
-                .limit(limit)
-            )
+    # Com aprendizado ativo, os mais prováveis de inclusão vêm primeiro
+    scores = await relevance_scores(db, project, todo) if phase == Phase.title_abstract else None
+    stmt = select(Record).where(Record.id.in_(todo))
+    if scores:
+        ranked = order_by_scores(todo, scores)[:limit]
+        rows = {r.id: r for r in (await db.execute(stmt.where(Record.id.in_(ranked)))).scalars()}
+        records = [rows[rid] for rid in ranked]
+    else:
+        records = (
+            (await db.execute(stmt.order_by(Record.created_at, Record.id).limit(limit)))
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
-    )
+    await db.commit()  # a conta técnica da IA pode ter sido criada agora
     return Queue(items=[_item(r) for r in records], remaining=len(todo))
 
 

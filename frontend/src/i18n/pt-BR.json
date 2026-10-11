@@ -140,7 +140,8 @@
     "running": "{{label}}…",
     "progress": "{{label}}: {{done}} de {{total}}",
     "failed": "A tarefa “{{label}}” falhou: {{error}}",
-    "ai_screen": "Triagem por IA"
+    "ai_screen": "Triagem por IA",
+    "ai_embed": "Calculando embeddings"
   },
   "import": {
     "title": "Importar arquivo de busca",
@@ -432,6 +433,21 @@
     "flags_hint": "Registros excluídos pela equipe em que a IA discordou. Vale conferir.",
     "no_flags": "Nenhum registro sinalizado.",
     "chip": "IA: {{decision}}",
-    "usage": "Uso da IA no projeto: {{calls}} chamadas, {{tokens}} tokens, {{cost}}."
+    "usage": "Uso da IA no projeto: {{calls}} chamadas, {{tokens}} tokens, {{cost}}.",
+    "active_learning": "Priorizar a fila (aprendizado ativo)",
+    "active_learning_hint": "Depois das primeiras decisões, os registros que parecem mais relevantes aparecem primeiro na triagem. Exige o modelo de embeddings.",
+    "stop_after": "Sugerir parada após N exclusões seguidas",
+    "stop_after_hint": "A regra de parada é uma sugestão; a decisão de parar é da equipe e deve ser relatada no artigo.",
+    "curve_title": "Priorização e regra de parada",
+    "curve_hint": "A curva mostra quantos incluídos apareceram ao longo da triagem. Quando ela achata, os relevantes já foram quase todos encontrados.",
+    "embed": "Calcular embeddings",
+    "embed_hint": "Necessário antes de priorizar. Só calcula o que é novo.",
+    "curve_stats": "{{screened}} de {{total}} triados, {{found}} incluídos. Exclusões seguidas desde o último incluído: {{since}}.",
+    "curve_expected": "Relevantes estimados entre os não triados: {{n}}.",
+    "prioritized_on": "A fila está ordenada pelo modelo.",
+    "prioritized_off": "A fila ainda não está priorizada (ligue a opção, calcule os embeddings e decida ao menos um incluído e um excluído).",
+    "should_stop": "Já são {{n}} ou mais exclusões seguidas e o modelo estima menos de um relevante restante. A equipe pode considerar parar a triagem.",
+    "curve_x_one": "{{count}} registro",
+    "curve_x_other": "{{count}} registros"
   }
 }

@@ -97,7 +97,7 @@ export interface DuplicateGroup {
 
 export interface Job {
   id: string
-  kind: 'dedup' | 'enrich' | 'ai_screen'
+  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed'
   status: 'queued' | 'running' | 'done' | 'failed'
   progress: number
   total: number
@@ -237,6 +237,8 @@ export interface ProjectAISettings {
   mode: 'suggest' | 'second_reviewer'
   budget_usd: number | null
   extra_instructions: string
+  active_learning: boolean
+  stop_after_irrelevant: number
 }
 export type AIScope = 'pending' | 'excluded' | 'calibration'
 export interface AIEstimate {
@@ -278,4 +280,15 @@ export interface AIUsage {
 export interface AIFlag {
   record: ScreeningItem
   suggestion: AISuggestion
+}
+export interface AICurve {
+  total: number
+  screened: number
+  found: number
+  since_last_include: number
+  expected_remaining: number | null
+  stop_after_irrelevant: number
+  should_stop: boolean
+  prioritized: boolean
+  points: { screened: number; found: number }[]
 }

@@ -8,10 +8,12 @@ from revalli.core.db import get_db
 from revalli.core.deps import admin_user, current_user, get_membership, require_lead
 from revalli.models import AIProvider, AIUsage, Record, User
 from revalli.modules.ai import client
+from revalli.modules.ai.active import screening_curve
 from revalli.modules.ai.client import AIError, Endpoint
 from revalli.modules.ai.crypto import decrypt, encrypt
 from revalli.modules.ai.schemas import (
     Calibration,
+    Curve,
     Estimate,
     FlagOut,
     InstanceAISettings,
@@ -297,3 +299,27 @@ async def bot_info(
     bot = await bot_user(db)
     await db.commit()
     return {"user_id": str(bot.id)}
+
+
+@project_router.post("/embed", response_model=JobOut, status_code=202)
+async def start_embed(
+    project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    project = await _enabled_project(db, project_id, user)
+    try:
+        res = await resolve(db, "embeddings", project_ai(project).local_only)
+    except AIError as exc:
+        raise _ai_error(exc) from exc
+    job = await create_job(db, project_id, "ai_embed")
+    await dispatch(db, job, queue="gpu" if res.provider.is_local else "remote")
+    return job
+
+
+@project_router.get("/curve", response_model=Curve)
+async def curve(
+    project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    project, _ = await get_membership(db, project_id, user)
+    out = await screening_curve(db, project)
+    await db.commit()
+    return out

@@ -49,6 +49,10 @@ class ProjectAISettings(BaseModel):
     mode: Literal["suggest", "second_reviewer"] = "suggest"
     budget_usd: float | None = Field(default=None, ge=0)
     extra_instructions: str = Field(default="", max_length=5000)
+    # Ordena a fila pelo que o modelo acha mais provável de ser incluído
+    active_learning: bool = False
+    # Sugere parar quando tantos registros seguidos forem excluídos
+    stop_after_irrelevant: int = Field(default=100, ge=10, le=10_000)
 
 
 class Criterion(BaseModel):
@@ -109,3 +113,20 @@ class UsageOut(BaseModel):
 class FlagOut(BaseModel):
     record: QueueItem
     suggestion: SuggestionOut
+
+
+class CurvePoint(BaseModel):
+    screened: int
+    found: int
+
+
+class Curve(BaseModel):
+    total: int
+    screened: int
+    found: int
+    since_last_include: int
+    expected_remaining: float | None
+    stop_after_irrelevant: int
+    should_stop: bool
+    prioritized: bool
+    points: list[CurvePoint]

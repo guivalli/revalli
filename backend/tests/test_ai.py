@@ -12,7 +12,18 @@ TA = "title_abstract"
 CALLS: list[dict] = []
 
 
+def _fake_vector(text: str) -> list[float]:
+    v = [0.0] * 16
+    for w in text.lower().split():
+        v[sum(map(ord, w)) % 16] += 1
+    return v
+
+
 def _fake_llm(request: httpx.Request) -> httpx.Response:
+    if request.url.path.endswith("/embeddings"):
+        texts = json.loads(request.content)["input"]
+        data = [{"index": i, "embedding": _fake_vector(t)} for i, t in enumerate(texts)]
+        return httpx.Response(200, json={"data": data, "usage": {"prompt_tokens": 5 * len(texts)}})
     if request.url.path.endswith("/models"):
         if request.headers.get("authorization") != "Bearer sk-test-1234":
             return httpx.Response(401, json={"error": "bad key"})
@@ -69,7 +80,8 @@ async def _configure(admin, local=False, price=(1.0, 2.0)):
             "model": "fake-8b",
             "price_input": price[0],
             "price_output": price[1],
-        }
+        },
+        "embeddings": {"provider_id": prov["id"], "model": "fake-embed"},
     }
     assert (await admin.put("/api/ai/settings", json=s)).status_code == 200
     return prov
@@ -230,3 +242,74 @@ async def test_ai_disabled_and_not_configured(admin):
     assert r.status_code == 409 and r.json()["detail"] == "ai_not_configured"
     await admin.put(f"/api/projects/{pid}/ai/settings", json={"enabled": False})
     assert (await admin.post(f"/api/projects/{pid}/ai/run", json={})).status_code == 409
+
+
+async def test_active_learning_orders_queue_and_suggests_stop(admin):
+    await _configure(admin)
+    relevant = [f"Exercise reduces anxiety in adults trial {i}" for i in range(3)]
+    irrelevant = [f"Liver toxicity in rats model {i}" for i in range(12)]
+    pid = await _project(admin, relevant + irrelevant, reviewers=1)
+    ai = {"enabled": True, "active_learning": True, "stop_after_irrelevant": 10}
+    await admin.put(f"/api/projects/{pid}/ai/settings", json=ai)
+    job = (await admin.post(f"/api/projects/{pid}/ai/embed", json={})).json()
+    assert job["status"] == "done" and job["result"]["embedded"] == 15, job
+    # Rodar de novo não recalcula nada
+    job = (await admin.post(f"/api/projects/{pid}/ai/embed", json={})).json()
+    assert job["result"]["embedded"] == 0
+
+    q = (await admin.get(f"/api/projects/{pid}/screening/{TA}/queue?limit=100")).json()["items"]
+
+    async def decide(item, decision):
+        r = await admin.post(
+            f"/api/projects/{pid}/screening/{TA}/decisions",
+            json={"record_id": item["id"], "decision": decision},
+        )
+        assert r.status_code == 200
+
+    # Sem rótulos dos dois tipos, a ordem é a de importação
+    await decide(next(i for i in q if "trial 0" in i["title"]), "include")
+    await decide(next(i for i in q if "rats model 0" in i["title"]), "exclude")
+    q = (await admin.get(f"/api/projects/{pid}/screening/{TA}/queue?limit=3")).json()["items"]
+    assert all("anxiety" in i["title"] for i in q[:2]), [i["title"] for i in q]
+
+    for item in q[:2]:
+        await decide(item, "include")
+    rest = (await admin.get(f"/api/projects/{pid}/screening/{TA}/queue?limit=100")).json()
+    for item in rest["items"]:
+        await decide(item, "exclude")
+    c = (await admin.get(f"/api/projects/{pid}/ai/curve")).json()
+    assert c["screened"] == 15 and c["found"] == 3 and c["since_last_include"] == 11
+    assert c["points"][-1] == {"screened": 15, "found": 3}
+    # Tudo triado: não há o que parar
+    assert c["should_stop"] is False
+
+
+async def test_curve_suggests_stop_with_unseen_records(admin):
+    await _configure(admin)
+    titles = ["Exercise and anxiety"] + [f"Unrelated rats study {i}" for i in range(12)]
+    pid = await _project(admin, titles, reviewers=1)
+    await admin.put(
+        f"/api/projects/{pid}/ai/settings", json={"enabled": True, "stop_after_irrelevant": 10}
+    )
+    q = (await admin.get(f"/api/projects/{pid}/screening/{TA}/queue?limit=100")).json()["items"]
+    for item in q[:11]:
+        decision = "include" if "anxiety" in item["title"] else "exclude"
+        await admin.post(
+            f"/api/projects/{pid}/screening/{TA}/decisions",
+            json={"record_id": item["id"], "decision": decision},
+        )
+    c = (await admin.get(f"/api/projects/{pid}/ai/curve")).json()
+    assert c["since_last_include"] == 10 and c["should_stop"] is True
+    assert c["prioritized"] is False and c["expected_remaining"] is None
+
+
+def test_logistic_regression_separates_classes():
+    import numpy as np
+
+    from revalli.modules.ai.active import predict, train_logistic
+
+    x = np.array([[1, 0], [0.9, 0.1], [0, 1], [0.1, 0.9], [0.2, 1]], dtype=np.float32)
+    y = np.array([1, 1, 0, 0, 0], dtype=np.float64)
+    w = train_logistic(x, y)
+    p = predict(w, np.array([[1, 0], [0, 1]], dtype=np.float32))
+    assert p[0] > 0.5 > p[1]

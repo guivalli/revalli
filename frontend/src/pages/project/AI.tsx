@@ -5,6 +5,7 @@ import {
   useAIFlags,
   useAIUsage,
   useCalibration,
+  useCurve,
   useInstanceAI,
   useProjectAI,
   useProjectAIActions,
@@ -30,12 +31,13 @@ function SettingsCard({ initial }: { initial: ProjectAISettings }) {
         {[
           ['enabled', 'ai.enabled', 'ai.enabled_hint'],
           ['local_only', 'ai.local_only', 'ai.local_only_hint'],
+          ['active_learning', 'ai.active_learning', 'ai.active_learning_hint'],
         ].map(([k, label, hint]) => (
           <label key={k} className="flex items-start gap-3">
             <input
               type="checkbox"
               className="mt-1 size-4 accent-brand-600"
-              checked={s[k as 'enabled' | 'local_only']}
+              checked={s[k as 'enabled' | 'local_only' | 'active_learning']}
               onChange={(e) => setS({ ...s, [k]: e.target.checked })}
             />
             <span>
@@ -70,6 +72,14 @@ function SettingsCard({ initial }: { initial: ProjectAISettings }) {
               step="0.5"
               value={s.budget_usd ?? ''}
               onChange={(e) => setS({ ...s, budget_usd: e.target.value === '' ? null : Number(e.target.value) })}
+            />
+          </Field>
+          <Field label={t('ai.stop_after')} hint={t('ai.stop_after_hint')}>
+            <Input
+              type="number"
+              min={10}
+              value={s.stop_after_irrelevant}
+              onChange={(e) => setS({ ...s, stop_after_irrelevant: Number(e.target.value) })}
             />
           </Field>
         </div>
@@ -161,6 +171,79 @@ function RunCard({ phase }: { phase: Phase }) {
       )}
       {run.isSuccess && <p className="text-sm text-brand-700 dark:text-brand-100">{t('ai.started')}</p>}
       <ErrorText error={estimate.error ?? run.error} />
+    </Card>
+  )
+}
+
+function CurveChart({ points, total }: { points: { screened: number; found: number }[]; total: number }) {
+  const { t } = useTranslation()
+  const w = 520
+  const h = 180
+  const pad = 32
+  const maxX = Math.max(total, 1)
+  const maxY = Math.max(...points.map((p) => p.found), 1)
+  const x = (v: number) => pad + (v / maxX) * (w - pad - 8)
+  const y = (v: number) => h - pad - (v / maxY) * (h - pad - 8)
+  const path = points.map((p, i) => `${i ? 'L' : 'M'}${x(p.screened)},${y(p.found)}`).join(' ')
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full max-w-xl" role="img" aria-label={t('ai.curve_title')}>
+      <line x1={pad} y1={h - pad} x2={w - 8} y2={h - pad} className="stroke-stone-300 dark:stroke-stone-600" />
+      <line x1={pad} y1={8} x2={pad} y2={h - pad} className="stroke-stone-300 dark:stroke-stone-600" />
+      <line
+        x1={x(0)}
+        y1={y(0)}
+        x2={x(maxX)}
+        y2={y(maxY)}
+        strokeDasharray="4 4"
+        className="stroke-stone-300 dark:stroke-stone-600"
+      />
+      <path d={`M${x(0)},${y(0)} ${path.replace(/^M/, 'L')}`} fill="none" strokeWidth={2} className="stroke-brand-600" />
+      <text x={pad} y={h - 10} fontSize={11} className="fill-stone-500">
+        0
+      </text>
+      <text x={w - 8} y={h - 10} fontSize={11} textAnchor="end" className="fill-stone-500">
+        {t('ai.curve_x', { count: maxX })}
+      </text>
+      <text x={pad - 6} y={14} fontSize={11} textAnchor="end" className="fill-stone-500">
+        {maxY}
+      </text>
+    </svg>
+  )
+}
+
+function PriorityCard() {
+  const { t } = useTranslation()
+  const { project, canManage } = useProjectContext()
+  const { data: c } = useCurve(project.id)
+  const { embed } = useProjectAIActions(project.id)
+  return (
+    <Card className="space-y-3">
+      <h2 className="font-semibold">{t('ai.curve_title')}</h2>
+      <p className="text-xs text-stone-500">{t('ai.curve_hint')}</p>
+      {canManage && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="ghost" onClick={() => embed.mutate()} disabled={embed.isPending}>
+            {t('ai.embed')}
+          </Button>
+          <span className="text-xs text-stone-500">{t('ai.embed_hint')}</span>
+        </div>
+      )}
+      <ErrorText error={embed.error} />
+      {c && (
+        <>
+          <p className="text-sm">
+            {t('ai.curve_stats', { screened: c.screened, total: c.total, found: c.found, since: c.since_last_include })}{' '}
+            {c.expected_remaining != null && t('ai.curve_expected', { n: c.expected_remaining })}
+          </p>
+          <p className="text-xs text-stone-500">{c.prioritized ? t('ai.prioritized_on') : t('ai.prioritized_off')}</p>
+          {c.points.length > 1 && <CurveChart points={c.points} total={c.total} />}
+          {c.should_stop && (
+            <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+              {t('ai.should_stop', { n: c.stop_after_irrelevant })}
+            </p>
+          )}
+        </>
+      )}
     </Card>
   )
 }
@@ -279,6 +362,7 @@ export default function AI() {
           </div>
           {canManage && configured && <RunCard key={phase} phase={phase} />}
           <CalibrationCard phase={phase} />
+          {phase === 'title_abstract' && <PriorityCard />}
           <FlagsCard phase={phase} />
         </>
       )}

@@ -140,7 +140,8 @@
     "running": "{{label}}…",
     "progress": "{{label}}: {{done}} of {{total}}",
     "failed": "The task “{{label}}” failed: {{error}}",
-    "ai_screen": "AI screening"
+    "ai_screen": "AI screening",
+    "ai_embed": "Computing embeddings"
   },
   "import": {
     "title": "Import a search file",
@@ -432,6 +433,21 @@
     "flags_hint": "Records the team excluded where the AI disagreed. Worth a check.",
     "no_flags": "No flagged records.",
     "chip": "AI: {{decision}}",
-    "usage": "AI usage on this project: {{calls}} calls, {{tokens}} tokens, {{cost}}."
+    "usage": "AI usage on this project: {{calls}} calls, {{tokens}} tokens, {{cost}}.",
+    "active_learning": "Prioritize the queue (active learning)",
+    "active_learning_hint": "After the first decisions, the records that look most relevant come first in screening. Needs the embeddings model.",
+    "stop_after": "Suggest stopping after N excludes in a row",
+    "stop_after_hint": "The stopping rule is a suggestion; the decision to stop belongs to the team and must be reported in the paper.",
+    "curve_title": "Prioritization and stopping rule",
+    "curve_hint": "The curve shows how many included records appeared along the screening. When it flattens, most relevant records have been found.",
+    "embed": "Compute embeddings",
+    "embed_hint": "Needed before prioritizing. Only computes what is new.",
+    "curve_stats": "{{screened}} of {{total}} screened, {{found}} included. Excludes in a row since the last include: {{since}}.",
+    "curve_expected": "Estimated relevant records among the unscreened: {{n}}.",
+    "prioritized_on": "The queue is ordered by the model.",
+    "prioritized_off": "The queue is not prioritized yet (turn the option on, compute embeddings and decide at least one include and one exclude).",
+    "should_stop": "There are {{n}} or more excludes in a row and the model estimates less than one relevant record left. The team may consider stopping.",
+    "curve_x_one": "{{count}} record",
+    "curve_x_other": "{{count}} records"
   }
 }

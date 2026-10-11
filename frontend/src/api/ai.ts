@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import type {
   AICalibration,
+  AICurve,
   AIFlag,
   AIEstimate,
   AIScope,
@@ -116,6 +117,10 @@ export function useProjectAIActions(pid: string) {
       onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', pid, 'ai'] }),
     }),
     estimate: useMutation({ mutationFn: (body: RunPayload) => api.post<AIEstimate>(`${base(pid)}/estimate`, body) }),
+    embed: useMutation({
+      mutationFn: () => api.post<Job>(`${base(pid)}/embed`, {}),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', pid, 'jobs'] }),
+    }),
     run: useMutation({
       mutationFn: (body: RunPayload) => api.post<Job>(`${base(pid)}/run`, body),
       onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', pid, 'jobs'] }),
@@ -129,5 +134,12 @@ export function useAIBot(pid: string, enabled = true) {
     queryFn: () => api.get<{ user_id: string }>(`${base(pid)}/bot`),
     enabled,
     staleTime: Infinity,
+  })
+}
+
+export function useCurve(pid: string) {
+  return useQuery({
+    queryKey: ['projects', pid, 'ai', 'curve'],
+    queryFn: () => api.get<AICurve>(`${base(pid)}/curve`),
   })
 }
