@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAIBot, useProjectAI, useSuggestions } from '../../api/ai'
+import { useFileActions, useFilesSummary } from '../../api/files'
 import { useMe } from '../../api/hooks'
+import { useRecentJobs } from '../../api/records'
 import {
   useAgreement,
   useConflicts,
@@ -11,7 +13,7 @@ import {
   useScreened,
   useScreeningActions,
 } from '../../api/screening'
-import type { AISuggestion, DecisionInfo, DecisionKind, Phase, Reason, ScreenedItem } from '../../api/types'
+import type { AISuggestion, DecisionInfo, DecisionKind, Job, Phase, Reason, ScreenedItem } from '../../api/types'
 import { AISuggestionChip } from '../../components/AISuggestionChip'
 import { RecordLinks } from '../../components/RecordView'
 import { Button, Card, ErrorText, Select } from '../../components/ui'
@@ -411,6 +413,107 @@ function ScreenedSection({ phase, reasons }: { phase: Phase; reasons: Reason[] }
   )
 }
 
+function lastResult(jobs: Job[] | undefined, kind: Job['kind']) {
+  const job = jobs?.find((j) => j.kind === kind && j.status === 'done')
+  return job?.result as Record<string, number | string[]> | undefined
+}
+
+function FullTextSection() {
+  const { t } = useTranslation()
+  const { project, canManage } = useProjectContext()
+  const summary = useFilesSummary(project.id)
+  const recent = useRecentJobs(project.id)
+  const { zip, openAccess } = useFileActions(project.id)
+  const s = summary.data
+  const zipRes = lastResult(recent.data, 'pdf_zip')
+  const oaRes = lastResult(recent.data, 'pdf_oa')
+  const unmatched = (zipRes?.unmatched as string[] | undefined) ?? []
+  const count = (v: unknown) => (Array.isArray(v) ? v.length : Number(v ?? 0))
+
+  return (
+    <Card className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-semibold">{t('pdf.title')}</h2>
+        {s && (
+          <p className="text-sm text-stone-500">
+            {[
+              t('pdf.summary', { with_pdf: s.with_pdf, records: s.records }),
+              s.without_text > 0 && t('pdf.without_text', { count: s.without_text }),
+              s.from_open_access > 0 && t('pdf.from_oa', { count: s.from_open_access }),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
+      </div>
+      {/* ZIP e busca de acesso aberto mexem em muitos registros de uma vez: só líderes */}
+      {canManage && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label className="inline-flex cursor-pointer items-center rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-200 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800">
+              <input
+                type="file"
+                accept=".zip,application/zip"
+                className="sr-only"
+                disabled={zip.isPending}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) zip.mutate(file)
+                  e.target.value = ''
+                }}
+              />
+              {zip.isPending ? t('pdf.uploading') : t('pdf.zip_button')}
+            </label>
+            <p className="text-xs text-stone-500">{t('pdf.zip_help')}</p>
+            <ErrorText error={zip.error} />
+            {zipRes && (
+              <p className="text-sm">
+                {t('pdf.zip_result', {
+                  matched: count(zipRes.matched),
+                  already: count(zipRes.already),
+                  unmatched: count(zipRes.unmatched),
+                  invalid: count(zipRes.invalid),
+                })}
+              </p>
+            )}
+            {unmatched.length > 0 && (
+              <details className="text-xs text-stone-500">
+                <summary className="cursor-pointer">{t('pdf.unmatched')}</summary>
+                <ul className="mt-1 list-inside list-disc">
+                  {unmatched.map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Button
+              variant="ghost"
+              className="border border-stone-300 dark:border-stone-700"
+              disabled={openAccess.isPending}
+              onClick={() => openAccess.mutate()}
+            >
+              {t('pdf.oa_button')}
+            </Button>
+            <p className="text-xs text-stone-500">{t('pdf.oa_help')}</p>
+            <ErrorText error={openAccess.error} />
+            {oaRes && 'checked' in oaRes && (
+              <p className="text-sm">
+                {t('pdf.oa_result', {
+                  checked: count(oaRes.checked),
+                  found: count(oaRes.found),
+                  downloaded: count(oaRes.downloaded),
+                })}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 export default function Screening() {
   const { t } = useTranslation()
   const { project } = useProjectContext()
@@ -436,6 +539,7 @@ export default function Screening() {
         ))}
       </div>
       <ProgressSection key={`p-${phase}`} phase={phase} />
+      {phase === 'full_text' && <FullTextSection />}
       <ConflictsSection key={`c-${phase}`} phase={phase} reasons={reasons} />
       <ScreenedSection key={`s-${phase}`} phase={phase} reasons={reasons} />
     </div>

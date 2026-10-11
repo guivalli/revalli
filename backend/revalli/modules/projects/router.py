@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from revalli.core.db import get_db
 from revalli.core.deps import current_user, get_membership, require_lead
 from revalli.models import Project, ProjectMember, User
+from revalli.modules.fulltext import storage
 from revalli.modules.projects.models import Role
 from revalli.modules.projects.schemas import (
     MemberIn,
@@ -107,6 +109,7 @@ async def delete_project(
     project = await require_lead(db, project_id, user)
     await db.delete(project)
     await db.commit()
+    await asyncio.to_thread(storage.remove_project, project_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

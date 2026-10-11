@@ -62,7 +62,14 @@ Qualquer serviço que siga o formato de chat compatível com OpenAI funciona: es
 docker compose --profile backup up -d
 ```
 
-Gera um dump do banco por dia em `deploy/backups/` e apaga os mais antigos que `BACKUP_KEEP_DAYS`. Copie essa pasta para outro disco ou outra máquina.
+Gera um dump do banco por dia em `deploy/backups/` e apaga os mais antigos que `BACKUP_KEEP_DAYS`. Também copia os PDFs para `deploy/backups/files/` e a chave que cifra as chaves de API (`secret.key`, quando ela foi gerada automaticamente). Copie essa pasta para outro disco ou outra máquina e guarde-a com cuidado: com a chave, quem tiver o backup consegue ler as chaves de API.
+
+Restaurar os PDFs (com a pilha parada):
+
+```bash
+docker run --rm -v revalli_revalli_data:/data -v "$PWD/backups:/backups:ro" alpine \
+  sh -c 'mkdir -p /data/files && cp -a /backups/files/. /data/files/ && cp -a /backups/secret.key /data/ 2>/dev/null; true'
+```
 
 Restaurar um dump:
 

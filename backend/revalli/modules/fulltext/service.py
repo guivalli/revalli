@@ -6,7 +6,7 @@ import uuid
 import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 import httpx
 from rapidfuzz import fuzz
@@ -163,58 +163,68 @@ def match_record(records: list[Record], filename: str, info: PDFInfo) -> Match:
 async def import_zip(
     db: AsyncSession,
     project: Project,
-    data: bytes,
+    source: bytes | Path,
     user_id: uuid.UUID | None,
     progress: Callable[[int, int], None] | None = None,
 ) -> dict:
+    """``source`` pode ser o caminho do ZIP no disco, para não carregar arquivos grandes na
+    memória de uma vez."""
     records = await candidate_records(db, project)
     try:
-        zf = zipfile.ZipFile(io.BytesIO(data))
+        zf = zipfile.ZipFile(io.BytesIO(source) if isinstance(source, bytes) else source)
     except zipfile.BadZipFile as exc:
         raise PDFError("invalid_zip") from exc
-    entries = [
-        i
-        for i in zf.infolist()
-        if not i.is_dir()
-        and i.filename.lower().endswith(".pdf")
-        and not PurePosixPath(i.filename).name.startswith("._")
-    ]
-    if sum(i.file_size for i in entries) > ZIP_MAX_TOTAL:
-        raise PDFError("zip_too_large")
-    stats = {"files": len(entries), "matched": 0, "already": 0, "unmatched": [], "invalid": []}
-    for n, entry in enumerate(entries, 1):
-        name = PurePosixPath(entry.filename).name
-        if entry.file_size > max_pdf_bytes():
-            stats["invalid"].append(name)
-            continue
-        content = zf.read(entry)
-        try:
-            info = read_pdf(content)
-        except PDFError:
-            stats["invalid"].append(name)
-            continue
-        m = match_record(records, name, info)
-        if m.record is None:
-            stats["unmatched"].append(name)
-        else:
-            before = (
-                await db.execute(
-                    select(func.count()).where(
-                        RecordFile.record_id == m.record.id,
-                        RecordFile.sha256 == storage.sha256(content),
+    with zf:
+        entries = [
+            i
+            for i in zf.infolist()
+            if not i.is_dir()
+            and i.filename.lower().endswith(".pdf")
+            and not PurePosixPath(i.filename).name.startswith("._")
+        ]
+        if sum(i.file_size for i in entries) > ZIP_MAX_TOTAL:
+            raise PDFError("zip_too_large")
+        stats = {"files": len(entries), "matched": 0, "already": 0, "unmatched": [], "invalid": []}
+        for n, entry in enumerate(entries, 1):
+            name = PurePosixPath(entry.filename).name
+            if entry.file_size > max_pdf_bytes():
+                stats["invalid"].append(name)
+                continue
+            content = zf.read(entry)
+            try:
+                info = read_pdf(content)
+            except PDFError:
+                stats["invalid"].append(name)
+                continue
+            m = match_record(records, name, info)
+            if m.record is None:
+                stats["unmatched"].append(name)
+            else:
+                before = (
+                    await db.execute(
+                        select(func.count()).where(
+                            RecordFile.record_id == m.record.id,
+                            RecordFile.sha256 == storage.sha256(content),
+                        )
                     )
+                ).scalar_one()
+                await attach(
+                    db,
+                    project.id,
+                    m.record,
+                    content,
+                    name,
+                    source="zip",
+                    user_id=user_id,
+                    info=info,
                 )
-            ).scalar_one()
-            await attach(
-                db, project.id, m.record, content, name, source="zip", user_id=user_id, info=info
-            )
-            stats["already" if before else "matched"] += 1
-        await db.commit()
-        if progress:
-            progress(n, len(entries))
-    stats["unmatched"] = stats["unmatched"][:200]
-    stats["invalid"] = stats["invalid"][:200]
-    return stats
+                stats["already" if before else "matched"] += 1
+            await db.commit()
+            if progress:
+                progress(n, len(entries))
+        stats["unmatched"] = stats["unmatched"][:200]
+        stats["invalid"] = stats["invalid"][:200]
+        return stats
 
 
 # --- Acesso aberto -----------------------------------------------------------------------

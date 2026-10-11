@@ -29,7 +29,7 @@ async def pdf_zip_job(db: AsyncSession, job: Job) -> dict:
         return await import_zip(
             db,
             project,
-            await asyncio.to_thread(path.read_bytes),
+            path,
             _uuid(job.params.get("user_id")),
             progress=_progress(job),
         )

@@ -101,7 +101,17 @@
     "ai_not_configured": "AI is not configured on this installation yet.",
     "ai_local_only": "This project is “local only”, but the configured model is remote.",
     "ai_disabled": "AI is turned off for this project.",
-    "ai_provider_error": "The AI provider did not respond as expected."
+    "ai_provider_error": "The AI provider did not respond as expected.",
+    "not_a_pdf": "The file is not a PDF.",
+    "invalid_pdf": "Could not open the PDF.",
+    "encrypted_pdf": "The PDF is password protected.",
+    "invalid_zip": "The file is not a valid ZIP.",
+    "zip_too_large": "The ZIP contents exceed the limit.",
+    "cannot_upload": "Your role cannot upload files.",
+    "file_not_found": "File not found.",
+    "file_missing": "The file is missing from the server disk.",
+    "lead_or_uploader_only": "Only leads or the uploader can do this.",
+    "record_not_found": "Reference not found."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -141,7 +151,9 @@
     "progress": "{{label}}: {{done}} of {{total}}",
     "failed": "The task “{{label}}” failed: {{error}}",
     "ai_screen": "AI screening",
-    "ai_embed": "Computing embeddings"
+    "ai_embed": "Computing embeddings",
+    "pdf_zip": "Importing PDFs from ZIP",
+    "pdf_oa": "Looking for open access PDFs"
   },
   "import": {
     "title": "Import a search file",
@@ -449,5 +461,37 @@
     "should_stop": "There are {{n}} or more excludes in a row and the model estimates less than one relevant record left. The team may consider stopping.",
     "curve_x_one": "{{count}} record",
     "curve_x_other": "{{count}} records"
+  },
+  "pdf": {
+    "zoom_out": "Zoom out",
+    "zoom_in": "Zoom in",
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "hits_one": "{{count}} highlighted term",
+    "hits_other": "{{count}} highlighted terms",
+    "open": "Open in new tab",
+    "error": "Could not open the PDF.",
+    "upload": "Upload PDF",
+    "add_another": "Upload another PDF",
+    "none": "This reference has no full text yet.",
+    "uploading": "Uploading…",
+    "file": "File",
+    "main": "main",
+    "no_text": "No searchable text (scanned PDF?)",
+    "open_access": "Open access",
+    "delete": "Remove",
+    "delete_confirm": "Remove this file from the reference?",
+    "make_main": "Make main",
+    "title": "Full text",
+    "summary": "{{with_pdf}} of {{records}} references have a PDF",
+    "without_text": "{{count}} without searchable text",
+    "from_oa": "{{count}} from open access",
+    "oa_button": "Find open access PDFs",
+    "oa_help": "Searches OpenAlex for free versions of references with a DOI that have no PDF yet.",
+    "zip_button": "Upload ZIP with PDFs",
+    "zip_help": "Files are linked to references by DOI (in the text or the file name) or by title.",
+    "zip_result": "{{matched}} PDFs linked, {{already}} already present, {{unmatched}} unmatched, {{invalid}} invalid",
+    "oa_result": "{{checked}} checked, {{found}} with an open version, {{downloaded}} downloaded",
+    "unmatched": "No matching reference"
   }
 }

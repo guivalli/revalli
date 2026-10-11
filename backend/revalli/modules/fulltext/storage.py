@@ -1,6 +1,7 @@
 """Arquivos guardados no volume de dados, nomeados pelo hash do conteúdo."""
 
 import hashlib
+import shutil
 import uuid
 from pathlib import Path
 
@@ -34,3 +35,8 @@ def save(project_id: uuid.UUID, data: bytes) -> str:
 def remove_if_unused(project_id: uuid.UUID, digest: str, still_used: bool) -> None:
     if not still_used:
         path_for(project_id, digest).unlink(missing_ok=True)
+
+
+def remove_project(project_id: uuid.UUID) -> None:
+    """Apaga todos os arquivos de um projeto excluído."""
+    shutil.rmtree(Path(get_settings().data_dir) / "files" / str(project_id), ignore_errors=True)

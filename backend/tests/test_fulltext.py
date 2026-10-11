@@ -1,10 +1,12 @@
 import io
+import uuid
 import zipfile
 
 import httpx
 import pymupdf
 
 from revalli.modules.fulltext import service as ft_service
+from revalli.modules.fulltext import storage
 from revalli.modules.fulltext.service import _public_url
 from tests.conftest import invite_and_join
 from tests.test_records import UPLOAD_HEADERS, _import, _ris
@@ -78,6 +80,11 @@ async def test_upload_view_and_delete(admin):
     assert [x["id"] for x in files] == [second["id"]] and files[0]["is_main"]
     summary = (await admin.get(f"/api/projects/{pid}/files/summary")).json()
     assert summary == {"records": 3, "with_pdf": 1, "without_text": 0, "from_open_access": 0}
+    # Excluir o projeto apaga os arquivos do disco
+    folder = storage.files_dir(uuid.UUID(pid))
+    assert any(folder.iterdir())
+    assert (await admin.delete(f"/api/projects/{pid}")).status_code == 204
+    assert not folder.exists()
 
 
 async def test_upload_permissions(admin):

@@ -9,6 +9,7 @@ import {
   useScreeningSettings,
 } from '../../api/screening'
 import type { DecisionKind, Phase, ScreeningItem } from '../../api/types'
+import { FullTextPanel } from '../../components/FullTextPanel'
 import { HighlightedText } from '../../components/HighlightedText'
 import { RecordLinks } from '../../components/RecordView'
 import { Button, Card, ErrorText, Input } from '../../components/ui'
@@ -251,7 +252,7 @@ export default function ScreeningSession() {
           {t(`screening.phase_${phase}`)} · {t('screening.counter', { remaining })}
         </span>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card className="space-y-4">
           <h2 className="text-xl font-semibold leading-snug">
             <HighlightedText text={current.title || t('records.no_title')} include={hlInc} exclude={hlExc} />
@@ -279,8 +280,20 @@ export default function ScreeningSession() {
           )}
           <RecordLinks r={current} />
         </Card>
+        {phase === 'full_text' && (
+          <div className="lg:col-start-1">
+            <FullTextPanel
+              key={current.id}
+              pid={project.id}
+              rid={current.id}
+              include={hlInc}
+              exclude={hlExc}
+              canUpload={project.my_role !== 'observer'}
+            />
+          </div>
+        )}
 
-        <div className="space-y-4">
+        <div className="space-y-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <Card className="space-y-3 p-4">
             {my && (
               <p className="text-sm text-stone-500">

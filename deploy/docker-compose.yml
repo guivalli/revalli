@@ -139,6 +139,7 @@ services:
     volumes:
       - ./backup.sh:/backup.sh:ro
       - ${BACKUP_DIR:-./backups}:/backups
+      - revalli_data:/data:ro
     entrypoint: ["sh", "/backup.sh"]
     depends_on:
       db:

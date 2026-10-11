@@ -101,7 +101,17 @@
     "ai_not_configured": "A IA ainda não foi configurada nesta instalação.",
     "ai_local_only": "Este projeto é “só local”, mas o modelo configurado é remoto.",
     "ai_disabled": "A IA está desligada neste projeto.",
-    "ai_provider_error": "O provedor de IA não respondeu como esperado."
+    "ai_provider_error": "O provedor de IA não respondeu como esperado.",
+    "not_a_pdf": "O arquivo não é um PDF.",
+    "invalid_pdf": "Não foi possível abrir o PDF.",
+    "encrypted_pdf": "O PDF está protegido por senha.",
+    "invalid_zip": "O arquivo não é um ZIP válido.",
+    "zip_too_large": "O conteúdo do ZIP passa do limite.",
+    "cannot_upload": "Seu papel não permite enviar arquivos.",
+    "file_not_found": "Arquivo não encontrado.",
+    "file_missing": "O arquivo sumiu do disco do servidor.",
+    "lead_or_uploader_only": "Só líderes ou quem enviou o arquivo podem fazer isso.",
+    "record_not_found": "Referência não encontrada."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -141,7 +151,9 @@
     "progress": "{{label}}: {{done}} de {{total}}",
     "failed": "A tarefa “{{label}}” falhou: {{error}}",
     "ai_screen": "Triagem por IA",
-    "ai_embed": "Calculando embeddings"
+    "ai_embed": "Calculando embeddings",
+    "pdf_zip": "Importando PDFs do ZIP",
+    "pdf_oa": "Buscando PDFs de acesso aberto"
   },
   "import": {
     "title": "Importar arquivo de busca",
@@ -449,5 +461,37 @@
     "should_stop": "Já são {{n}} ou mais exclusões seguidas e o modelo estima menos de um relevante restante. A equipe pode considerar parar a triagem.",
     "curve_x_one": "{{count}} registro",
     "curve_x_other": "{{count}} registros"
+  },
+  "pdf": {
+    "zoom_out": "Diminuir zoom",
+    "zoom_in": "Aumentar zoom",
+    "pages_one": "{{count}} página",
+    "pages_other": "{{count}} páginas",
+    "hits_one": "{{count}} termo destacado",
+    "hits_other": "{{count}} termos destacados",
+    "open": "Abrir em outra aba",
+    "error": "Não foi possível abrir o PDF.",
+    "upload": "Enviar PDF",
+    "add_another": "Enviar outro PDF",
+    "none": "Esta referência ainda não tem texto completo.",
+    "uploading": "Enviando…",
+    "file": "Arquivo",
+    "main": "principal",
+    "no_text": "Sem texto pesquisável (PDF escaneado?)",
+    "open_access": "Acesso aberto",
+    "delete": "Remover",
+    "delete_confirm": "Remover este arquivo da referência?",
+    "make_main": "Tornar principal",
+    "title": "Texto completo",
+    "summary": "{{with_pdf}} de {{records}} referências têm PDF",
+    "without_text": "{{count}} sem texto pesquisável",
+    "from_oa": "{{count}} de acesso aberto",
+    "oa_button": "Buscar PDFs de acesso aberto",
+    "oa_help": "Procura no OpenAlex versões gratuitas das referências com DOI que ainda não têm PDF.",
+    "zip_button": "Enviar ZIP com PDFs",
+    "zip_help": "Os arquivos são ligados às referências pelo DOI (no texto ou no nome do arquivo) ou pelo título.",
+    "zip_result": "{{matched}} PDFs ligados, {{already}} já existiam, {{unmatched}} sem referência, {{invalid}} inválidos",
+    "oa_result": "{{checked}} verificadas, {{found}} com versão aberta, {{downloaded}} baixadas",
+    "unmatched": "Sem referência correspondente"
   }
 }

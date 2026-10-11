@@ -97,7 +97,7 @@ export interface DuplicateGroup {
 
 export interface Job {
   id: string
-  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed'
+  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa'
   status: 'queued' | 'running' | 'done' | 'failed'
   progress: number
   total: number
@@ -291,4 +291,22 @@ export interface AICurve {
   should_stop: boolean
   prioritized: boolean
   points: { screened: number; found: number }[]
+}
+export interface RecordFile {
+  id: string
+  record_id: string
+  filename: string
+  size: number
+  pages: number
+  source: 'upload' | 'zip' | 'open_access'
+  source_url: string
+  is_main: boolean
+  has_text: boolean
+  created_at: string
+}
+export interface FilesSummary {
+  records: number
+  with_pdf: number
+  without_text: number
+  from_open_access: number
 }

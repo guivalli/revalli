@@ -7,7 +7,7 @@ Plataforma open source e auto-hospedada para conduzir revisões de literatura (s
 
 ## Estado atual
 
-Versão **0.2.0-dev (M0 a M3)**. O que já funciona:
+Versão **0.3.0-dev (M0 a M4, com partes do M4 ainda por fazer)**. O que já funciona:
 
 - Instalação com Docker Compose (banco, fila, API, worker e servidor web).
 - Configuração inicial com criação do administrador.
@@ -29,8 +29,9 @@ Versão **0.2.0-dev (M0 a M3)**. O que já funciona:
 - Triagem por IA como sugestão (mostrada só depois da decisão humana) ou como segunda revisora, checagem dos excluídos e calibração (sensibilidade, especificidade e kappa contra os humanos).
 - Aprendizado ativo: a fila de título e resumo pode ser ordenada pelos registros mais prováveis de inclusão, com curva de incluídos e sugestão de parada.
 - Benchmark da IA sobre conjuntos já rotulados (veja [docs/benchmark.md](docs/benchmark.md)).
+- Texto completo: PDFs enviados um a um ou num ZIP (ligados às referências pelo DOI ou pelo título), busca automática de versões de acesso aberto pelo OpenAlex e visualizador de PDF na tela de triagem, com as palavras do protocolo destacadas no próprio documento.
 
-O texto completo com PDFs, a extração de dados e o risco de viés vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
+O agrupamento de vários relatórios do mesmo estudo, a extração de dados e o risco de viés vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 
