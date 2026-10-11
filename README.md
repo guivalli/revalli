@@ -7,7 +7,7 @@ Plataforma open source e auto-hospedada para conduzir revisões de literatura (s
 
 ## Estado atual
 
-Versão **0.2.0-dev (M0 a M2 e a primeira parte do M3)**. O que já funciona:
+Versão **0.2.0-dev (M0 a M3)**. O que já funciona:
 
 - Instalação com Docker Compose (banco, fila, API, worker e servidor web).
 - Configuração inicial com criação do administrador.
@@ -27,8 +27,10 @@ Versão **0.2.0-dev (M0 a M2 e a primeira parte do M3)**. O que já funciona:
 - Exportação das referências em RIS ou CSV, com estado, motivos de exclusão, etiquetas e decisões (respeitando o cegamento).
 - IA plugável: Ollama no próprio servidor ou APIs remotas compatíveis com OpenAI, com chaves cifradas, opção “só IA local” por projeto, estimativa de custo, limite de gasto e cache.
 - Triagem por IA como sugestão (mostrada só depois da decisão humana) ou como segunda revisora, checagem dos excluídos e calibração (sensibilidade, especificidade e kappa contra os humanos).
+- Aprendizado ativo: a fila de título e resumo pode ser ordenada pelos registros mais prováveis de inclusão, com curva de incluídos e sugestão de parada.
+- Benchmark da IA sobre conjuntos já rotulados (veja [docs/benchmark.md](docs/benchmark.md)).
 
-O aprendizado ativo, o benchmark da IA e o texto completo com PDFs vêm nos próximos passos (veja o [roteiro](docs/roteiro.md)).
+O texto completo com PDFs, a extração de dados e o risco de viés vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 

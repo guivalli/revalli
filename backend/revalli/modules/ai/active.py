@@ -96,7 +96,13 @@ async def load_vectors(
     return {rid: np.frombuffer(v, dtype=np.float32) for rid, v in rows.all()}
 
 
-def train_logistic(x: np.ndarray, y: np.ndarray, l2: float = 1.0, steps: int = 300) -> np.ndarray:
+def train_logistic(
+    x: np.ndarray,
+    y: np.ndarray,
+    l2: float = 1.0,
+    steps: int = 300,
+    w0: np.ndarray | None = None,
+) -> np.ndarray:
     """Regressão logística com pesos de classe balanceados, por gradiente descendente.
 
     Inclusões costumam ser raras; o balanceamento evita que o modelo aprenda só a excluir.
@@ -106,7 +112,7 @@ def train_logistic(x: np.ndarray, y: np.ndarray, l2: float = 1.0, steps: int = 3
     pos = max(int(y.sum()), 1)
     neg = max(n - pos, 1)
     weights = np.where(y == 1, n / (2 * pos), n / (2 * neg))
-    w = np.zeros(d + 1, dtype=np.float64)
+    w = np.zeros(d + 1, dtype=np.float64) if w0 is None else w0.copy()
     lr = 0.5
     for _ in range(steps):
         p = 1 / (1 + np.exp(-(xb @ w)))
