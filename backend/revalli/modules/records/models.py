@@ -124,6 +124,7 @@ class Job(IdMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(20), default=JobStatus.queued)
     progress: Mapped[int] = mapped_column(Integer, default=0)
     total: Mapped[int] = mapped_column(Integer, default=0)
+    params: Mapped[dict] = mapped_column(JSONB, default=dict, server_default="{}")
     result: Mapped[dict] = mapped_column(JSONB, default=dict)
     error: Mapped[str] = mapped_column(Text, default="")
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

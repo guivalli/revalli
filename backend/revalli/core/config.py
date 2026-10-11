@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     enrichment_contact_email: str = ""
     openalex_url: str = "https://api.openalex.org"
 
+    # Chave usada para cifrar as chaves de API dos provedores de IA. Se ficar vazia,
+    # o ReValli gera uma e guarda em data_dir/secret.key na primeira vez.
+    secret_key: str = ""
+    data_dir: str = "/data"
+    # Tempo máximo de uma chamada a um modelo de IA, em segundos
+    ai_timeout: int = 120
+
 
 @lru_cache
 def get_settings() -> Settings:

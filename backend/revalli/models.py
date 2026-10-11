@@ -1,5 +1,12 @@
 """Importa todos os modelos para que o Alembic e o metadata os enxerguem."""
 
+from revalli.modules.ai.models import (
+    AIProvider,
+    AISuggestion,
+    AIUsage,
+    InstanceSetting,
+    RecordEmbedding,
+)
 from revalli.modules.auth.models import Invitation, Session, User
 from revalli.modules.projects.models import Project, ProjectMember
 from revalli.modules.records.models import (
@@ -12,6 +19,11 @@ from revalli.modules.records.models import (
 from revalli.modules.screening.models import DecisionEvent, ExclusionReason
 
 __all__ = [
+    "AIProvider",
+    "AISuggestion",
+    "AIUsage",
+    "InstanceSetting",
+    "RecordEmbedding",
     "DecisionEvent",
     "DuplicateGroup",
     "ExclusionReason",

@@ -27,18 +27,26 @@ def handler(kind: str):
     return register
 
 
-async def create_job(db: AsyncSession, project_id: uuid.UUID, kind: str) -> Job:
+async def create_job(
+    db: AsyncSession, project_id: uuid.UUID, kind: str, params: dict | None = None
+) -> Job:
     """Cria um job; se já houver um igual na fila (ainda não iniciado), reaproveita."""
+    params = params or {}
     queued = (
-        await db.execute(
-            select(Job).where(
-                Job.project_id == project_id, Job.kind == kind, Job.status == JobStatus.queued
+        (
+            await db.execute(
+                select(Job).where(
+                    Job.project_id == project_id, Job.kind == kind, Job.status == JobStatus.queued
+                )
             )
         )
-    ).scalar_one_or_none()
-    if queued is not None and not get_settings().jobs_inline:
-        return queued
-    job = Job(project_id=project_id, kind=kind)
+        .scalars()
+        .all()
+    )
+    same = next((j for j in queued if (j.params or {}) == params), None)
+    if same is not None and not get_settings().jobs_inline:
+        return same
+    job = Job(project_id=project_id, kind=kind, params=params)
     db.add(job)
     await db.commit()
     return job
@@ -46,6 +54,7 @@ async def create_job(db: AsyncSession, project_id: uuid.UUID, kind: str) -> Job:
 
 async def execute(db: AsyncSession, job_id: uuid.UUID) -> None:
     # Garante que os handlers foram registrados
+    from revalli.modules.ai import tasks as ai_tasks  # noqa: F401
     from revalli.modules.records import tasks  # noqa: F401
 
     # Reivindica o job de forma atômica para que duas execuções não rodem o mesmo

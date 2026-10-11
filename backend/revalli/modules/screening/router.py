@@ -309,6 +309,20 @@ async def progress(
         )
         for uid, name in members
     ]
+    # Quem votou sem ser membro (a IA como revisora, ou alguém que saiu do projeto)
+    listed = {uid for uid, _ in members}
+    others = await _names(db, set(per_user) - listed)
+    reviewers += [
+        ReviewerProgress(
+            user_id=uid,
+            full_name=name,
+            decided=sum(per_user[uid].values()),
+            included=per_user[uid]["include"],
+            excluded=per_user[uid]["exclude"],
+            maybe=per_user[uid]["maybe"],
+        )
+        for uid, name in others.items()
+    ]
     return Progress(
         phase=phase,
         eligible=len(states),

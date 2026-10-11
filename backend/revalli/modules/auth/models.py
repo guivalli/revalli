@@ -16,6 +16,8 @@ class User(IdMixin, TimestampMixin, Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     locale: Mapped[str] = mapped_column(String(10), default="pt-BR")
+    # Conta técnica usada pela IA quando ela atua como revisora; nunca faz login
+    is_bot: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class Session(TimestampMixin, Base):
