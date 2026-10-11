@@ -41,6 +41,7 @@ class TaskModel(BaseModel):
 class InstanceAISettings(BaseModel):
     screening: TaskModel = TaskModel()
     embeddings: TaskModel = TaskModel()
+    extraction: TaskModel = TaskModel()
 
 
 class ProjectAISettings(BaseModel):

@@ -42,7 +42,8 @@ async def clean_db():
                 "TRUNCATE users, sessions, invitations, projects, project_members, searches,"
                 " records, duplicate_groups, not_duplicates, jobs, exclusion_reasons,"
                 " decision_events, ai_providers, instance_settings, ai_suggestions, ai_usage,"
-                " record_embeddings, record_files, file_pages, studies, study_reports CASCADE"
+                " record_embeddings, record_files, file_pages, studies, study_reports,"
+                " extraction_forms, extraction_form_versions, extractions CASCADE"
             )
         )
     login_limiter._hits.clear()
