@@ -7,7 +7,7 @@ Plataforma open source e auto-hospedada para conduzir revisões de literatura (s
 
 ## Estado atual
 
-Versão **0.5.0-dev (M0 a M5, M6 em andamento)**. O que já funciona:
+Versão **0.1.0.dev0 (M0 a M5, M6 em andamento)**. O que já funciona:
 
 - Instalação com Docker Compose (banco, fila, API, worker e servidor web).
 - Configuração inicial com criação do administrador.
