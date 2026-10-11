@@ -1,0 +1,144 @@
+# ReValli: instalação de produção.
+# Uso:  cp .env.example .env  (edite)  &&  docker compose up -d --build
+# Opcionais: --profile local-ai (Ollama na GPU), --profile tunnel (Cloudflare Tunnel),
+#            --profile backup (dump diário do banco)
+
+name: revalli
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-revalli}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@db:5432/${POSTGRES_DB:-revalli}
+  REDIS_URL: redis://redis:6379/0
+  PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+
+services:
+  web:
+    build: ../frontend
+    image: ${REVALLI_IMAGE_PREFIX:-ghcr.io/guivalli}/revalli-web:${REVALLI_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    build: ../backend
+    image: ${REVALLI_IMAGE_PREFIX:-ghcr.io/guivalli}/revalli-api:${REVALLI_VERSION:-latest}
+    restart: unless-stopped
+    environment: *backend-env
+    volumes:
+      - revalli_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ../backend
+    image: ${REVALLI_IMAGE_PREFIX:-ghcr.io/guivalli}/revalli-api:${REVALLI_VERSION:-latest}
+    restart: unless-stopped
+    command: celery -A revalli.workers.celery_app worker --loglevel=info --concurrency=2 -Q default,remote,gpu
+    environment: *backend-env
+    volumes:
+      - revalli_data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-revalli}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-revalli}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # --- Opcionais -------------------------------------------------------------
+
+  ollama:
+    profiles: ["local-ai"]
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    environment:
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_KEEP_ALIVE: 30m
+    volumes:
+      - ollama_models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  cloudflared:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web
+
+  backup:
+    profiles: ["backup"]
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-revalli}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      PGDATABASE: ${POSTGRES_DB:-revalli}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    entrypoint: ["sh", "/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redis_data:
+  revalli_data:
+  caddy_data:
+  caddy_config:
+  ollama_models:

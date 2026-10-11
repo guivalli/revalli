@@ -1,0 +1,52 @@
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+
+from revalli import __version__
+from revalli.core.db import SessionLocal
+from revalli.modules.auth.router import router as auth_router
+from revalli.modules.projects.router import router as projects_router
+
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+app = FastAPI(
+    title="ReValli API",
+    version=__version__,
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+    redoc_url=None,
+)
+
+
+@app.middleware("http")
+async def require_json_for_writes(request: Request, call_next):
+    """Proteção contra CSRF: formulários de outros sites não conseguem enviar JSON
+    sem passar pelo preflight de CORS, que esta API não libera."""
+    if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/"):
+        content_type = request.headers.get("content-type", "")
+        has_body = request.headers.get("content-length", "0") not in ("", "0")
+        if (has_body or request.method != "DELETE") and not content_type.startswith(
+            "application/json"
+        ):
+            return JSONResponse({"detail": "json_required"}, status_code=415)
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    return response
+
+
+@app.get("/api/health")
+async def health():
+    db_ok = True
+    try:
+        async with SessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+    except Exception:
+        db_ok = False
+    return JSONResponse(
+        {"status": "ok" if db_ok else "degraded", "database": db_ok, "version": __version__},
+        status_code=200 if db_ok else 503,
+    )
+
+
+app.include_router(auth_router, prefix="/api")
+app.include_router(projects_router, prefix="/api")

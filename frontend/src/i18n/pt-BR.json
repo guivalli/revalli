@@ -1,0 +1,86 @@
+{
+  "app": {
+    "name": "ReValli",
+    "tagline": "Triagem colaborativa de revisões de literatura",
+    "logout": "Sair",
+    "language": "Idioma",
+    "loading": "Carregando…"
+  },
+  "setup": {
+    "title": "Configuração inicial",
+    "intro": "Crie a conta de administrador desta instalação.",
+    "submit": "Criar administrador"
+  },
+  "login": {
+    "title": "Entrar",
+    "submit": "Entrar"
+  },
+  "fields": {
+    "email": "E-mail",
+    "full_name": "Nome completo",
+    "password": "Senha",
+    "password_hint": "Mínimo de 10 caracteres.",
+    "title": "Título",
+    "description": "Descrição",
+    "review_type": "Tipo de revisão",
+    "role": "Papel"
+  },
+  "projects": {
+    "title": "Projetos",
+    "empty": "Você ainda não participa de nenhum projeto.",
+    "new": "Novo projeto",
+    "create": "Criar projeto",
+    "cancel": "Cancelar",
+    "members_count_one": "{{count}} membro",
+    "members_count_other": "{{count}} membros",
+    "back": "Voltar aos projetos",
+    "not_found": "Projeto não encontrado."
+  },
+  "review_type": {
+    "systematic": "Sistemática",
+    "scoping": "De escopo",
+    "integrative": "Integrativa",
+    "other": "Outra"
+  },
+  "role": {
+    "lead": "Líder",
+    "reviewer": "Revisor",
+    "arbitrator": "Árbitro",
+    "extractor": "Extrator",
+    "observer": "Observador"
+  },
+  "members": {
+    "title": "Membros",
+    "remove": "Remover",
+    "invite_title": "Convidar pessoa",
+    "invite_submit": "Gerar convite",
+    "invite_ready": "Convite criado. Envie este link para {{email}}:",
+    "copy": "Copiar",
+    "copied": "Copiado"
+  },
+  "invite": {
+    "title": "Convite",
+    "for_project": "Você foi convidado para o projeto “{{project}}” como {{role}}.",
+    "for_instance": "Você foi convidado para usar o ReValli.",
+    "create_account": "Crie sua conta para aceitar.",
+    "login_first": "Já existe uma conta com {{email}}. Entre nela para aceitar o convite.",
+    "accept": "Aceitar convite",
+    "invalid": "Este convite não é válido ou já expirou."
+  },
+  "errors": {
+    "invalid_credentials": "E-mail ou senha incorretos.",
+    "too_many_attempts": "Muitas tentativas. Aguarde alguns minutos.",
+    "already_set_up": "Esta instalação já foi configurada.",
+    "validation_error": "Confira os campos preenchidos.",
+    "lead_only": "Só líderes do projeto podem fazer isso.",
+    "admin_only": "Só administradores podem fazer isso.",
+    "last_lead": "O projeto precisa de pelo menos um líder.",
+    "already_member": "Essa pessoa já é membro.",
+    "user_not_found": "Usuário não encontrado.",
+    "login_required": "Entre na sua conta para continuar.",
+    "unknown_error": "Algo deu errado. Tente de novo."
+  },
+  "footer": {
+    "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
+  }
+}

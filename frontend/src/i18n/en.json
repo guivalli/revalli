@@ -1,0 +1,86 @@
+{
+  "app": {
+    "name": "ReValli",
+    "tagline": "Collaborative screening for literature reviews",
+    "logout": "Log out",
+    "language": "Language",
+    "loading": "Loading…"
+  },
+  "setup": {
+    "title": "Initial setup",
+    "intro": "Create the administrator account for this installation.",
+    "submit": "Create administrator"
+  },
+  "login": {
+    "title": "Log in",
+    "submit": "Log in"
+  },
+  "fields": {
+    "email": "Email",
+    "full_name": "Full name",
+    "password": "Password",
+    "password_hint": "At least 10 characters.",
+    "title": "Title",
+    "description": "Description",
+    "review_type": "Review type",
+    "role": "Role"
+  },
+  "projects": {
+    "title": "Projects",
+    "empty": "You are not part of any project yet.",
+    "new": "New project",
+    "create": "Create project",
+    "cancel": "Cancel",
+    "members_count_one": "{{count}} member",
+    "members_count_other": "{{count}} members",
+    "back": "Back to projects",
+    "not_found": "Project not found."
+  },
+  "review_type": {
+    "systematic": "Systematic",
+    "scoping": "Scoping",
+    "integrative": "Integrative",
+    "other": "Other"
+  },
+  "role": {
+    "lead": "Lead",
+    "reviewer": "Reviewer",
+    "arbitrator": "Arbitrator",
+    "extractor": "Extractor",
+    "observer": "Observer"
+  },
+  "members": {
+    "title": "Members",
+    "remove": "Remove",
+    "invite_title": "Invite someone",
+    "invite_submit": "Create invitation",
+    "invite_ready": "Invitation created. Send this link to {{email}}:",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "invite": {
+    "title": "Invitation",
+    "for_project": "You were invited to the project “{{project}}” as {{role}}.",
+    "for_instance": "You were invited to use ReValli.",
+    "create_account": "Create your account to accept.",
+    "login_first": "An account for {{email}} already exists. Log in to accept the invitation.",
+    "accept": "Accept invitation",
+    "invalid": "This invitation is invalid or has expired."
+  },
+  "errors": {
+    "invalid_credentials": "Wrong email or password.",
+    "too_many_attempts": "Too many attempts. Please wait a few minutes.",
+    "already_set_up": "This installation is already set up.",
+    "validation_error": "Please check the fields.",
+    "lead_only": "Only project leads can do this.",
+    "admin_only": "Only administrators can do this.",
+    "last_lead": "The project needs at least one lead.",
+    "already_member": "This person is already a member.",
+    "user_not_found": "User not found.",
+    "login_required": "Log in to continue.",
+    "unknown_error": "Something went wrong. Please try again."
+  },
+  "footer": {
+    "vibecoded": "Experimental project built with heavy AI assistance."
+  }
+}

@@ -1,0 +1,13 @@
+# Roteiro
+
+Cada marco termina com uma versão utilizável.
+
+| Marco | Conteúdo | Estado |
+|---|---|---|
+| M0 | Fundação: Docker, login, projetos, membros, convites, CI | em andamento |
+| M1 | Importação (RIS, BibTeX, PubMed, CSV), registro de buscas, enriquecimento de metadados, deduplicação | planejado |
+| M2 | Triagem cega pelo teclado, destaque de palavras-chave, etiquetas, filtros, conflitos, concordância, PRISMA 2020, exportação | planejado |
+| M3 | IA plugável (local ou remota), triagem assistida, calibração, controle de custo, aprendizado ativo e critério de parada | planejado |
+| M4 | Texto completo: PDFs, busca de acesso aberto, visualizador, agrupamento de relatórios por estudo | planejado |
+| M5 | Extração de dados e risco de viés, com citação literal verificada no PDF | planejado |
+| M6 | Síntese, snowballing, buscas por API, relatórios, conversa com o corpus, API pública e servidor MCP | planejado |
