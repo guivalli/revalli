@@ -27,6 +27,7 @@ const CodingUnit = lazy(() => import('./pages/project/CodingUnit'))
 const Meta = lazy(() => import('./pages/project/Meta'))
 const Grade = lazy(() => import('./pages/project/Grade'))
 const AI = lazy(() => import('./pages/project/AI'))
+const Corpus = lazy(() => import('./pages/project/Corpus'))
 const AISettings = lazy(() => import('./pages/AISettings'))
 
 function Lazy({ children }: { children: ReactNode }) {
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="sintese/meta" element={<Lazy><Meta /></Lazy>} />
           <Route path="sintese/grade" element={<Lazy><Grade /></Lazy>} />
           <Route path="sintese/:recordId" element={<Lazy><CodingUnit /></Lazy>} />
+          <Route path="conversa" element={<Lazy><Corpus /></Lazy>} />
           <Route path="relatorio" element={<Lazy><Report /></Lazy>} />
           <Route path="membros" element={<Members />} />
         </Route>

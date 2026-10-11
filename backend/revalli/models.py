@@ -8,6 +8,7 @@ from revalli.modules.ai.models import (
     RecordEmbedding,
 )
 from revalli.modules.auth.models import Invitation, Session, User
+from revalli.modules.corpus.models import Chunk, ChunkEmbedding, CorpusMessage
 from revalli.modules.extraction.models import Extraction, ExtractionForm, FormVersion
 from revalli.modules.fulltext.models import FilePage, RecordFile, Study, StudyReport
 from revalli.modules.meta.models import GradeRow, MetaAnalysis
@@ -23,6 +24,9 @@ from revalli.modules.screening.models import DecisionEvent, ExclusionReason
 from revalli.modules.synthesis.models import ChecklistEntry, Code, Excerpt, ExcerptCode
 
 __all__ = [
+    "Chunk",
+    "ChunkEmbedding",
+    "CorpusMessage",
     "GradeRow",
     "MetaAnalysis",
     "ChecklistEntry",

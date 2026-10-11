@@ -54,6 +54,7 @@ export default function ProjectLayout() {
     { to: 'sintese', label: t('tabs.synthesis') },
     { to: 'protocolo', label: t('tabs.protocol') },
     { to: 'ia', label: t('tabs.ai') },
+    { to: 'conversa', label: t('tabs.corpus') },
     { to: 'relatorio', label: t('tabs.report') },
     { to: 'membros', label: t('tabs.members') },
   ]

@@ -134,7 +134,8 @@
     "analysis_not_found": "Meta-análise não encontrada.",
     "grade_not_found": "Desfecho do GRADE não encontrado.",
     "duplicate_row_id": "Há linhas repetidas na tabela de dados.",
-    "invalid_figure": "Uma das figuras do relatório não pôde ser lida."
+    "invalid_figure": "Uma das figuras do relatório não pôde ser lida.",
+    "corpus_not_indexed": "Indexe os PDFs antes de perguntar."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -150,7 +151,8 @@
     "report": "Relatório",
     "ai": "IA",
     "extraction": "Extração",
-    "synthesis": "Síntese"
+    "synthesis": "Síntese",
+    "corpus": "Conversa"
   },
   "summary": {
     "identified": "Registros identificados",
@@ -503,7 +505,9 @@
     "curve_x_one": "{{count}} registro",
     "curve_x_other": "{{count}} registros",
     "task_extraction": "Extração de dados",
-    "task_extraction_hint": "Modelo que lê os PDFs e preenche os campos marcados nos formulários de extração. Precisa de um contexto longo (32 mil tokens ou mais)."
+    "task_extraction_hint": "Modelo que lê os PDFs e preenche os campos marcados nos formulários de extração. Precisa de um contexto longo (32 mil tokens ou mais).",
+    "task_chat": "Conversa com os PDFs",
+    "task_chat_hint": "Modelo que responde perguntas sobre os PDFs. Se ficar vazio, usa o modelo da triagem."
   },
   "pdf": {
     "zoom_out": "Diminuir zoom",
@@ -1066,5 +1070,38 @@
     "section_appendix_checklist": "Apêndice: checklist",
     "generate": "Gerar relatório",
     "generating": "Gerando…"
+  },
+  "corpus": {
+    "title": "Conversa com os PDFs",
+    "hint": "Pergunte sobre os estudos e receba uma resposta só com o que os PDFs dizem, com o trecho e a página de cada afirmação. Cada citação é procurada no texto do PDF.",
+    "not_enabled": "A IA está desligada neste projeto. Ligue na aba IA.",
+    "no_model": "Nenhum modelo de conversa configurado. A administração escolhe em Configuração da IA.",
+    "indexed": "{{chunks}} trechos indexados",
+    "pending": "{{count}} PDFs ainda sem índice",
+    "embedded": "Busca por significado: {{n}} de {{chunks}} trechos ({{model}})",
+    "text_only": "Busca só por palavras (sem modelo de embeddings configurado)",
+    "index": "Indexar PDFs",
+    "indexing": "Indexando…",
+    "empty": "Nenhum PDF com texto foi indexado ainda. Envie os PDFs na aba Referências e indexe.",
+    "question": "Pergunta",
+    "placeholder": "Ex.: Qual foi a dose e a duração da intervenção nos estudos?",
+    "scope": "Onde procurar",
+    "scope_included": "Estudos incluídos",
+    "scope_all": "Todos os PDFs do projeto",
+    "follow_up": "É continuação da pergunta anterior",
+    "ask": "Perguntar",
+    "asking": "Procurando e respondendo…",
+    "history": "Histórico",
+    "no_history": "Nenhuma pergunta ainda.",
+    "no_hits": "Nenhum trecho dos PDFs combina com a pergunta. Tente outras palavras ou procure em todos os PDFs.",
+    "not_grounded": "Nenhuma citação pôde ser conferida no texto do PDF. Trate esta resposta como não confiável.",
+    "sources": "Fontes",
+    "verified": "citação conferida no PDF",
+    "unverified": "citação não encontrada no PDF",
+    "page": "p. {{page}}",
+    "open_pdf": "Abrir no PDF",
+    "close_pdf": "Fechar PDF",
+    "remove": "Apagar",
+    "model": "Modelo: {{model}}"
   }
 }

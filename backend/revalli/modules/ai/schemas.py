@@ -42,6 +42,8 @@ class InstanceAISettings(BaseModel):
     screening: TaskModel = TaskModel()
     embeddings: TaskModel = TaskModel()
     extraction: TaskModel = TaskModel()
+    # Conversa com o corpus; sem um modelo próprio, usa o da triagem
+    chat: TaskModel = TaskModel()
 
 
 class ProjectAISettings(BaseModel):

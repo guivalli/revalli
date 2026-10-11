@@ -184,6 +184,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "task_screening": "Triagem",
         "task_extraction": "Extração",
         "task_query_translation": "Tradução de busca",
+        "task_corpus_chat": "Conversa com os PDFs",
         "task_embeddings": "Ordenação por relevância",
         "calibration_table": (
             "Desempenho da IA comparado à decisão humana final (“talvez” conta como inclusão)."
@@ -385,6 +386,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "task_screening": "Screening",
         "task_extraction": "Extraction",
         "task_query_translation": "Search translation",
+        "task_corpus_chat": "Chat with the PDFs",
         "task_embeddings": "Relevance ranking",
         "calibration_table": (
             "AI performance against the final human decision (“maybe” counts as include)."

@@ -102,7 +102,7 @@ export interface DuplicateGroup {
 
 export interface Job {
   id: string
-  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa' | 'ai_extract' | 'api_search' | 'snowball'
+  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa' | 'ai_extract' | 'api_search' | 'snowball' | 'corpus_index'
   status: 'queued' | 'running' | 'done' | 'failed'
   progress: number
   total: number
@@ -242,6 +242,7 @@ export interface InstanceAISettings {
   screening: TaskModel
   embeddings: TaskModel
   extraction: TaskModel
+  chat: TaskModel
 }
 export interface ProjectAISettings {
   enabled: boolean
@@ -662,4 +663,38 @@ export interface GradeRowT {
     egger_p: number | null
   } | null
   suggestions: string[]
+}
+
+export interface CorpusStatus {
+  chunks: number
+  pending_files: number
+  embedded: number
+  embeddings_model: string | null
+  chat_model: string | null
+  enabled: boolean
+}
+
+export interface CorpusSource {
+  n: number
+  record_id: string
+  file_id: string
+  page: number
+  title: string
+  authors: string[]
+  year: number | null
+  excerpt: string
+  quote: string
+  score: number
+  verified: boolean
+}
+
+export interface CorpusMessage {
+  id: string
+  question: string
+  answer: string
+  sources: CorpusSource[]
+  grounded: boolean
+  scope: 'included' | 'all'
+  model: string
+  created_at: string
 }

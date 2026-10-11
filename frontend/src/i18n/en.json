@@ -134,7 +134,8 @@
     "analysis_not_found": "Meta-analysis not found.",
     "grade_not_found": "GRADE outcome not found.",
     "duplicate_row_id": "The data table has repeated rows.",
-    "invalid_figure": "One of the report figures could not be read."
+    "invalid_figure": "One of the report figures could not be read.",
+    "corpus_not_indexed": "Index the PDFs before asking."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -150,7 +151,8 @@
     "report": "Report",
     "ai": "AI",
     "extraction": "Extraction",
-    "synthesis": "Synthesis"
+    "synthesis": "Synthesis",
+    "corpus": "Chat"
   },
   "summary": {
     "identified": "Records identified",
@@ -503,7 +505,9 @@
     "curve_x_one": "{{count}} record",
     "curve_x_other": "{{count}} records",
     "task_extraction": "Data extraction",
-    "task_extraction_hint": "Model that reads the PDFs and fills the fields marked in the extraction forms. Needs a long context (32k tokens or more)."
+    "task_extraction_hint": "Model that reads the PDFs and fills the fields marked in the extraction forms. Needs a long context (32k tokens or more).",
+    "task_chat": "Chat with the PDFs",
+    "task_chat_hint": "Model that answers questions about the PDFs. If left empty, the screening model is used."
   },
   "pdf": {
     "zoom_out": "Zoom out",
@@ -1066,5 +1070,38 @@
     "section_appendix_checklist": "Appendix: checklist",
     "generate": "Generate report",
     "generating": "Generating…"
+  },
+  "corpus": {
+    "title": "Chat with the PDFs",
+    "hint": "Ask about the studies and get an answer built only from what the PDFs say, with the passage and page behind each claim. Every citation is looked up in the PDF text.",
+    "not_enabled": "AI is turned off in this project. Turn it on in the AI tab.",
+    "no_model": "No chat model configured. The administrator picks one in the AI settings.",
+    "indexed": "{{chunks}} passages indexed",
+    "pending": "{{count}} PDFs not indexed yet",
+    "embedded": "Search by meaning: {{n}} of {{chunks}} passages ({{model}})",
+    "text_only": "Keyword search only (no embeddings model configured)",
+    "index": "Index PDFs",
+    "indexing": "Indexing…",
+    "empty": "No PDF with text has been indexed yet. Upload the PDFs in the References tab and index them.",
+    "question": "Question",
+    "placeholder": "E.g.: What were the dose and duration of the intervention in the studies?",
+    "scope": "Where to look",
+    "scope_included": "Included studies",
+    "scope_all": "All project PDFs",
+    "follow_up": "This continues the previous question",
+    "ask": "Ask",
+    "asking": "Searching and answering…",
+    "history": "History",
+    "no_history": "No questions yet.",
+    "no_hits": "No PDF passage matches the question. Try other words or search all PDFs.",
+    "not_grounded": "No citation could be checked against the PDF text. Treat this answer as unreliable.",
+    "sources": "Sources",
+    "verified": "quote checked in the PDF",
+    "unverified": "quote not found in the PDF",
+    "page": "p. {{page}}",
+    "open_pdf": "Open in PDF",
+    "close_pdf": "Close PDF",
+    "remove": "Delete",
+    "model": "Model: {{model}}"
   }
 }

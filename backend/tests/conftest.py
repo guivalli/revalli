@@ -45,7 +45,8 @@ async def clean_db():
                 " decision_events, ai_providers, instance_settings, ai_suggestions, ai_usage,"
                 " record_embeddings, record_files, file_pages, studies, study_reports,"
                 " extraction_forms, extraction_form_versions, extractions, codes, excerpts,"
-                " excerpt_codes, checklist_entries, meta_analyses, grade_rows CASCADE"
+                " excerpt_codes, checklist_entries, meta_analyses, grade_rows,"
+                " corpus_chunks, corpus_chunk_embeddings, corpus_messages CASCADE"
             )
         )
     login_limiter._hits.clear()

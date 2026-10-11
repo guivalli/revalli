@@ -7,6 +7,7 @@ from revalli.core.db import SessionLocal
 from revalli.modules.ai.router import project_router as ai_project_router
 from revalli.modules.ai.router import router as ai_router
 from revalli.modules.auth.router import router as auth_router
+from revalli.modules.corpus.router import router as corpus_router
 from revalli.modules.extraction.router import router as extraction_router
 from revalli.modules.fulltext.router import router as fulltext_router
 from revalli.modules.meta.router import router as meta_router
@@ -76,3 +77,4 @@ app.include_router(extraction_router, prefix="/api")
 app.include_router(sources_router, prefix="/api")
 app.include_router(synthesis_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")
+app.include_router(corpus_router, prefix="/api")
