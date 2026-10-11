@@ -24,6 +24,8 @@ const FormBuilder = lazy(() => import('./pages/project/FormBuilder'))
 const Report = lazy(() => import('./pages/project/Report'))
 const Coding = lazy(() => import('./pages/project/Coding'))
 const CodingUnit = lazy(() => import('./pages/project/CodingUnit'))
+const Meta = lazy(() => import('./pages/project/Meta'))
+const Grade = lazy(() => import('./pages/project/Grade'))
 const AI = lazy(() => import('./pages/project/AI'))
 const AISettings = lazy(() => import('./pages/AISettings'))
 
@@ -79,6 +81,8 @@ export default function App() {
           <Route path="extracao/:formId/editar" element={<Lazy><FormBuilder /></Lazy>} />
           <Route path="extracao/:formId/:recordId" element={<Lazy><ExtractionUnit /></Lazy>} />
           <Route path="sintese" element={<Lazy><Coding /></Lazy>} />
+          <Route path="sintese/meta" element={<Lazy><Meta /></Lazy>} />
+          <Route path="sintese/grade" element={<Lazy><Grade /></Lazy>} />
           <Route path="sintese/:recordId" element={<Lazy><CodingUnit /></Lazy>} />
           <Route path="relatorio" element={<Lazy><Report /></Lazy>} />
           <Route path="membros" element={<Members />} />

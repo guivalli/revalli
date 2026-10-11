@@ -551,3 +551,113 @@ export interface ChecklistFacts {
   coding: { codes: number; excerpts: number }
   prisma: Prisma
 }
+
+export type Measure = 'MD' | 'SMD' | 'RR' | 'OR' | 'RD' | 'HR' | 'GENERIC'
+
+export interface MetaRow {
+  id: string
+  record_id: string | null
+  label: string
+  subgroup: string
+  n1?: number | null
+  mean1?: number | null
+  sd1?: number | null
+  e1?: number | null
+  n2?: number | null
+  mean2?: number | null
+  sd2?: number | null
+  e2?: number | null
+  hr?: number | null
+  hr_lower?: number | null
+  hr_upper?: number | null
+  yi?: number | null
+  sei?: number | null
+}
+
+export interface MetaAnalysisT {
+  id: string
+  name: string
+  outcome: string
+  measure: Measure
+  model: 'random' | 'fixed'
+  label1: string
+  label2: string
+  lower_favours_1: boolean
+  rows: MetaRow[]
+}
+
+export interface PooledT {
+  k: number
+  estimate: number
+  lower: number
+  upper: number
+  p: number
+  z: number
+  q: number
+  df: number
+  p_q: number | null
+  i2: number
+  tau2: number
+  prediction: [number, number] | null
+  participants: number | null
+}
+
+export interface MetaResult {
+  measure: Measure
+  model: string
+  log_scale: boolean
+  studies: {
+    id: string
+    label: string
+    subgroup: string
+    yi: number | null
+    se: number | null
+    estimate: number | null
+    lower: number | null
+    upper: number | null
+    weight: number | null
+    skipped: string | null
+    corrected: boolean
+    participants: number | null
+  }[]
+  pooled: PooledT | null
+  subgroups: { name: string; pooled: PooledT | null }[]
+  subgroup_test: { q: number; df: number; p: number } | null
+  egger: { intercept: number; se: number; t: number; p: number } | null
+}
+
+export type GradeDomainKey =
+  | 'risk_of_bias'
+  | 'inconsistency'
+  | 'indirectness'
+  | 'imprecision'
+  | 'publication_bias'
+  | 'large_effect'
+  | 'dose_response'
+  | 'confounding'
+
+export interface GradeRowT {
+  id: string
+  outcome: string
+  analysis_id: string | null
+  design: 'rct' | 'observational'
+  studies: number | null
+  participants: number | null
+  effect: string
+  domains: Partial<Record<GradeDomainKey, { rating: number; reason: string }>>
+  importance: 'critical' | 'important' | 'limited'
+  comments: string
+  certainty: 'high' | 'moderate' | 'low' | 'very_low'
+  auto: {
+    measure: Measure
+    k: number
+    participants: number | null
+    estimate: number
+    lower: number
+    upper: number
+    i2: number
+    crosses_null: boolean
+    egger_p: number | null
+  } | null
+  suggestions: string[]
+}

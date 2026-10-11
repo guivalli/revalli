@@ -10,6 +10,7 @@ from revalli.modules.ai.models import (
 from revalli.modules.auth.models import Invitation, Session, User
 from revalli.modules.extraction.models import Extraction, ExtractionForm, FormVersion
 from revalli.modules.fulltext.models import FilePage, RecordFile, Study, StudyReport
+from revalli.modules.meta.models import GradeRow, MetaAnalysis
 from revalli.modules.projects.models import Project, ProjectMember
 from revalli.modules.records.models import (
     DuplicateGroup,
@@ -22,6 +23,8 @@ from revalli.modules.screening.models import DecisionEvent, ExclusionReason
 from revalli.modules.synthesis.models import ChecklistEntry, Code, Excerpt, ExcerptCode
 
 __all__ = [
+    "GradeRow",
+    "MetaAnalysis",
     "ChecklistEntry",
     "Code",
     "Excerpt",

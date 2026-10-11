@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { codingExportUrl, useCodes, useCodingActions, useExcerpts, useMatrix } from '../../api/synthesis'
 import type { Code } from '../../api/types'
 import { CodeDot } from '../../components/CodeDot'
+import { SynthesisNav } from '../../components/SynthesisNav'
 import { Button, Card, ErrorText, Input, Select } from '../../components/ui'
 import { CODE_COLORS, codeSubtree, flattenCodes } from '../../lib/codes'
 import { useProjectContext } from './context'
@@ -283,6 +284,7 @@ export default function Coding() {
 
   return (
     <div className="space-y-6">
+      <SynthesisNav pid={project.id} />
       <div className="flex flex-wrap items-start gap-3">
         <div className="mr-auto">
           <h1 className="text-lg font-semibold">{t('coding.title')}</h1>

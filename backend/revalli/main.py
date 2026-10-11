@@ -9,6 +9,7 @@ from revalli.modules.ai.router import router as ai_router
 from revalli.modules.auth.router import router as auth_router
 from revalli.modules.extraction.router import router as extraction_router
 from revalli.modules.fulltext.router import router as fulltext_router
+from revalli.modules.meta.router import router as meta_router
 from revalli.modules.projects.router import router as projects_router
 from revalli.modules.records.router import router as records_router
 from revalli.modules.reports.router import router as reports_router
@@ -74,3 +75,4 @@ app.include_router(fulltext_router, prefix="/api")
 app.include_router(extraction_router, prefix="/api")
 app.include_router(sources_router, prefix="/api")
 app.include_router(synthesis_router, prefix="/api")
+app.include_router(meta_router, prefix="/api")

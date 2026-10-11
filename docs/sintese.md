@@ -39,3 +39,30 @@ Para cada item, a liderança marca **Atendido** ou **Não se aplica** e registra
 O checklist preenchido pode ser baixado em CSV para enviar com o manuscrito.
 
 Os textos dos itens estão resumidos. Confira sempre a versão oficial de cada checklist.
+
+## Meta-análise
+
+Em **Síntese → Meta-análise**, a liderança cria uma ou mais análises; as demais pessoas veem os resultados.
+
+**Dados.** Escolha a medida e preencha uma linha por estudo:
+- **RR, OR e RD**: eventos e total de cada grupo. Um grupo com zero eventos recebe correção de 0,5; estudos sem eventos nos dois grupos ficam de fora.
+- **MD e SMD**: n, média e desvio padrão de cada grupo. A SMD é o g de Hedges.
+- **HR**: o hazard ratio e o IC 95% relatados.
+- **Genérica**: o efeito (na escala log, se for razão) e o erro padrão.
+
+**Adicionar estudos incluídos** cria uma linha por estudo incluído. **Colar de uma planilha** aceita linhas separadas por tabulação. A coluna **Subgrupo** é opcional.
+
+**Cálculo.** Feito no servidor, por variância inversa. O modelo de efeitos aleatórios usa DerSimonian-Laird e mostra τ², I², Q e o intervalo de predição. Com subgrupos, aparecem os subtotais e o teste de diferença entre eles. Os números foram conferidos com um conjunto de dados clássico da literatura (vacina BCG).
+
+**Gráficos.** O forest plot e o gráfico de funil podem ser baixados em SVG ou PNG; os dados calculados, em CSV. O teste de Egger aparece a partir de 3 estudos, com aviso quando há menos de 10.
+
+## GRADE e sumário de achados
+
+Em **Síntese → GRADE**, cada linha é um desfecho:
+1. Ligue o desfecho a uma meta-análise (opcional) e clique em **Preencher** para trazer o efeito, o número de estudos e de participantes.
+2. Escolha o desenho: ensaios randomizados começam com certeza alta; estudos observacionais, baixa.
+3. Para cada domínio, rebaixe ou eleve e escreva a justificativa.
+
+O ReValli sugere justificativas a partir da meta-análise ligada: I² alto, IC que cruza a linha de nenhum efeito, menos de 400 participantes, menos de 10 estudos ou teste de Egger com p < 0,10. As sugestões são só pontos de partida; a decisão é da equipe.
+
+A tabela de sumário de achados mostra a certeza com os símbolos ⊕ e pode ser baixada em CSV.
