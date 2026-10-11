@@ -8,6 +8,7 @@ from revalli.modules.ai.models import (
     RecordEmbedding,
 )
 from revalli.modules.auth.models import Invitation, Session, User
+from revalli.modules.fulltext.models import FilePage, RecordFile
 from revalli.modules.projects.models import Project, ProjectMember
 from revalli.modules.records.models import (
     DuplicateGroup,
@@ -26,6 +27,7 @@ __all__ = [
     "RecordEmbedding",
     "DecisionEvent",
     "DuplicateGroup",
+    "FilePage",
     "ExclusionReason",
     "Invitation",
     "Job",
@@ -33,6 +35,7 @@ __all__ = [
     "Project",
     "ProjectMember",
     "Record",
+    "RecordFile",
     "Search",
     "Session",
     "User",

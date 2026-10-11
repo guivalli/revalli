@@ -55,6 +55,7 @@ async def create_job(
 async def execute(db: AsyncSession, job_id: uuid.UUID) -> None:
     # Garante que os handlers foram registrados
     from revalli.modules.ai import tasks as ai_tasks  # noqa: F401
+    from revalli.modules.fulltext import tasks as fulltext_tasks  # noqa: F401
     from revalli.modules.records import tasks  # noqa: F401
 
     # Reivindica o job de forma atômica para que duas execuções não rodem o mesmo

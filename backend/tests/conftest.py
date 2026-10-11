@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 os.environ.setdefault(
     "DATABASE_URL", "postgresql+asyncpg://revalli:revalli@localhost:5432/revalli_test"
@@ -6,6 +7,7 @@ os.environ.setdefault(
 
 os.environ["JOBS_INLINE"] = "true"
 os.environ["SECRET_KEY"] = "test-secret"
+os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="revalli-test-")
 os.environ["ENRICHMENT_ENABLED"] = "true"
 
 import pytest  # noqa: E402
@@ -40,7 +42,7 @@ async def clean_db():
                 "TRUNCATE users, sessions, invitations, projects, project_members, searches,"
                 " records, duplicate_groups, not_duplicates, jobs, exclusion_reasons,"
                 " decision_events, ai_providers, instance_settings, ai_suggestions, ai_usage,"
-                " record_embeddings CASCADE"
+                " record_embeddings, record_files, file_pages CASCADE"
             )
         )
     login_limiter._hits.clear()

@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     # Roda tarefas de fundo na própria requisição (testes e depuração)
     jobs_inline: bool = False
     max_import_mb: int = 50
+    max_pdf_mb: int = 100
+    max_zip_mb: int = 2000
 
     # Enriquecimento de metadados pela API pública do OpenAlex
     enrichment_enabled: bool = True
