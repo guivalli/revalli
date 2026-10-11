@@ -44,7 +44,9 @@ export function Layout() {
                 {t('app.ai_settings')}
               </Link>
             )}
-            <span className="hidden text-stone-500 sm:inline">{me?.full_name}</span>
+            <Link to="/conta" className="hidden text-stone-500 hover:underline sm:inline">
+              {me?.full_name}
+            </Link>
             <LanguageSelect />
             <Button variant="ghost" onClick={() => logout.mutate()}>
               {t('app.logout')}

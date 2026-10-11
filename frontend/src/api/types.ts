@@ -700,3 +700,18 @@ export interface CorpusMessage {
   model: string
   created_at: string
 }
+
+export interface ApiTokenInfo {
+  id: string
+  name: string
+  prefix: string
+  project_id: string | null
+  scope: string
+  created_at: string
+  expires_at: string | null
+  last_used_at: string | null
+}
+
+export interface ApiTokenCreated extends ApiTokenInfo {
+  token: string
+}

@@ -135,7 +135,10 @@
     "grade_not_found": "Desfecho do GRADE não encontrado.",
     "duplicate_row_id": "Há linhas repetidas na tabela de dados.",
     "invalid_figure": "Uma das figuras do relatório não pôde ser lida.",
-    "corpus_not_indexed": "Indexe os PDFs antes de perguntar."
+    "corpus_not_indexed": "Indexe os PDFs antes de perguntar.",
+    "token_read_only": "Esta chave só lê.",
+    "token_scope": "Esta chave não acessa esta rota.",
+    "too_many_tokens": "Limite de chaves atingido. Revogue alguma."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -1104,5 +1107,22 @@
     "remove": "Apagar",
     "model": "Modelo: {{model}}",
     "numbers": "Números da resposta que não aparecem nos trechos citados: {{list}}. Confira no PDF antes de usar."
+  },
+  "account": {
+    "tokens_title": "Chaves de API",
+    "tokens_hint": "Uma chave dá acesso só de leitura aos seus projetos pela API, com o mesmo cegamento que você tem na interface. Serve para scripts e para o servidor MCP. Guarde-a como uma senha.",
+    "token_name": "Nome",
+    "token_project": "Projeto",
+    "all_projects": "Todos os meus projetos",
+    "token_days": "Validade (dias)",
+    "token_days_hint": "Vazio: não expira.",
+    "create_token": "Criar chave",
+    "token_once": "Copie agora: a chave não aparece de novo.",
+    "your_tokens": "Suas chaves",
+    "no_tokens": "Nenhuma chave ainda.",
+    "created": "criada em {{date}}",
+    "last_used": "último uso: {{date}}",
+    "expires": "expira em {{date}}",
+    "revoke": "Revogar"
   }
 }

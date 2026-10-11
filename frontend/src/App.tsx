@@ -29,6 +29,7 @@ const Grade = lazy(() => import('./pages/project/Grade'))
 const AI = lazy(() => import('./pages/project/AI'))
 const Corpus = lazy(() => import('./pages/project/Corpus'))
 const AISettings = lazy(() => import('./pages/AISettings'))
+const Account = lazy(() => import('./pages/Account'))
 
 function Lazy({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
@@ -68,6 +69,7 @@ export default function App() {
       >
         <Route index element={<Projects />} />
         <Route path="/ia" element={<Lazy><AISettings /></Lazy>} />
+        <Route path="/conta" element={<Lazy><Account /></Lazy>} />
         <Route path="/projetos/:id" element={<ProjectLayout />}>
           <Route index element={<Overview />} />
           <Route path="referencias" element={<Records />} />

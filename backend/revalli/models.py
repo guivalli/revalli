@@ -22,8 +22,10 @@ from revalli.modules.records.models import (
 )
 from revalli.modules.screening.models import DecisionEvent, ExclusionReason
 from revalli.modules.synthesis.models import ChecklistEntry, Code, Excerpt, ExcerptCode
+from revalli.modules.tokens.models import ApiToken
 
 __all__ = [
+    "ApiToken",
     "Chunk",
     "ChunkEmbedding",
     "CorpusMessage",

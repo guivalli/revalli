@@ -58,6 +58,9 @@ async def list_projects(user: User = Depends(current_user), db: AsyncSession = D
     )
     if not user.is_admin:
         q = q.where(mine.c.role.is_not(None))
+    only = getattr(user, "api_token_project_id", None)
+    if only is not None:
+        q = q.where(Project.id == only)
     rows = (await db.execute(q)).all()
     return [_out(p, Role(r) if r else None, n) for p, r, n in rows]
 

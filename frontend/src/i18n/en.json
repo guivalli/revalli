@@ -135,7 +135,10 @@
     "grade_not_found": "GRADE outcome not found.",
     "duplicate_row_id": "The data table has repeated rows.",
     "invalid_figure": "One of the report figures could not be read.",
-    "corpus_not_indexed": "Index the PDFs before asking."
+    "corpus_not_indexed": "Index the PDFs before asking.",
+    "token_read_only": "This key is read-only.",
+    "token_scope": "This key cannot access this route.",
+    "too_many_tokens": "Key limit reached. Revoke one."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -1104,5 +1107,22 @@
     "remove": "Delete",
     "model": "Model: {{model}}",
     "numbers": "Numbers in the answer that do not appear in the cited passages: {{list}}. Check the PDF before using them."
+  },
+  "account": {
+    "tokens_title": "API keys",
+    "tokens_hint": "A key gives read-only access to your projects through the API, with the same blinding you have in the interface. Use it for scripts and for the MCP server. Keep it like a password.",
+    "token_name": "Name",
+    "token_project": "Project",
+    "all_projects": "All my projects",
+    "token_days": "Valid for (days)",
+    "token_days_hint": "Empty: never expires.",
+    "create_token": "Create key",
+    "token_once": "Copy it now: the key will not be shown again.",
+    "your_tokens": "Your keys",
+    "no_tokens": "No keys yet.",
+    "created": "created {{date}}",
+    "last_used": "last used: {{date}}",
+    "expires": "expires {{date}}",
+    "revoke": "Revoke"
   }
 }
