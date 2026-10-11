@@ -12,6 +12,7 @@ import Overview from './pages/project/Overview'
 import Protocol from './pages/project/Protocol'
 import ProjectLayout from './pages/project/ProjectLayout'
 import Records from './pages/project/Records'
+import Report from './pages/project/Report'
 import Screening from './pages/project/Screening'
 import ScreeningSession from './pages/project/ScreeningSession'
 import Projects from './pages/Projects'
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="triagem" element={<Screening />} />
           <Route path="triagem/sessao" element={<ScreeningSession />} />
           <Route path="protocolo" element={<Protocol />} />
+          <Route path="relatorio" element={<Report />} />
           <Route path="membros" element={<Members />} />
         </Route>
       </Route>

@@ -33,6 +33,7 @@ from revalli.modules.screening.service import (
     RecordState,
     State,
     agreement_pairs,
+    can_see_others,
     compute_states,
     get_settings,
     kappa,
@@ -83,10 +84,7 @@ def _item(r: Record, mine: DecisionEvent | None = None) -> QueueItem:
 
 
 async def _can_see_others(db, project: Project, user: User, role: Role | None) -> bool:
-    """Com cegamento, ninguém vê as decisões dos outros, exceto árbitros que não triam."""
-    if not get_settings(project).blind:
-        return True
-    return role == Role.arbitrator
+    return can_see_others(project, role)
 
 
 # --- Configuração ----------------------------------------------------------------

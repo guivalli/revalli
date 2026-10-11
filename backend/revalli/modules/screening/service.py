@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from revalli.models import DecisionEvent, DuplicateGroup, Project, Record
+from revalli.modules.projects.models import Role
 from revalli.modules.records.models import DuplicateStatus
 from revalli.modules.screening.models import Decision, Phase
 from revalli.modules.screening.schemas import ScreeningSettings
@@ -33,6 +34,13 @@ class RecordState:
 
 def get_settings(project: Project) -> ScreeningSettings:
     return ScreeningSettings.model_validate(project.settings or {})
+
+
+def can_see_others(project: Project, role: Role | None) -> bool:
+    """Com cegamento, ninguém vê as decisões dos outros, exceto árbitros que não triam."""
+    if not get_settings(project).blind:
+        return True
+    return role == Role.arbitrator
 
 
 def eligible_ids_query(project_id: uuid.UUID, phase: Phase):

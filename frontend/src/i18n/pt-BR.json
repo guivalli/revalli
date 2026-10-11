@@ -108,7 +108,8 @@
     "duplicates": "Duplicatas",
     "members": "Membros",
     "screening": "Triagem",
-    "protocol": "Protocolo"
+    "protocol": "Protocolo",
+    "report": "Relatório"
   },
   "summary": {
     "identified": "Registros identificados",
@@ -297,5 +298,36 @@
     "unarchive": "Reativar",
     "archived": "arquivado",
     "readonly": "Só líderes podem alterar o protocolo."
+  },
+  "prisma": {
+    "title": "Fluxograma PRISMA 2020",
+    "hint": "Atualizado com as decisões da triagem. Baixe em SVG para editar ou em PNG para colar no artigo.",
+    "download_svg": "Baixar SVG",
+    "download_png": "Baixar PNG",
+    "phase_identification": "Identificação",
+    "phase_screening": "Triagem",
+    "phase_included": "Incluídos",
+    "identified": "Registros identificados de:",
+    "databases": "Bases de dados",
+    "removed_before": "Registros removidos antes da triagem:",
+    "duplicates": "Duplicatas removidas",
+    "screened": "Registros triados",
+    "excluded": "Registros excluídos",
+    "sought": "Relatórios buscados para recuperação",
+    "not_retrieved": "Relatórios não recuperados",
+    "assessed": "Relatórios avaliados para elegibilidade",
+    "reports_excluded": "Relatórios excluídos:",
+    "no_reason": "Sem motivo informado",
+    "included": "Estudos incluídos na revisão",
+    "pending_note_one": "{{count}} registro ainda sem decisão final não aparece nas caixas.",
+    "pending_note_other": "{{count}} registros ainda sem decisão final não aparecem nas caixas."
+  },
+  "export": {
+    "title": "Exportar referências",
+    "hint": "Inclui o estado de cada registro, os motivos de exclusão e as etiquetas. Com cegamento ligado, você recebe só as suas decisões.",
+    "phase": "Fase",
+    "state": "Estado",
+    "ris": "Baixar RIS",
+    "csv": "Baixar CSV (planilha)"
   }
 }

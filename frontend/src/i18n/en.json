@@ -108,7 +108,8 @@
     "duplicates": "Duplicates",
     "members": "Members",
     "screening": "Screening",
-    "protocol": "Protocol"
+    "protocol": "Protocol",
+    "report": "Report"
   },
   "summary": {
     "identified": "Records identified",
@@ -297,5 +298,36 @@
     "unarchive": "Restore",
     "archived": "archived",
     "readonly": "Only leads can change the protocol."
+  },
+  "prisma": {
+    "title": "PRISMA 2020 flow diagram",
+    "hint": "Updated from the screening decisions. Download as SVG to edit or PNG to paste into a paper.",
+    "download_svg": "Download SVG",
+    "download_png": "Download PNG",
+    "phase_identification": "Identification",
+    "phase_screening": "Screening",
+    "phase_included": "Included",
+    "identified": "Records identified from:",
+    "databases": "Databases",
+    "removed_before": "Records removed before screening:",
+    "duplicates": "Duplicate records removed",
+    "screened": "Records screened",
+    "excluded": "Records excluded",
+    "sought": "Reports sought for retrieval",
+    "not_retrieved": "Reports not retrieved",
+    "assessed": "Reports assessed for eligibility",
+    "reports_excluded": "Reports excluded:",
+    "no_reason": "No reason given",
+    "included": "Studies included in review",
+    "pending_note_one": "{{count}} record without a final decision is not counted in the boxes.",
+    "pending_note_other": "{{count}} records without a final decision are not counted in the boxes."
+  },
+  "export": {
+    "title": "Export references",
+    "hint": "Includes each record's state, exclusion reasons and labels. With blinding on, you only get your own decisions.",
+    "phase": "Phase",
+    "state": "State",
+    "ris": "Download RIS",
+    "csv": "Download CSV (spreadsheet)"
   }
 }

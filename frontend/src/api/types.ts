@@ -200,3 +200,15 @@ export interface PairAgreement {
   percent: number | null
   kappa: number | null
 }
+export interface Prisma {
+  identification: { by_source: { source: string; records: number }[]; total: number; duplicates_removed: number }
+  screening: { screened: number; excluded: number; pending: number }
+  retrieval: { sought: number; not_retrieved: number }
+  eligibility: {
+    assessed: number
+    excluded: number
+    reasons: { reason: string | null; count: number }[]
+    pending: number
+  }
+  included: number
+}

@@ -51,6 +51,7 @@ export default function ProjectLayout() {
     { to: 'duplicatas', label: t('tabs.duplicates'), badge: pending },
     { to: 'triagem', label: t('tabs.screening') },
     { to: 'protocolo', label: t('tabs.protocol') },
+    { to: 'relatorio', label: t('tabs.report') },
     { to: 'membros', label: t('tabs.members') },
   ]
 
