@@ -149,7 +149,10 @@
     "token_read_only": "Esta chave só lê.",
     "token_scope": "Esta chave não acessa esta rota.",
     "too_many_tokens": "Limite de chaves atingido. Revogue alguma.",
-    "too_many_watches": "Limite de atualizações automáticas atingido."
+    "too_many_watches": "Limite de atualizações automáticas atingido.",
+    "dimension_not_found": "Essa dimensão não existe mais.",
+    "code_has_no_children": "Esse código não tem subcódigos.",
+    "invalid_dimension": "Dimensão inválida."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -1068,7 +1071,8 @@
   "synthesis": {
     "coding": "Codificação",
     "meta": "Meta-análise",
-    "grade": "GRADE"
+    "grade": "GRADE",
+    "gaps": "Lacunas de evidência"
   },
   "report_doc": {
     "title": "Relatório da revisão (DOCX ou PDF)",
@@ -1168,5 +1172,19 @@
     "error_dns_failed": "o nome do servidor não foi encontrado",
     "error_too_large": "o arquivo é grande demais",
     "error_invalid_url": "a URL é inválida"
+  },
+  "gaps": {
+    "title": "Mapa de lacunas de evidência",
+    "hint": "Cruza duas dimensões dos estudos incluídos, por exemplo intervenção × desfecho. Cada célula conta os estudos que estão nas duas categorias; as células vazias (tracejadas) são as lacunas. As dimensões vêm dos códigos qualitativos (os subcódigos de um código) ou dos campos de escolha dos formulários de extração.",
+    "choose": "Escolha…",
+    "from_codes": "Códigos",
+    "from_fields": "Campos de extração",
+    "rows": "Linhas",
+    "cols": "Colunas",
+    "no_dimensions": "Ainda não há dimensões: crie códigos com subcódigos na aba Síntese, ou campos de escolha em um formulário de extração.",
+    "unclassified": "Sem classificação",
+    "studies": "{{count}} estudos incluídos",
+    "export": "Exportar CSV",
+    "legend": "Os números são estudos. “Sem classificação” reúne os estudos que não têm categoria nessa dimensão. Um estudo pode aparecer em várias categorias."
   }
 }

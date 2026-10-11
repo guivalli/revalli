@@ -149,7 +149,10 @@
     "token_read_only": "This key is read-only.",
     "token_scope": "This key cannot access this route.",
     "too_many_tokens": "Key limit reached. Revoke one.",
-    "too_many_watches": "Automatic update limit reached."
+    "too_many_watches": "Automatic update limit reached.",
+    "dimension_not_found": "That dimension no longer exists.",
+    "code_has_no_children": "That code has no subcodes.",
+    "invalid_dimension": "Invalid dimension."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -1068,7 +1071,8 @@
   "synthesis": {
     "coding": "Coding",
     "meta": "Meta-analysis",
-    "grade": "GRADE"
+    "grade": "GRADE",
+    "gaps": "Evidence gaps"
   },
   "report_doc": {
     "title": "Review report (DOCX or PDF)",
@@ -1168,5 +1172,19 @@
     "error_dns_failed": "the server name was not found",
     "error_too_large": "the file is too large",
     "error_invalid_url": "the URL is invalid"
+  },
+  "gaps": {
+    "title": "Evidence gap map",
+    "hint": "Crosses two dimensions of the included studies, for example intervention × outcome. Each cell counts the studies in both categories; empty (dashed) cells are the gaps. Dimensions come from qualitative codes (the subcodes of a code) or from the choice fields of extraction forms.",
+    "choose": "Choose…",
+    "from_codes": "Codes",
+    "from_fields": "Extraction fields",
+    "rows": "Rows",
+    "cols": "Columns",
+    "no_dimensions": "No dimensions yet: create codes with subcodes in the Synthesis tab, or choice fields in an extraction form.",
+    "unclassified": "Unclassified",
+    "studies": "{{count}} included studies",
+    "export": "Export CSV",
+    "legend": "Numbers are studies. “Unclassified” gathers studies with no category in that dimension. A study can appear in several categories."
   }
 }

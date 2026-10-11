@@ -38,6 +38,8 @@ class Tool:
     # Parâmetros de caminho, obrigatórios; os de consulta são opcionais
     path_params: tuple[str, ...] = ()
     query: dict[str, str] = field(default_factory=dict)
+    # Parâmetros de consulta que não podem faltar
+    required_query: tuple[str, ...] = ()
     enums: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     def schema(self) -> dict:
@@ -50,7 +52,8 @@ class Tool:
             )
         for q, desc in self.query.items():
             props[q] = {"type": "string", "description": desc}
-        return {"type": "object", "properties": props, "required": list(self.path_params)}
+        required = [*self.path_params, *self.required_query]
+        return {"type": "object", "properties": props, "required": required}
 
 
 PROJECT = ("project_id",)
@@ -144,6 +147,23 @@ TOOLS: list[Tool] = [
         PROJECT,
     ),
     Tool(
+        "gap_dimensions",
+        "Dimensões que podem ser eixo do mapa de lacunas (códigos com subcódigos e campos de escolha).",
+        "/api/projects/{project_id}/gaps/dimensions",
+        PROJECT,
+    ),
+    Tool(
+        "gap_map",
+        "Mapa de lacunas de evidência: estudos por categoria de duas dimensões (use gap_dimensions).",
+        "/api/projects/{project_id}/gaps",
+        PROJECT,
+        {
+            "rows": "referência da dimensão das linhas, como vem em gap_dimensions",
+            "cols": "referência da dimensão das colunas",
+        },
+        required_query=("rows", "cols"),
+    ),
+    Tool(
         "coding_matrix",
         "Matriz de códigos qualitativos por estudo.",
         "/api/projects/{project_id}/coding/matrix",
@@ -184,6 +204,9 @@ class Server:
         tool = BY_NAME.get(name)
         if tool is None:
             raise InvalidParams(f"Unknown tool: {name}")
+        for q in tool.required_query:
+            if not isinstance(args.get(q), str) or not args[q]:
+                raise InvalidParams(f"Missing argument: {q}")
         values: dict[str, str] = {}
         for p in tool.path_params:
             v = args.get(p)

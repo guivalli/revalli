@@ -11,6 +11,7 @@ from revalli.modules.auth.router import router as auth_router
 from revalli.modules.corpus.router import router as corpus_router
 from revalli.modules.extraction.router import router as extraction_router
 from revalli.modules.fulltext.router import router as fulltext_router
+from revalli.modules.gaps.router import router as gaps_router
 from revalli.modules.meta.router import router as meta_router
 from revalli.modules.projects.router import router as projects_router
 from revalli.modules.records.router import router as records_router
@@ -84,3 +85,4 @@ app.include_router(meta_router, prefix="/api")
 app.include_router(corpus_router, prefix="/api")
 app.include_router(tokens_router, prefix="/api")
 app.include_router(watches_router, prefix="/api")
+app.include_router(gaps_router, prefix="/api")

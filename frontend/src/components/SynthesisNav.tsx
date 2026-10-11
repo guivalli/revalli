@@ -7,6 +7,7 @@ export function SynthesisNav({ pid }: { pid: string }) {
     { to: `/projetos/${pid}/sintese`, label: t('synthesis.coding'), end: true },
     { to: `/projetos/${pid}/sintese/meta`, label: t('synthesis.meta') },
     { to: `/projetos/${pid}/sintese/grade`, label: t('synthesis.grade') },
+    { to: `/projetos/${pid}/sintese/lacunas`, label: t('synthesis.gaps') },
   ]
   return (
     <nav className="inline-flex rounded-md border border-stone-300 p-0.5 text-sm dark:border-stone-700">

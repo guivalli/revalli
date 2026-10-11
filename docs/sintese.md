@@ -66,3 +66,15 @@ Em **Síntese → GRADE**, cada linha é um desfecho:
 O ReValli sugere justificativas a partir da meta-análise ligada: I² alto, IC que cruza a linha de nenhum efeito, menos de 400 participantes, menos de 10 estudos ou teste de Egger com p < 0,10. As sugestões são só pontos de partida; a decisão é da equipe.
 
 A tabela de sumário de achados mostra a certeza com os símbolos ⊕ e pode ser baixada em CSV.
+
+## Mapa de lacunas de evidência
+
+Na aba **Síntese**, em **Lacunas de evidência**, você cruza duas dimensões dos estudos incluídos (por exemplo, intervenção × desfecho) e vê onde há evidência e onde não há.
+
+- **Dimensões.** Os subcódigos de um código da árvore qualitativa (um estudo está na categoria se algum trecho dele, ou de um subcódigo mais fundo, tem aquele código) ou as opções de um campo de **escolha** ou **múltipla escolha** de um formulário de extração (vale o valor final: consenso, ou o acordo entre extratores).
+- **Células.** O número de estudos que estão nas duas categorias; clique para ver quais. Células vazias aparecem tracejadas: são as lacunas.
+- **Sem classificação.** Estudos sem categoria numa dimensão ficam numa linha ou coluna própria, para que nada desapareça do mapa.
+- Um estudo com vários relatórios conta uma vez. Um estudo pode estar em várias categorias; por isso a soma de uma linha pode passar do total de estudos.
+- **CSV.** A exportação traz todas as combinações, inclusive as de zero estudos.
+
+O mapa é calculado na hora, a partir do que está registrado; ele não guarda configuração própria.

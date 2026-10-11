@@ -746,3 +746,22 @@ export interface WatchInput {
   every_days: number
   enabled: boolean
 }
+
+export interface GapDimensions {
+  codes: { ref: string; label: string; categories: number }[]
+  fields: { ref: string; label: string; categories: number }[]
+}
+
+export interface GapAxis {
+  source: string
+  title: string
+  categories: { key: string; label: string; n: number }[]
+}
+
+export interface GapMap {
+  rows: GapAxis
+  cols: GapAxis
+  cells: { row: string; col: string; studies: string[] }[]
+  studies: Record<string, { label: string; title: string; year: number | null }>
+  total_studies: number
+}

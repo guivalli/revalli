@@ -26,6 +26,7 @@ const Coding = lazy(() => import('./pages/project/Coding'))
 const CodingUnit = lazy(() => import('./pages/project/CodingUnit'))
 const Meta = lazy(() => import('./pages/project/Meta'))
 const Grade = lazy(() => import('./pages/project/Grade'))
+const Gaps = lazy(() => import('./pages/project/Gaps'))
 const AI = lazy(() => import('./pages/project/AI'))
 const Corpus = lazy(() => import('./pages/project/Corpus'))
 const AISettings = lazy(() => import('./pages/AISettings'))
@@ -86,6 +87,7 @@ export default function App() {
           <Route path="sintese" element={<Lazy><Coding /></Lazy>} />
           <Route path="sintese/meta" element={<Lazy><Meta /></Lazy>} />
           <Route path="sintese/grade" element={<Lazy><Grade /></Lazy>} />
+          <Route path="sintese/lacunas" element={<Lazy><Gaps /></Lazy>} />
           <Route path="sintese/:recordId" element={<Lazy><CodingUnit /></Lazy>} />
           <Route path="conversa" element={<Lazy><Corpus /></Lazy>} />
           <Route path="relatorio" element={<Lazy><Report /></Lazy>} />
