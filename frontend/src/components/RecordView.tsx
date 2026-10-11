@@ -10,7 +10,7 @@ export function Badge({ children, tone = 'stone' }: { children: string; tone?: '
   return <span className={`rounded px-1.5 py-0.5 text-xs ${tones[tone]}`}>{children}</span>
 }
 
-export function RecordLinks({ r }: { r: RecordItem }) {
+export function RecordLinks({ r }: { r: Pick<RecordItem, 'doi' | 'pmid'> }) {
   return (
     <span className="space-x-3 text-xs">
       {r.doi && (

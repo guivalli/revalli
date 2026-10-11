@@ -115,3 +115,88 @@ export interface Summary {
   missing_abstract: number
   by_source: { source: string; records: number }[]
 }
+
+export type Phase = 'title_abstract' | 'full_text'
+export type DecisionKind = 'include' | 'exclude' | 'maybe'
+
+export interface ScreeningSettings {
+  blind: boolean
+  reviewers_title_abstract: number
+  reviewers_full_text: number
+  inclusion_criteria: string
+  exclusion_criteria: string
+  highlight_include: string[]
+  highlight_exclude: string[]
+}
+
+export interface Reason {
+  id: string
+  label: string
+  position: number
+  archived: boolean
+}
+
+export interface DecisionInfo {
+  user_id: string | null
+  user_name: string | null
+  decision: DecisionKind
+  reason_ids: string[]
+  labels: string[]
+  note: string
+  is_final: boolean
+  created_at: string
+}
+
+export interface ScreeningItem {
+  id: string
+  title: string
+  abstract: string
+  authors: string[]
+  year: number | null
+  journal: string
+  doi: string | null
+  pmid: string | null
+  keywords: string[]
+  publication_type: string
+  language: string
+  my_decision: DecisionInfo | null
+}
+
+export interface Progress {
+  phase: Phase
+  eligible: number
+  included: number
+  excluded: number
+  conflicts: number
+  pending: number
+  reviewers_required: number
+  blind: boolean
+  remaining_for_me: number
+  reviewers: {
+    user_id: string
+    full_name: string
+    decided: number
+    included: number
+    excluded: number
+    maybe: number
+  }[]
+}
+
+export interface ConflictItem {
+  record: ScreeningItem
+  decisions: DecisionInfo[]
+}
+
+export interface ScreenedItem {
+  record: ScreeningItem
+  state: 'pending' | 'included' | 'excluded' | 'conflict' | 'hidden'
+  decisions: DecisionInfo[]
+}
+
+export interface PairAgreement {
+  user_a: string
+  user_b: string
+  n: number
+  percent: number | null
+  kappa: number | null
+}

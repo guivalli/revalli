@@ -70,9 +70,14 @@ async def test_observer_cannot_screen(admin):
 
 async def test_agreement_conflicts_and_resolution(admin):
     pid, ana, bia = await _setup(admin)
-    ids = [i["id"] for i in (await ana.get(f"/api/projects/{pid}/screening/{TA}/queue")).json()["items"]]
+    ids = [
+        i["id"]
+        for i in (await ana.get(f"/api/projects/{pid}/screening/{TA}/queue")).json()["items"]
+    ]
     reason = (
-        await admin.post(f"/api/projects/{pid}/screening/reasons", json={"label": "População errada"})
+        await admin.post(
+            f"/api/projects/{pid}/screening/reasons", json={"label": "População errada"}
+        )
     ).json()
     # r0: ambos incluem; r1: ambos excluem; r2: conflito; r3: só Ana
     await _decide(ana, pid, ids[0], "include")
@@ -84,7 +89,13 @@ async def test_agreement_conflicts_and_resolution(admin):
     await _decide(ana, pid, ids[3], "include")
 
     prog = (await admin.get(f"/api/projects/{pid}/screening/{TA}/progress")).json()
-    assert (prog["eligible"], prog["included"], prog["excluded"], prog["conflicts"], prog["pending"]) == (
+    assert (
+        prog["eligible"],
+        prog["included"],
+        prog["excluded"],
+        prog["conflicts"],
+        prog["pending"],
+    ) == (
         4,
         1,
         1,
@@ -112,11 +123,13 @@ async def test_agreement_conflicts_and_resolution(admin):
 
     # Revisores não resolvem
     r = await ana.post(
-        f"/api/projects/{pid}/screening/{TA}/resolve", json={"record_id": ids[2], "decision": "include"}
+        f"/api/projects/{pid}/screening/{TA}/resolve",
+        json={"record_id": ids[2], "decision": "include"},
     )
     assert r.status_code == 403
     r = await admin.post(
-        f"/api/projects/{pid}/screening/{TA}/resolve", json={"record_id": ids[2], "decision": "maybe"}
+        f"/api/projects/{pid}/screening/{TA}/resolve",
+        json={"record_id": ids[2], "decision": "maybe"},
     )
     assert r.status_code == 422
     r = await admin.post(
@@ -137,7 +150,9 @@ async def test_agreement_conflicts_and_resolution(admin):
     await admin.post(
         f"/api/projects/{pid}/screening/{TA}/resolve", json={"record_id": ids[2], "decision": None}
     )
-    assert (await admin.get(f"/api/projects/{pid}/screening/{TA}/progress")).json()["conflicts"] == 1
+    assert (await admin.get(f"/api/projects/{pid}/screening/{TA}/progress")).json()[
+        "conflicts"
+    ] == 1
     await ana.aclose()
     await bia.aclose()
 
@@ -158,7 +173,10 @@ async def test_arbitrator_sees_conflicts_even_when_blind(admin):
 
 async def test_blind_hides_others_decisions(admin):
     pid, ana, bia = await _setup(admin, n_records=2)
-    ids = [i["id"] for i in (await ana.get(f"/api/projects/{pid}/screening/{TA}/queue")).json()["items"]]
+    ids = [
+        i["id"]
+        for i in (await ana.get(f"/api/projects/{pid}/screening/{TA}/queue")).json()["items"]
+    ]
     await _decide(ana, pid, ids[0], "include", note="nota da Ana")
     await _decide(bia, pid, ids[0], "exclude")
     page = (await bia.get(f"/api/projects/{pid}/screening/{TA}/screened")).json()
@@ -191,7 +209,10 @@ async def test_duplicates_are_not_screened(admin):
 
 async def test_full_text_phase_gets_only_included(admin):
     pid, ana, bia = await _setup(admin, n_records=3, reviewers=1)
-    ids = [i["id"] for i in (await ana.get(f"/api/projects/{pid}/screening/{TA}/queue")).json()["items"]]
+    ids = [
+        i["id"]
+        for i in (await ana.get(f"/api/projects/{pid}/screening/{TA}/queue")).json()["items"]
+    ]
     await _decide(ana, pid, ids[0], "include")
     await _decide(ana, pid, ids[1], "exclude")
     ft = (await admin.get(f"/api/projects/{pid}/screening/full_text/progress")).json()

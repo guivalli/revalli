@@ -9,8 +9,11 @@ import Duplicates from './pages/project/Duplicates'
 import Import from './pages/project/Import'
 import Members from './pages/project/Members'
 import Overview from './pages/project/Overview'
+import Protocol from './pages/project/Protocol'
 import ProjectLayout from './pages/project/ProjectLayout'
 import Records from './pages/project/Records'
+import Screening from './pages/project/Screening'
+import ScreeningSession from './pages/project/ScreeningSession'
 import Projects from './pages/Projects'
 import Setup from './pages/Setup'
 
@@ -50,6 +53,9 @@ export default function App() {
           <Route path="referencias" element={<Records />} />
           <Route path="importar" element={<Import />} />
           <Route path="duplicatas" element={<Duplicates />} />
+          <Route path="triagem" element={<Screening />} />
+          <Route path="triagem/sessao" element={<ScreeningSession />} />
+          <Route path="protocolo" element={<Protocol />} />
           <Route path="membros" element={<Members />} />
         </Route>
       </Route>

@@ -49,6 +49,8 @@ export default function ProjectLayout() {
     { to: 'referencias', label: t('tabs.records') },
     ...(canManage ? [{ to: 'importar', label: t('tabs.import') }] : []),
     { to: 'duplicatas', label: t('tabs.duplicates'), badge: pending },
+    { to: 'triagem', label: t('tabs.screening') },
+    { to: 'protocolo', label: t('tabs.protocol') },
     { to: 'membros', label: t('tabs.members') },
   ]
 

@@ -7,7 +7,7 @@ Plataforma open source e auto-hospedada para conduzir revisões de literatura (s
 
 ## Estado atual
 
-Versão **0.1.0-dev (M0 e M1)**. O que já funciona:
+Versão **0.1.0-dev (M0, M1 e a primeira parte do M2)**. O que já funciona:
 
 - Instalação com Docker Compose (banco, fila, API, worker e servidor web).
 - Configuração inicial com criação do administrador.
@@ -19,8 +19,12 @@ Versão **0.1.0-dev (M0 e M1)**. O que já funciona:
 - Detecção de duplicatas por DOI, PMID e título parecido, com tela de revisão lado a lado.
 - Preenchimento automático de resumos, DOIs e PMIDs faltantes pela API pública do [OpenAlex](https://openalex.org).
 - Contagens de identificação (registros por fonte, duplicatas removidas, registros únicos).
+- Protocolo da triagem: critérios de inclusão e exclusão, motivos de exclusão, palavras destacadas em verde e vermelho, número de revisores por registro e cegamento.
+- Triagem por título e resumo feita pelo teclado (I incluir, E excluir com motivo, M talvez, U desfazer, setas para navegar), com etiquetas e notas.
+- Divisão automática do trabalho: cada registro recebe o número de revisores definido no protocolo.
+- Painel da triagem com progresso por revisor, concordância (porcentagem e kappa de Cohen), resolução de conflitos com decisão final e lista das minhas decisões.
 
-A triagem e os recursos de IA vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
+Diagrama PRISMA, exportação, triagem de texto completo e os recursos de IA vêm nos próximos marcos (veja o [roteiro](docs/roteiro.md)).
 
 ## Instalação
 
