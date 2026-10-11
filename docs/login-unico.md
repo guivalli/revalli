@@ -52,4 +52,24 @@ Fluxo de código com PKCE (S256), `state` e `nonce` amarrados ao navegador por u
 - Não há sincronização de grupos nem de papéis: administração e papéis nos projetos ficam no ReValli.
 - Sair do ReValli não encerra a sessão no provedor.
 - A configuração é por variáveis de ambiente, sem tela, para que o segredo do cliente não passe pelo banco.
-- Foi testado apenas contra um provedor simulado (ver os testes); falta um teste com um provedor real.
+- Foi verificado contra um Keycloak 26.0 real (veja abaixo). Outros provedores (Authentik, Azure AD, Google etc.) não foram testados.
+
+## Verificação contra um provedor real
+
+Em 2026-10-11 o fluxo foi exercitado, de ponta a ponta e sem simulação, contra um Keycloak 26.0 (`start-dev`, cliente confidencial com PKCE S256 exigido) e a API do ReValli em outro processo, navegando como um navegador (formulário de login do provedor, redirecionamento de volta, cookie de sessão). Resultado:
+
+| Situação | Resultado |
+|---|---|
+| Conta existente, e-mail verificado | entra; sessão válida em `/api/auth/me` |
+| E-mail não verificado no provedor | `erro=email_not_verified` |
+| Sem conta, `OIDC_AUTO_CREATE=false` | `erro=no_account` |
+| Sem conta, `OIDC_AUTO_CREATE=true` | conta criada sem administração e sem senha; entrada por senha responde 401 |
+| Conta desativada | `erro=account_disabled` |
+| Domínio fora de `OIDC_ALLOWED_DOMAINS` | `erro=domain_not_allowed` |
+| `state` forjado | `erro=state_mismatch` |
+| Sem o cookie da tentativa | `erro=invalid_attempt` |
+| Mesmo código usado duas vezes | `erro=token_exchange_failed` (o provedor recusa) |
+| Provedor responde `login_required` | `erro=provider_login_required` |
+| Senha errada | o provedor recusa; o ReValli nem é chamado |
+
+Observação para quem testa por script: o Keycloak marca os cookies da tela de login como `Secure`, e clientes HTTP comuns não os reenviam por HTTP puro (navegadores reenviam para `localhost`). Em produção o acesso é por HTTPS e isso não importa.
