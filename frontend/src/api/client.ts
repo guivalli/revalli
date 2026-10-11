@@ -47,6 +47,19 @@ async function upload<T>(path: string, form: FormData): Promise<T> {
   return handle<T>(res)
 }
 
+/** POST em JSON que devolve um arquivo (ex.: relatório em DOCX/PDF). */
+async function download(path: string, body: unknown): Promise<{ blob: Blob; name: string }> {
+  const res = await fetch(`/api${path}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) await handle(res)
+  const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? 'arquivo'
+  return { blob: await res.blob(), name }
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
@@ -54,4 +67,5 @@ export const api = {
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
   upload,
+  download,
 }

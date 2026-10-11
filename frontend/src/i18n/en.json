@@ -133,7 +133,8 @@
     "item_not_found": "Item not found in the checklist.",
     "analysis_not_found": "Meta-analysis not found.",
     "grade_not_found": "GRADE outcome not found.",
-    "duplicate_row_id": "The data table has repeated rows."
+    "duplicate_row_id": "The data table has repeated rows.",
+    "invalid_figure": "One of the report figures could not be read."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -1048,5 +1049,20 @@
     "coding": "Coding",
     "meta": "Meta-analysis",
     "grade": "GRADE"
+  },
+  "report_doc": {
+    "title": "Review report (DOCX or PDF)",
+    "hint": "Generates a draft with methods, results (PRISMA flow diagram, included studies, risk of bias, meta-analyses, GRADE and codes) and appendices with the searches, the log of AI use and the checklist. The text is built from the project's data: review it before use.",
+    "format": "Format",
+    "docx": "Word (DOCX)",
+    "language": "Report language",
+    "sections": "Parts",
+    "section_methods": "Methods",
+    "section_results": "Results",
+    "section_appendix_search": "Appendix: searches",
+    "section_appendix_ai": "Appendix: AI use",
+    "section_appendix_checklist": "Appendix: checklist",
+    "generate": "Generate report",
+    "generating": "Generating…"
   }
 }

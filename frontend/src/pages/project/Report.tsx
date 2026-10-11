@@ -6,6 +6,7 @@ import { PrismaDiagram } from '../../components/PrismaDiagram'
 import { savePng, saveSvg } from '../../lib/download'
 import { useProjectContext } from './context'
 import { ChecklistSection } from './ChecklistSection'
+import { ReportDocument } from './ReportDocument'
 
 const STATES = ['all', 'included', 'excluded', 'conflict', 'pending'] as const
 
@@ -35,6 +36,8 @@ export default function Report() {
           <div className="min-w-[640px]">{data && <PrismaDiagram ref={svgRef} data={data} />}</div>
         </div>
       </Card>
+
+      <ReportDocument />
 
       <Card className="space-y-4 p-4">
         <h2 className="font-semibold">{t('export.title')}</h2>

@@ -133,7 +133,8 @@
     "item_not_found": "Item não encontrado no checklist.",
     "analysis_not_found": "Meta-análise não encontrada.",
     "grade_not_found": "Desfecho do GRADE não encontrado.",
-    "duplicate_row_id": "Há linhas repetidas na tabela de dados."
+    "duplicate_row_id": "Há linhas repetidas na tabela de dados.",
+    "invalid_figure": "Uma das figuras do relatório não pôde ser lida."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -1048,5 +1049,20 @@
     "coding": "Codificação",
     "meta": "Meta-análise",
     "grade": "GRADE"
+  },
+  "report_doc": {
+    "title": "Relatório da revisão (DOCX ou PDF)",
+    "hint": "Gera um rascunho com métodos, resultados (fluxograma PRISMA, estudos incluídos, risco de viés, meta-análises, GRADE e códigos) e apêndices com as buscas, o registro de uso da IA e o checklist. O texto é montado a partir dos dados do projeto: revise antes de usar.",
+    "format": "Formato",
+    "docx": "Word (DOCX)",
+    "language": "Idioma do relatório",
+    "sections": "Partes",
+    "section_methods": "Métodos",
+    "section_results": "Resultados",
+    "section_appendix_search": "Apêndice: buscas",
+    "section_appendix_ai": "Apêndice: uso da IA",
+    "section_appendix_checklist": "Apêndice: checklist",
+    "generate": "Gerar relatório",
+    "generating": "Gerando…"
   }
 }

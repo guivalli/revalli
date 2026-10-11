@@ -1,8 +1,12 @@
+import base64
+import binascii
 import re
 import unicodedata
 import uuid
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query
+import pymupdf
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from revalli.core.db import get_db
 from revalli.core.deps import current_user, get_membership
 from revalli.models import Record, Search, User
-from revalli.modules.reports.schemas import Prisma
+from revalli.modules.reports.document import build_report
+from revalli.modules.reports.render import to_docx, to_pdf
+from revalli.modules.reports.schemas import DocumentIn, Prisma
 from revalli.modules.reports.service import (
     STATE_LABELS,
     prisma_counts,
@@ -133,4 +139,58 @@ async def export(
         content=body.encode("utf-8"),
         media_type=media,
         headers={"Content-Disposition": f'attachment; filename="{name}.{format}"'},
+    )
+
+
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+MEDIA = {
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "pdf": "application/pdf",
+}
+
+
+def _png(data: str) -> bytes:
+    """Decodifica e confere uma figura enviada pela interface."""
+    if data.startswith("data:"):
+        data = data.split(",", 1)[-1]
+    try:
+        raw = base64.b64decode(data, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(422, "invalid_figure") from None
+    if not raw.startswith(PNG_MAGIC):
+        raise HTTPException(422, "invalid_figure")
+    try:
+        pix = pymupdf.Pixmap(raw)
+    except Exception:
+        raise HTTPException(422, "invalid_figure") from None
+    if pix.width * pix.height > 25_000_000:
+        raise HTTPException(422, "invalid_figure")
+    return raw
+
+
+@router.post("/report/document")
+async def report_document(
+    project_id: uuid.UUID,
+    body: DocumentIn,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Rascunho do relatório da revisão (métodos, resultados e apêndices) em DOCX ou PDF."""
+    project, _ = await get_membership(db, project_id, user)
+    figures = {k: _png(v) for k, v in body.figures.items()}
+    report = await build_report(
+        db,
+        project,
+        lang=body.lang,
+        sections=list(body.sections),
+        figures=figures,
+        checklist_items=body.checklist_items,
+    )
+    content = to_docx(report) if body.format == "docx" else to_pdf(report)
+    stamp = datetime.now().strftime("%Y%m%d")
+    name = f"{_slug(project.title)}-relatorio-{stamp}.{body.format}"
+    return Response(
+        content=content,
+        media_type=MEDIA[body.format],
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )
