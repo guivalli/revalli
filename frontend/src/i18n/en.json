@@ -215,7 +215,9 @@
     "stop": "Stop",
     "cancelling": "{{label}}: stopping…",
     "cancelled": "The “{{label}}” task was stopped.",
-    "open_corpus": "Open Corpus to index again"
+    "open_corpus": "Open the “{{tab}}” tab to index again",
+    "error_ai_unreachable": "the AI provider did not answer. If it is the local Ollama, turn it on in the AI page and try again.",
+    "error_embeddings_unsupported": "the embeddings model cannot produce embeddings. Pick an embeddings model (for example, bge-m3) on the AI page."
   },
   "import": {
     "title": "Import a search file",

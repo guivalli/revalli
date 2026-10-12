@@ -4,15 +4,15 @@
 
 Lista viva do que falta. O que cada marco já entrega está no [roteiro](docs/roteiro.md). Marque com `x` ao concluir.
 
-Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde); a stack local roda em `http://localhost:1515`; 205 testes do backend passam.
+Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde) até `774ef2b`; a stack local roda em `http://localhost:1515`; 207 testes do backend passam.
 
 ## 1. Fechar o trabalho recente
 
 - [ ] Ver no navegador as telas novas que ainda não foram conferidas: aba Configurações do projeto, cartões do Protocolo (critérios detalhados, etiquetas, motivos), painel de sugestão na sessão de triagem, assistente de busca em Importar (conversa salva e **Recomeçar**).
-- [ ] Testar **Parar** e **Continuar** a triagem por IA com o worker real pelo navegador (os testes cobrem o mecanismo, não o clique).
+- [ ] Testar **Parar** e **Continuar** a triagem por IA com o worker real pelo navegador. **Parar** foi visto de verdade (job `cancelled` com 5 de 354); falta **Continuar**, que falhou porque o Ollama estava desligado. Ligue o Ollama na tela IA e rode de novo.
 - [ ] Conferir o clique na tela do cartão **Chave do OpenAlex** (menu IA) e, se quiser, passar a chave do `deploy/.env` para a interface.
 - [ ] Salvar o modelo da CAFe (menu IA → Acesso pela instituição): `https://{host}.ez128.periodicos.capes.gov.br{path}`. Conferir se o link que parte do `doi.org` funciona pelo proxy; se não, resolver o endereço da editora antes de aplicar o modelo.
-- [ ] Apagar `erropdf.png` (captura de tela na raiz, não versionada) e arquivar ou apagar o `HANDOFF.md`, que descreve outro ambiente.
+- [ ] Apagar `erro.png` (captura de tela na raiz, não versionada) e arquivar ou apagar o `HANDOFF.md`, que descreve outro ambiente.
 
 ## 2. Publicar
 
@@ -22,7 +22,7 @@ Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde);
 
 ## 3. Verificar contra o mundo real
 
-- [ ] Rodar de novo **Buscar PDFs de acesso aberto** (a cadeia nova: paralelismo, páginas do OpenAlex, IPv6) e contar quantos vêm de cada fonte. No teste anterior, 6 de 14 baixaram e 8 ficaram pendentes (PePSIC responde 403 por anti-robô; DOIs que não resolvem; servidores lentos). Se os pendentes forem muitos, avaliar Semantic Scholar, CORE, Redalyc e LA Referencia como fontes.
+- [x] Rodar de novo **Buscar PDFs de acesso aberto** e contar por fonte (2026-10-12): nenhum PDF novo; 6 de 14 com PDF (4 OpenAlex, 2 página do artigo). Dos 8 pendentes, OpenAlex e Unpaywall conhecem 1 PDF (PePSIC, 403), Europe PMC 0, e a página do artigo falhou em todos (7 do PePSIC por anti-robô ou 404, 1 timeout da UEL). O gargalo é o PePSIC: só à mão, pela lista de pendentes e o link da CAFe. Ainda vale avaliar Semantic Scholar, CORE, Redalyc e LA Referencia, mas nenhum resolve o PePSIC.
 - [ ] Medir a triagem por IA com critérios detalhados: calibração em decisões humanas reais e o benchmark em mais conjuntos, com um modelo maior (o llama3.1 8B ficou com 93% de sensibilidade e 29% de especificidade num conjunto).
 - [ ] Avaliar o agrupamento de motivos de exclusão com volume real (o teste teve 6 motivos distintos, nada para juntar).
 - [ ] Testar o assistente de busca com um modelo maior: no teste local faltaram blocos de conceito e houve `[mh]` em termo truncado.
@@ -33,7 +33,7 @@ Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde);
 
 - [ ] **Triagem por IA no texto completo, lendo o PDF.** Hoje a IA só vale em título e resumo, e o botão fica escondido no texto completo. Plano: texto do PDF principal até `AI_EXTRACT_MAX_CHARS`, pular estudos sem PDF ou escaneados, prompt próprio, prévia de custo contando o texto. ~1 hora.
 - [ ] Parar também embeddings, extração por IA e importações (só a triagem por IA para).
-- [ ] Modelo de embeddings dedicado (`bge-m3` ou `nomic-embed-text`): a configuração atual usa `qwen2.5:14b` também para embeddings, o que é lento e fraco.
+- [x] Modelo de embeddings dedicado: a instalação usa `bge-m3`; um modelo de chat nessa tarefa agora gera aviso claro e a indexação mantém a busca por palavras.
 - [ ] OCR de PDFs escaneados.
 - [ ] Busca direta em LILACS/BVS (depende de uma chave da API da BVS) e no Portal CAPES (não tem API pública).
 - [ ] Título original na importação da BVS: o campo `TI` pode vir em inglês num artigo em português, e a exportação não diz qual título é o original.
@@ -49,6 +49,9 @@ Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde);
 
 ## Feito recentemente
 
+- [x] Tela IA: o modelo de cada tarefa é uma lista dos modelos do provedor (com "Outro" para digitar).
+- [x] Embeddings recusados (modelo de chat) não derrubam a indexação do corpus: aviso na aba Conversa e mensagens claras para provedor fora do ar.
+- [x] Busca de PDFs reexecutada com contagem por fonte; par duplicado entre versão online e impressa achado e agrupado para revisão.
 - [x] Commit e envio do trabalho para o GitHub; CI verde na `m6-buscas`; sem conflitos nem rebase necessário.
 - [x] Porta local 1515 (`HTTP_PORT` e `PUBLIC_URL` em `deploy/.env`).
 - [x] Ligar e desligar o Ollama pela tela IA, com auxiliar no computador ([docs/ollama.md](docs/ollama.md)).

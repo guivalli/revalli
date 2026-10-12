@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useActiveJobs, useRecentJobs, useRecordActions, useSummary } from '../../api/records'
@@ -16,6 +17,13 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 'wa
       </p>
     </Card>
   )
+}
+
+/** Troca erros técnicos de IA por uma instrução; o resto aparece como veio do worker. */
+function jobError(t: TFunction, error: string): string {
+  if (/^AIError: connection\b/.test(error)) return t('jobs.error_ai_unreachable')
+  if (/^AIError: embeddings_unsupported\b/.test(error)) return t('jobs.error_embeddings_unsupported')
+  return error
 }
 
 export default function Overview() {
@@ -111,10 +119,10 @@ export default function Overview() {
           <ErrorText error={enrich.error ?? dedup.error} />
           {failed.map((j) => (
             <p key={j.id} role="alert" className="text-sm text-red-700 dark:text-red-400">
-              {t('jobs.failed', { label: t(`jobs.${j.kind}`), error: j.error })}{' '}
+              {t('jobs.failed', { label: t(`jobs.${j.kind}`), error: jobError(t, j.error) })}{' '}
               {j.kind === 'corpus_index' && (
                 <Link to="conversa" className="underline">
-                  {t('jobs.open_corpus')}
+                  {t('jobs.open_corpus', { tab: t('tabs.corpus') })}
                 </Link>
               )}
             </p>

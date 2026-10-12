@@ -215,7 +215,9 @@
     "stop": "Parar",
     "cancelling": "{{label}}: parando…",
     "cancelled": "A tarefa “{{label}}” foi interrompida.",
-    "open_corpus": "Abrir o Corpus para indexar de novo"
+    "open_corpus": "Abrir a aba “{{tab}}” para indexar de novo",
+    "error_ai_unreachable": "o provedor de IA não respondeu. Se for o Ollama do computador, ligue-o na tela IA e tente de novo.",
+    "error_embeddings_unsupported": "o modelo de embeddings não gera embeddings. Escolha um modelo de embeddings (por exemplo, bge-m3) na tela IA."
   },
   "import": {
     "title": "Importar arquivo de busca",
