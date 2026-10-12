@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMemberActions, useMembers } from '../../api/hooks'
+import { useCreatePasswordReset, useMe, useMemberActions, useMembers } from '../../api/hooks'
 import { ROLES, type Role } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
@@ -65,12 +65,22 @@ export default function Members() {
   const { project, canManage } = useProjectContext()
   const members = useMembers(project.id)
   const { changeRole, remove } = useMemberActions(project.id)
+  const { data: me } = useMe()
+  const reset = useCreatePasswordReset()
+  const [resetFor, setResetFor] = useState<string | null>(null)
 
   return (
     <div className="space-y-6">
       <Card className="space-y-3">
         <h2 className="font-semibold">{t('members.title')}</h2>
-        <ErrorText error={changeRole.error ?? remove.error} />
+        <ErrorText error={changeRole.error ?? remove.error ?? reset.error} />
+        {reset.data && resetFor && (
+          <div className="space-y-2 rounded-md border border-brand-200 bg-brand-50 p-3 text-sm dark:border-brand-800 dark:bg-brand-900/30">
+            <p>{t('members.reset_ready', { email: reset.data.email })}</p>
+            <Input readOnly value={reset.data.reset_url} onFocus={(e) => e.target.select()} />
+            <p className="text-xs text-stone-500">{t('members.reset_hint')}</p>
+          </div>
+        )}
         <ul className="divide-y divide-stone-200 dark:divide-stone-800">
           {members.data?.map((m) => (
             <li key={m.user_id} className="flex flex-wrap items-center justify-between gap-2 py-3">
@@ -94,6 +104,18 @@ export default function Members() {
                       </option>
                     ))}
                   </Select>
+                  {me?.is_admin && m.user_id !== me.id && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setResetFor(m.user_id)
+                        reset.mutate(m.user_id)
+                      }}
+                      disabled={reset.isPending}
+                    >
+                      {t('members.reset_link')}
+                    </Button>
+                  )}
                   <Button variant="danger" onClick={() => remove.mutate(m.user_id)}>
                     {t('members.remove')}
                   </Button>

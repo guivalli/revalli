@@ -45,7 +45,8 @@
     "oidc_provider_unavailable": "O provedor de login não respondeu.",
     "oidc_invalid_attempt": "A tentativa de entrada expirou. Tente de novo.",
     "oidc_expired_attempt": "A tentativa de entrada expirou. Tente de novo.",
-    "oidc_provider_access_denied": "O acesso foi negado no provedor."
+    "oidc_provider_access_denied": "O acesso foi negado no provedor.",
+    "no_account": "Ainda não tem conta? O acesso é por convite: peça o link a quem lidera a revisão."
   },
   "fields": {
     "email": "E-mail",
@@ -88,7 +89,10 @@
     "invite_submit": "Gerar convite",
     "invite_ready": "Convite criado. Envie este link para {{email}}:",
     "copy": "Copiar",
-    "copied": "Copiado"
+    "copied": "Copiado",
+    "reset_link": "Gerar link de nova senha",
+    "reset_ready": "Link de nova senha para {{email}} (copie e envie à pessoa):",
+    "reset_hint": "Vale por 48 horas e funciona uma vez. Gerar outro invalida este."
   },
   "invite": {
     "title": "Convite",
@@ -108,7 +112,7 @@
     "admin_only": "Só administradores podem fazer isso.",
     "last_lead": "O projeto precisa de pelo menos um líder.",
     "already_member": "Essa pessoa já é membro.",
-    "user_not_found": "Usuário não encontrado.",
+    "user_not_found": "Pessoa não encontrada.",
     "login_required": "Entre na sua conta para continuar.",
     "unknown_error": "Algo deu errado. Tente de novo.",
     "file_too_large": "Arquivo maior que o limite.",
@@ -182,7 +186,9 @@
     "ai_phase_not_supported": "A triagem por IA só está disponível em título e resumo.",
     "ai_rate_limited": "O provedor de IA recusou por excesso de pedidos. Tente de novo em instantes ou reduza o limite por minuto na tela IA.",
     "ai_quota_exhausted": "A cota do dia do provedor de IA acabou. Tente amanhã ou use outro provedor.",
-    "ai_embeddings_unsupported": "O modelo de embeddings configurado não gera embeddings. Escolha um modelo de embeddings na tela IA."
+    "ai_embeddings_unsupported": "O modelo de embeddings configurado não gera embeddings. Escolha um modelo de embeddings na tela IA.",
+    "password_incorrect": "A senha atual não confere.",
+    "reset_invalid": "Este link de nova senha não é válido ou já foi usado."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -1277,7 +1283,12 @@
     "created": "criada em {{date}}",
     "last_used": "último uso: {{date}}",
     "expires": "expira em {{date}}",
-    "revoke": "Revogar"
+    "revoke": "Revogar",
+    "password_title": "Senha",
+    "password_current": "Senha atual",
+    "password_new": "Nova senha",
+    "password_save": "Trocar senha",
+    "password_saved": "Senha trocada. As outras sessões desta conta foram encerradas."
   },
   "watches": {
     "title": "Atualizações automáticas",
@@ -1479,5 +1490,15 @@
     "exclude": "Critérios de exclusão",
     "none": "Nenhum critério definido ainda.",
     "edit": "Editar no Protocolo"
+  },
+  "reset": {
+    "title": "Definir nova senha",
+    "for": "Conta de {{name}} ({{email}}).",
+    "new_password": "Nova senha",
+    "password_hint": "Pelo menos {{min}} caracteres.",
+    "repeat": "Repita a nova senha",
+    "mismatch": "As senhas não são iguais.",
+    "submit": "Salvar e entrar",
+    "invalid": "Este link de nova senha não é válido ou já foi usado. Peça um novo a quem administra o ReValli."
   }
 }

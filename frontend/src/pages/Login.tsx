@@ -77,6 +77,7 @@ export default function Login() {
           </div>
         )}
       </Card>
+      <p className="text-center text-sm text-stone-500">{t('login.no_account')}</p>
       <div className="flex items-center justify-center gap-3">
         <ThemeSwitch />
         <LanguageSelect />

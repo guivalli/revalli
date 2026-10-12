@@ -38,6 +38,14 @@ Precisa de uma conta Cloudflare gratuita e de um domínio gerenciado nela.
 
 **Recomendado antes de convidar:** em **Zero Trust → Access → Applications**, crie uma aplicação protegendo `revalli.seudominio.org` com a regra "e-mails permitidos" (código por e-mail). É grátis até 50 pessoas e coloca uma porta de entrada na frente do login do ReValli.
 
+### Esqueceu a senha
+
+O ReValli não envia e-mail, então a recuperação é por link, gerado por quem administra o servidor:
+
+1. Em **Membros**, o administrador clica em **Gerar link de nova senha** ao lado da pessoa e copia o link.
+2. A pessoa abre o link, define a nova senha (mínimo de 10 caracteres) e já entra. O link vale por 48 horas e funciona uma vez; gerar outro invalida o anterior.
+3. Cada pessoa também pode trocar a própria senha na página **Conta** (menu ☰, o seu nome). Trocar encerra as outras sessões da conta.
+
 ## 3. Rodar em um Raspberry Pi (com a IA no seu computador)
 
 - **Modelo e sistema:** Pi 4 ou 5 com 64 bits e **4 GB ou mais** de RAM, e **SSD por USB** (o banco escreve bastante; cartão SD se desgasta).

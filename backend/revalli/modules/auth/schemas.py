@@ -62,6 +62,26 @@ class InvitationInfo(BaseModel):
     account_exists: bool
 
 
+class PasswordChangeIn(BaseModel):
+    current_password: str = Field(max_length=200)
+    new_password: str = Field(min_length=PASSWORD_MIN, max_length=200)
+
+
+class PasswordResetCreated(BaseModel):
+    email: str
+    reset_url: str
+    expires_at: datetime
+
+
+class PasswordResetInfo(BaseModel):
+    email: str
+    full_name: str
+
+
+class PasswordResetAcceptIn(BaseModel):
+    password: str = Field(min_length=PASSWORD_MIN, max_length=200)
+
+
 class AcceptInvitationIn(BaseModel):
     full_name: str | None = Field(default=None, max_length=200)
     password: str | None = Field(default=None, min_length=PASSWORD_MIN, max_length=200)

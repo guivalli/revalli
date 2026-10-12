@@ -1,13 +1,16 @@
+import uuid
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from revalli.core.config import get_settings
 from revalli.core.db import get_db, utcnow
 from revalli.core.deps import (
+    SESSION_COOKIE,
+    admin_user,
     current_user,
     end_session,
     get_membership,
@@ -16,13 +19,17 @@ from revalli.core.deps import (
 )
 from revalli.core.ratelimit import SlidingWindowLimiter
 from revalli.core.security import hash_password, hash_token, new_token, verify_password
-from revalli.models import Invitation, Project, ProjectMember, User
+from revalli.models import Invitation, PasswordReset, Project, ProjectMember, Session, User
 from revalli.modules.auth.schemas import (
     AcceptInvitationIn,
     InvitationCreated,
     InvitationIn,
     InvitationInfo,
     LoginIn,
+    PasswordChangeIn,
+    PasswordResetAcceptIn,
+    PasswordResetCreated,
+    PasswordResetInfo,
     SetupIn,
     SetupStatus,
     UserOut,
@@ -198,4 +205,95 @@ async def accept_invitation(
         await start_session(db, response, user)
     else:
         await db.commit()
+    return user
+
+
+# --- Senha -------------------------------------------------------------------------
+
+RESET_HOURS = 48
+
+
+@router.post("/auth/password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    body: PasswordChangeIn,
+    request: Request,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Troca a própria senha. As outras sessões da conta são encerradas."""
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "password_incorrect")
+    user.password_hash = hash_password(body.new_password)
+    keep = request.cookies.get(SESSION_COOKIE)
+    stmt = delete(Session).where(Session.user_id == user.id)
+    if keep:
+        stmt = stmt.where(Session.token_hash != hash_token(keep))
+    await db.execute(stmt)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/users/{user_id}/password-reset", response_model=PasswordResetCreated, status_code=201
+)
+async def create_password_reset(
+    user_id: uuid.UUID, admin: User = Depends(admin_user), db: AsyncSession = Depends(get_db)
+):
+    """O administrador gera um link de nova senha para uma pessoa (o ReValli não envia e-mail)."""
+    target = await db.get(User, user_id)
+    if target is None or target.is_bot or not target.is_active:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "user_not_found")
+    # Um link por vez: os anteriores ainda abertos deixam de valer
+    await db.execute(
+        delete(PasswordReset).where(
+            PasswordReset.user_id == target.id, PasswordReset.used_at.is_(None)
+        )
+    )
+    token = new_token()
+    reset = PasswordReset(
+        token_hash=hash_token(token),
+        user_id=target.id,
+        created_by_id=admin.id,
+        expires_at=utcnow() + timedelta(hours=RESET_HOURS),
+    )
+    db.add(reset)
+    await db.commit()
+    return PasswordResetCreated(
+        email=target.email,
+        reset_url=f"{_settings.public_url.rstrip('/')}/redefinir-senha/{token}",
+        expires_at=reset.expires_at,
+    )
+
+
+async def _valid_reset(db: AsyncSession, token: str) -> tuple[PasswordReset, User]:
+    reset = (
+        await db.execute(select(PasswordReset).where(PasswordReset.token_hash == hash_token(token)))
+    ).scalar_one_or_none()
+    if reset is None or reset.used_at is not None or reset.expires_at < utcnow():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "reset_invalid")
+    user = await db.get(User, reset.user_id)
+    if user is None or not user.is_active or user.is_bot:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "reset_invalid")
+    return reset, user
+
+
+@router.get("/password-resets/{token}", response_model=PasswordResetInfo)
+async def password_reset_info(token: str, db: AsyncSession = Depends(get_db)):
+    _, user = await _valid_reset(db, token)
+    return PasswordResetInfo(email=user.email, full_name=user.full_name)
+
+
+@router.post("/password-resets/{token}/accept", response_model=UserOut)
+async def accept_password_reset(
+    token: str,
+    body: PasswordResetAcceptIn,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    reset, user = await _valid_reset(db, token)
+    user.password_hash = hash_password(body.password)
+    reset.used_at = utcnow()
+    # Quem tinha a sessão aberta (ou a senha antiga) perde o acesso
+    await db.execute(delete(Session).where(Session.user_id == user.id))
+    await start_session(db, response, user)
     return user

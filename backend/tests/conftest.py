@@ -60,7 +60,7 @@ async def clean_db():
                 " extraction_forms, extraction_form_versions, extractions, codes, excerpts,"
                 " excerpt_codes, checklist_entries, meta_analyses, grade_rows,"
                 " corpus_chunks, corpus_chunk_embeddings, corpus_messages, api_tokens, watches,"
-                " search_assistant_chats CASCADE"
+                " search_assistant_chats, password_resets CASCADE"
             )
         )
     from revalli.modules.sources import keys

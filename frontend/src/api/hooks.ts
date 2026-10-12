@@ -97,3 +97,20 @@ export function useMemberActions(projectId: string) {
     }),
   }
 }
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (body: { current_password: string; new_password: string }) =>
+      api.post<void>('/auth/password', body),
+  })
+}
+
+export function useCreatePasswordReset() {
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api.post<{ email: string; reset_url: string; expires_at: string }>(
+        `/users/${userId}/password-reset`,
+        {},
+      ),
+  })
+}

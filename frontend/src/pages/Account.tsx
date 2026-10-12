@@ -1,8 +1,72 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useProjects } from '../api/hooks'
+import { useChangePassword, useProjects } from '../api/hooks'
 import { useApiTokenActions, useApiTokens } from '../api/tokens'
 import { Button, Card, ErrorText, Field, Input, Select } from '../components/ui'
+
+function ChangePassword() {
+  const { t } = useTranslation()
+  const change = useChangePassword()
+  const [form, setForm] = useState({ current: '', next: '', again: '' })
+  const mismatch = form.again.length > 0 && form.again !== form.next
+  return (
+    <Card className="space-y-4">
+      <h2 className="font-semibold">{t('account.password_title')}</h2>
+      <form
+        className="grid gap-4 sm:grid-cols-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (mismatch) return
+          change.mutate(
+            { current_password: form.current, new_password: form.next },
+            { onSuccess: () => setForm({ current: '', next: '', again: '' }) },
+          )
+        }}
+      >
+        <Field label={t('account.password_current')}>
+          <Input
+            required
+            type="password"
+            autoComplete="current-password"
+            value={form.current}
+            onChange={(e) => setForm({ ...form, current: e.target.value })}
+          />
+        </Field>
+        <Field label={t('account.password_new')} hint={t('reset.password_hint', { min: 10 })}>
+          <Input
+            required
+            type="password"
+            autoComplete="new-password"
+            minLength={10}
+            value={form.next}
+            onChange={(e) => setForm({ ...form, next: e.target.value })}
+          />
+        </Field>
+        <Field label={t('reset.repeat')}>
+          <Input
+            required
+            type="password"
+            autoComplete="new-password"
+            value={form.again}
+            onChange={(e) => setForm({ ...form, again: e.target.value })}
+          />
+        </Field>
+        <div className="space-y-2 sm:col-span-3">
+          {mismatch && <p className="text-sm text-red-700 dark:text-red-400">{t('reset.mismatch')}</p>}
+          <ErrorText error={change.error} />
+          {change.isSuccess && (
+            <p role="status" className="text-sm text-brand-700 dark:text-brand-100">
+              {t('account.password_saved')}
+            </p>
+          )}
+          <Button type="submit" disabled={change.isPending || mismatch}>
+            {t('account.password_save')}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  )
+}
 
 export default function Account() {
   const { t, i18n } = useTranslation()
@@ -18,6 +82,7 @@ export default function Account() {
 
   return (
     <div className="space-y-6">
+      <ChangePassword />
       <Card className="space-y-4">
         <div>
           <h2 className="font-semibold">{t('account.tokens_title')}</h2>

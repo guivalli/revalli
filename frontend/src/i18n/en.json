@@ -45,7 +45,8 @@
     "oidc_provider_unavailable": "The login provider did not answer.",
     "oidc_invalid_attempt": "The sign-in attempt expired. Try again.",
     "oidc_expired_attempt": "The sign-in attempt expired. Try again.",
-    "oidc_provider_access_denied": "Access was denied at the provider."
+    "oidc_provider_access_denied": "Access was denied at the provider.",
+    "no_account": "No account yet? Access is by invitation: ask the review lead for the link."
   },
   "fields": {
     "email": "Email",
@@ -88,7 +89,10 @@
     "invite_submit": "Create invitation",
     "invite_ready": "Invitation created. Send this link to {{email}}:",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "reset_link": "Create password link",
+    "reset_ready": "New password link for {{email}} (copy and send it to the person):",
+    "reset_hint": "Valid for 48 hours and works once. Creating another one invalidates this."
   },
   "invite": {
     "title": "Invitation",
@@ -108,7 +112,7 @@
     "admin_only": "Only administrators can do this.",
     "last_lead": "The project needs at least one lead.",
     "already_member": "This person is already a member.",
-    "user_not_found": "User not found.",
+    "user_not_found": "Person not found.",
     "login_required": "Log in to continue.",
     "unknown_error": "Something went wrong. Please try again.",
     "file_too_large": "File is larger than the limit.",
@@ -182,7 +186,9 @@
     "ai_phase_not_supported": "AI screening is only available at title and abstract.",
     "ai_rate_limited": "The AI provider refused for too many requests. Try again shortly or lower the per-minute limit on the AI page.",
     "ai_quota_exhausted": "The AI provider's daily quota ran out. Try tomorrow or use another provider.",
-    "ai_embeddings_unsupported": "The configured embeddings model cannot produce embeddings. Pick an embeddings model on the AI page."
+    "ai_embeddings_unsupported": "The configured embeddings model cannot produce embeddings. Pick an embeddings model on the AI page.",
+    "password_incorrect": "The current password is not correct.",
+    "reset_invalid": "This password link is not valid or was already used."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -1277,7 +1283,12 @@
     "created": "created {{date}}",
     "last_used": "last used: {{date}}",
     "expires": "expires {{date}}",
-    "revoke": "Revoke"
+    "revoke": "Revoke",
+    "password_title": "Password",
+    "password_current": "Current password",
+    "password_new": "New password",
+    "password_save": "Change password",
+    "password_saved": "Password changed. Other sessions of this account were signed out."
   },
   "watches": {
     "title": "Automatic updates",
@@ -1479,5 +1490,15 @@
     "exclude": "Exclusion criteria",
     "none": "No criteria defined yet.",
     "edit": "Edit in Protocol"
+  },
+  "reset": {
+    "title": "Set a new password",
+    "for": "Account of {{name}} ({{email}}).",
+    "new_password": "New password",
+    "password_hint": "At least {{min}} characters.",
+    "repeat": "Repeat the new password",
+    "mismatch": "The passwords do not match.",
+    "submit": "Save and sign in",
+    "invalid": "This password link is not valid or was already used. Ask the ReValli administrator for a new one."
   }
 }

@@ -7,7 +7,7 @@ from revalli.modules.ai.models import (
     InstanceSetting,
     RecordEmbedding,
 )
-from revalli.modules.auth.models import Invitation, Session, User
+from revalli.modules.auth.models import Invitation, PasswordReset, Session, User
 from revalli.modules.corpus.models import Chunk, ChunkEmbedding, CorpusMessage
 from revalli.modules.extraction.models import Extraction, ExtractionForm, FormVersion
 from revalli.modules.fulltext.models import FilePage, RecordFile, Study, StudyReport
@@ -52,6 +52,7 @@ __all__ = [
     "FilePage",
     "ExclusionReason",
     "Invitation",
+    "PasswordReset",
     "Job",
     "NotDuplicate",
     "Project",

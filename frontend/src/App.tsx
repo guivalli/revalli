@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useMe, useSetupStatus } from './api/hooks'
 import { Layout } from './components/Layout'
 import AcceptInvite from './pages/AcceptInvite'
+import ResetPassword from './pages/ResetPassword'
 import Login from './pages/Login'
 import Duplicates from './pages/project/Duplicates'
 import Import from './pages/project/Import'
@@ -62,6 +63,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={me ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/convite/:token" element={<AcceptInvite />} />
+      <Route path="/redefinir-senha/:token" element={<ResetPassword />} />
       <Route
         element={
           <RequireAuth>
