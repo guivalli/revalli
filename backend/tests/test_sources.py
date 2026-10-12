@@ -51,10 +51,32 @@ def _page(results):
     )
 
 
+# Revistas da coleção SciELO Brasil (ArticleMeta) e os trabalhos delas no OpenAlex
+SCIELO_ISSNS = {"scl": ["1111-1111", "2222-2222", "3333-3333"], "psi": ["4444-4444"]}
+BY_ISSN = {
+    "1111-1111": _work("W30", "Ansiedade e exercício em adultos", "10.1590/w30"),
+    "2222-2222": _work("W31", "Ansiedade em estudantes", "10.1590/w31"),
+    "3333-3333": _work("W32", "Ansiedade e sono", "10.1590/w32"),
+    "4444-4444": _work("W33", "Ansiedade no esporte", "10.1590/w33"),
+}
+
+
+def _articlemeta(request: httpx.Request) -> httpx.Response:
+    q = {k: v[0] for k, v in parse_qs(request.url.query.decode()).items()}
+    CALLS.append("articlemeta:" + q["collection"])
+    issns = SCIELO_ISSNS.get(q["collection"], [])
+    start, size = int(q["offset"]), int(q["limit"])
+    objects = [{"code": c, "collection": q["collection"]} for c in issns][start : start + size]
+    return httpx.Response(200, json={"meta": {"total": len(issns)}, "objects": objects})
+
+
 def _openalex(request: httpx.Request) -> httpx.Response:
     q = {k: v[0] for k, v in parse_qs(request.url.query.decode()).items()}
-    CALLS.append(q.get("filter") or q.get("search", ""))
+    CALLS.append(q.get("filter") or q.get("search") or "exact:" + q.get("search.exact", ""))
     flt = q.get("filter", "")
+    if flt.startswith("primary_location.source.issn:"):
+        wanted = flt.split(":", 1)[1].split("|")
+        return _page([BY_ISSN[i] for i in wanted if i in BY_ISSN])
     if flt.startswith("openalex:"):
         return _page([WORKS[i] for i in flt[9:].split("|") if i in WORKS])
     if flt.startswith("doi:"):
@@ -64,7 +86,7 @@ def _openalex(request: httpx.Request) -> httpx.Response:
         return _page([])
     if flt.startswith("cites:"):
         return _page([WORKS[i] for i in CITES.get(flt[6:], [])])
-    search = q.get("search", "")
+    search = q.get("search") or q.get("search.exact", "")
     found = [w for w in WORKS.values() if search.lower() in w["title"].lower()]
     if search == "anxiety":
         found = [WORKS["W1"], WORKS["W2"], WORKS["W10"]]
@@ -154,6 +176,8 @@ def _europepmc(request: httpx.Request) -> httpx.Response:
 
 def _router(request: httpx.Request) -> httpx.Response:
     host = request.url.host
+    if "scielo" in host:
+        return _articlemeta(request)
     if "openalex" in host:
         return _openalex(request)
     if "ncbi" in host:
@@ -261,7 +285,7 @@ async def test_api_search_preview_and_import(admin):
     assert p["translation"] == '"anxiety"[All Fields]'
     assert p["warnings"] == ["Nope", '"zzz"']
     r = await admin.post(f"{base}/preview", json={"source": "pubmed", "query": "bad[["})
-    assert r.status_code == 502 and r.json()["detail"] == "source_unavailable"
+    assert r.status_code == 502 and r.json()["detail"].startswith("source_unavailable: ")
 
     r = await admin.post(f"{base}/search", json={"source": "pubmed", "query": "anxiety"})
     assert r.status_code == 202, r.text
@@ -341,3 +365,289 @@ async def test_translate_query(admin):
     }
     usage = (await admin.get(f"/api/projects/{pid}/ai/usage")).json()
     assert usage["calls"] == 1 and usage["input_tokens"] == 100
+
+
+@pytest.mark.parametrize(
+    "target,marker",
+    [("scielo", "SciELO (searched through OpenAlex"), ("capes", "CAPES"), ("pepsic", "PePSIC")],
+)
+async def test_translate_query_to_brazilian_bases(admin, target, marker):
+    pid = (await admin.post("/api/projects", json={"title": "Tradução"})).json()["id"]
+    await admin.put(f"/api/projects/{pid}/ai/settings", json={"enabled": True})
+    await _configure(admin)
+    sent = []
+
+    def spy(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content)["messages"][-1]["content"])
+        content = json.dumps({"query": "exercicio AND ansiedade", "notes": []})
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": content}}],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 20},
+            },
+        )
+
+    ai_client.set_transport(httpx.MockTransport(spy))
+    try:
+        r = await admin.post(
+            f"/api/projects/{pid}/sources/translate",
+            json={"query": "exercise AND anxiety", "target": target},
+        )
+    finally:
+        ai_client.set_transport(None)
+    assert r.status_code == 200, r.text
+    assert marker in sent[0] and "Portuguese and Spanish" in sent[0]
+
+
+async def test_translate_rejects_unknown_target(admin):
+    pid = (await admin.post("/api/projects", json={"title": "Tradução"})).json()["id"]
+    r = await admin.post(
+        f"/api/projects/{pid}/sources/translate", json={"query": "x", "target": "google"}
+    )
+    assert r.status_code == 422
+
+
+async def test_scielo_and_pepsic_search_openalex_restricted_to_collection_journals(
+    admin, monkeypatch
+):
+    monkeypatch.setattr(clients, "ISSN_CHUNK", 2)
+    clients._collections.clear()
+    pid = (await admin.post("/api/projects", json={"title": "SciELO"})).json()["id"]
+    base = f"/api/projects/{pid}/sources"
+
+    r = await admin.post(f"{base}/preview", json={"source": "scielo", "query": "ansiedade"})
+    assert r.status_code == 200, r.text
+    p = r.json()
+    # 3 revistas em lotes de 2: a contagem soma os dois lotes
+    assert p["count"] == 3 and len(p["sample"]) == 3
+    assert CALLS.count("articlemeta:scl") == 1
+    issn_calls = [c for c in CALLS if c.startswith("primary_location.source.issn:")]
+    assert issn_calls == [
+        "primary_location.source.issn:1111-1111|2222-2222",
+        "primary_location.source.issn:3333-3333",
+    ]
+
+    r = await admin.post(f"{base}/search", json={"source": "scielo", "query": "ansiedade"})
+    res = r.json()["result"]
+    assert res["source"] == "SciELO (via OpenAlex)" and res["found"] == 3 and res["imported"] == 3
+    # A lista de revistas ficou em cache: o ArticleMeta não é consultado de novo
+    assert CALLS.count("articlemeta:scl") == 1
+
+    r = await admin.post(f"{base}/search", json={"source": "pepsic", "query": "ansiedade"})
+    res = r.json()["result"]
+    assert res["source"] == "PePSIC (via OpenAlex)" and res["imported"] == 1
+    assert CALLS.count("articlemeta:psi") == 1
+
+    r = await admin.post(f"{base}/search", json={"source": "scielo", "query": "x", "limit": 2})
+    assert r.json()["result"]["imported"] == 2 and r.json()["result"]["truncated"] is True
+
+
+async def test_wildcard_queries_use_openalex_exact_search(admin):
+    pid = (await admin.post("/api/projects", json={"title": "Curinga"})).json()["id"]
+    url = f"/api/projects/{pid}/sources/preview"
+    seen: list[dict] = []
+
+    def spy(request: httpx.Request) -> httpx.Response:
+        if "openalex" in request.url.host:
+            seen.append(dict(request.url.params))
+        return _router(request)
+
+    clients.set_transport(httpx.MockTransport(spy))
+    for source in ("openalex", "scielo", "pepsic"):
+        seen.clear()
+        r = await admin.post(url, json={"source": source, "query": "anxi* AND sono"})
+        assert r.status_code == 200, r.text
+        assert seen and all(
+            p.get("search.exact") == "anxi* AND sono" and "search" not in p for p in seen
+        )
+    seen.clear()
+    await admin.post(url, json={"source": "openalex", "query": "anxiety AND sono"})
+    assert seen[0].get("search") == "anxiety AND sono" and "search.exact" not in seen[0]
+
+
+async def test_rate_limited_source_is_retried_then_reported(admin):
+    pid = (await admin.post("/api/projects", json={"title": "Calma"})).json()["id"]
+    url = f"/api/projects/{pid}/sources/preview"
+    body = {"source": "openalex", "query": "anxiety"}
+    state = {"n": 0}
+
+    def flaky(request: httpx.Request) -> httpx.Response:
+        state["n"] += 1
+        if state["n"] == 1:
+            return httpx.Response(429, json={"error": "Rate limit exceeded"})
+        return _router(request)
+
+    clients.set_transport(httpx.MockTransport(flaky))
+    r = await admin.post(url, json=body)
+    assert r.status_code == 200 and r.json()["count"] == 3 and state["n"] == 2
+
+    clients.set_transport(
+        httpx.MockTransport(lambda req: httpx.Response(429, json={"error": "Rate limit"}))
+    )
+    r = await admin.post(url, json=body)
+    # Depois de várias tentativas, o motivo chega à tela
+    assert r.status_code == 502 and "http 429" in r.json()["detail"]
+
+
+def _assistant(sent: list):
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        sent.append(body["messages"])
+        content = json.dumps(
+            {
+                "reply": "Entendi: efeitos iatrogênicos de falar sobre bullying. Qual faixa etária?",
+                "strategies": [
+                    {
+                        "base": "pubmed",
+                        "query": '(bullying OR cyberbullying) AND (iatrogeni* OR "adverse effect*")',
+                        "notes": ["Truncamento com *"],
+                    },
+                    {"base": "SciELO", "query": '(bullying OR "assédio escolar") AND iatrogeni*'},
+                    {"base": "pubmed", "query": "duplicada"},
+                    {"base": "google", "query": "base desconhecida"},
+                    {"base": "scopus", "query": ""},
+                ],
+            }
+        )
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": content}}],
+                "usage": {"prompt_tokens": 300, "completion_tokens": 80},
+            },
+        )
+
+    return handler
+
+
+async def test_search_assistant_proposes_one_strategy_per_known_base(admin):
+    pid = (await admin.post("/api/projects", json={"title": "Bullying"})).json()["id"]
+    url = f"/api/projects/{pid}/sources/assist"
+    chat = {"messages": [{"role": "user", "content": "Efeitos iatrogênicos de falar de bullying"}]}
+    assert (await admin.post(url, json=chat)).json()["detail"] == "ai_disabled"
+    await admin.put(f"/api/projects/{pid}/ai/settings", json={"enabled": True})
+    await _configure(admin)
+    sent: list = []
+    ai_client.set_transport(httpx.MockTransport(_assistant(sent)))
+    try:
+        r = await admin.post(url, json=chat)
+        assert r.status_code == 200, r.text
+        out = r.json()
+        assert out["reply"].startswith("Entendi")
+        # Base desconhecida, repetida ou sem texto não passam; o nome da base é normalizado
+        assert [s["base"] for s in out["strategies"]] == ["pubmed", "scielo"]
+        assert out["strategies"][0]["notes"] == ["Truncamento com *"]
+        system = sent[0][0]["content"]
+        assert "Review title: Bullying" in system and "scielo:" in system and "pubmed:" in system
+        # A conversa inteira vai para o modelo, na ordem
+        follow = {
+            "messages": [
+                *chat["messages"],
+                {"role": "assistant", "content": out["reply"]},
+                {"role": "user", "content": "Adolescentes, 10 a 19 anos"},
+            ]
+        }
+        assert (await admin.post(url, json=follow)).status_code == 200
+        assert [m["role"] for m in sent[1]] == ["system", "user", "assistant", "user"]
+        # A conversa precisa terminar numa fala da pessoa
+        bad = {"messages": [{"role": "assistant", "content": "oi"}]}
+        assert (await admin.post(url, json=bad)).status_code == 422
+    finally:
+        ai_client.set_transport(None)
+    usage = (await admin.get(f"/api/projects/{pid}/ai/usage")).json()
+    assert usage["calls"] == 2
+
+
+HEAVY = "(a OR b OR c) AND (d OR e OR f) AND (g OR h OR i)"
+
+
+async def test_heavy_openalex_queries_are_spaced_out(monkeypatch):
+    from revalli.core.config import get_settings
+
+    assert clients.is_heavy({"search": HEAVY}) and not clients.is_heavy({"search": "a AND b"})
+    assert clients.is_heavy({"search.exact": HEAVY}) and not clients.is_heavy({})
+    sleeps: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr(get_settings(), "api_delay_seconds", 0.35)
+    monkeypatch.setattr(clients.asyncio, "sleep", fake_sleep)
+    clients._next_heavy.clear()
+    url = "https://api.openalex.org/works"
+    await clients.throttle(url, {"search": HEAVY})
+    assert sleeps == []  # a primeira consulta passa direto
+    await clients.throttle(url, {"search": HEAVY})
+    assert len(sleeps) == 1 and 0.5 < sleeps[0] <= clients.HEAVY_INTERVAL
+    # Consulta leve não espera nem ocupa a fila
+    await clients.throttle(url, {"search": "a AND b"})
+    assert len(sleeps) == 1
+    clients._next_heavy.clear()
+
+
+async def test_retry_waits_for_the_time_the_server_asks(monkeypatch):
+    from revalli.core.config import get_settings
+
+    waits: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        waits.append(seconds)
+
+    monkeypatch.setattr(get_settings(), "api_delay_seconds", 0.35)
+    monkeypatch.setattr(clients.asyncio, "sleep", fake_sleep)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return httpx.Response(429, json={"error": "Rate limit", "retryAfter": 2})
+        return httpx.Response(200, json={"ok": True})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        r = await clients.get(c, "https://api.example.org/x", {})
+    assert r.status_code == 200 and calls["n"] == 3
+    # Respeita o retryAfter do corpo e espera um pouco mais a cada tentativa
+    assert waits == [2.0, 4.0]
+
+
+def test_quoted_phrases_with_wildcards_are_rewritten_for_openalex():
+    q = '(bullying OR "assédio escolar") AND ("efeito* adverso*" OR "iatrogeni*" OR "adverse effect")'
+    assert clients.adapt_query(q) == (
+        '(bullying OR "assédio escolar") AND ((efeito* AND adverso*) OR iatrogeni* '
+        'OR "adverse effect")'
+    )
+    assert clients.adapt_query("plain words") == "plain words"
+    assert clients.search_param('"efeito* adverso*"') == {"search.exact": "(efeito* AND adverso*)"}
+
+
+async def test_preview_reports_the_adapted_query(admin):
+    pid = (await admin.post("/api/projects", json={"title": "Aspas"})).json()["id"]
+    url = f"/api/projects/{pid}/sources/preview"
+    r = await admin.post(url, json={"source": "scielo", "query": '"efeito* adverso*" AND anxi'})
+    assert r.status_code == 200, r.text
+    assert r.json()["translation"] == "(efeito* AND adverso*) AND anxi"
+    r = await admin.post(url, json={"source": "openalex", "query": "anxiety"})
+    assert r.json()["translation"] == ""
+
+
+async def test_exhausted_daily_budget_fails_fast_with_a_clear_code(admin):
+    pid = (await admin.post("/api/projects", json={"title": "Orçamento"})).json()["id"]
+    calls = {"n": 0}
+
+    def broke(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        body = {
+            "error": "Rate limit exceeded",
+            "message": "Insufficient budget",
+            "retryAfter": 81005,
+        }
+        return httpx.Response(429, json=body)
+
+    clients.set_transport(httpx.MockTransport(broke))
+    r = await admin.post(
+        f"/api/projects/{pid}/sources/preview", json={"source": "openalex", "query": "anxiety"}
+    )
+    # Uma tentativa só: esperar 22 horas não faz sentido
+    assert calls["n"] == 1
+    assert r.status_code == 502 and r.json()["detail"].startswith("openalex_key_needed: ")

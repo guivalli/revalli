@@ -17,6 +17,8 @@ x-backend-env: &backend-env
   NCBI_API_KEY: ${NCBI_API_KEY:-}
   API_SEARCH_MAX: ${API_SEARCH_MAX:-10000}
   OPENALEX_URL: ${OPENALEX_URL:-https://api.openalex.org}
+  OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+  ARTICLEMETA_URL: ${ARTICLEMETA_URL:-https://articlemeta.scielo.org/api/v1}
   PUBMED_URL: ${PUBMED_URL:-https://eutils.ncbi.nlm.nih.gov/entrez/eutils}
   EUROPEPMC_URL: ${EUROPEPMC_URL:-https://www.ebi.ac.uk/europepmc/webservices/rest}
   MAX_IMPORT_MB: ${MAX_IMPORT_MB:-50}

@@ -113,6 +113,12 @@ class JobStatus(enum.StrEnum):
     running = "running"
     done = "done"
     failed = "failed"
+    # Parada pedida pela pessoa: o worker encerra no próximo ponto seguro
+    cancelling = "cancelling"
+    cancelled = "cancelled"
+
+
+ACTIVE_STATUSES = [JobStatus.queued, JobStatus.running, JobStatus.cancelling]
 
 
 class Job(IdMixin, TimestampMixin, Base):

@@ -5,7 +5,7 @@ import type { ApiSource, Watch, WatchInput } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
 
-const SOURCES: ApiSource[] = ['pubmed', 'openalex', 'europepmc']
+const SOURCES: ApiSource[] = ['pubmed', 'openalex', 'europepmc', 'scielo', 'pepsic']
 const textarea =
   'w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-sm dark:border-stone-700 dark:bg-stone-900'
 

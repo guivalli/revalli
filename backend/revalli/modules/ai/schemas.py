@@ -52,6 +52,12 @@ class ProjectAISettings(BaseModel):
     mode: Literal["suggest", "second_reviewer"] = "suggest"
     budget_usd: float | None = Field(default=None, ge=0)
     extra_instructions: str = Field(default="", max_length=5000)
+    # A IA também sugere até 4 etiquetas por registro
+    suggest_tags: bool = True
+    # E o motivo principal da exclusão, para agrupar depois
+    suggest_reasons: bool = True
+    # Quando os revisores veem a sugestão: só depois de decidir (evita ancoragem) ou antes
+    reveal_suggestions: Literal["after", "before"] = "after"
     # Ordena a fila pelo que o modelo acha mais provável de ser incluído
     active_learning: bool = False
     # Sugere parar quando tantos registros seguidos forem excluídos
@@ -71,6 +77,8 @@ class SuggestionOut(BaseModel):
     confidence: float | None
     justification: str
     criteria: list[Criterion]
+    tags: list[str] = Field(default_factory=list)
+    exclusion_reason: str = ""
     model_key: str
     created_at: datetime
 
@@ -81,6 +89,28 @@ class RunIn(BaseModel):
     # calibration: amostra já decidida por humanos, para medir a IA
     scope: Literal["pending", "excluded", "calibration"] = "pending"
     limit: int | None = Field(default=None, ge=1, le=100_000)
+    # Refaz a análise mesmo onde já há resposta guardada para o mesmo prompt
+    force: bool = False
+
+
+class OrganizeIn(BaseModel):
+    inclusion_criteria: str = Field(default="", max_length=20_000)
+    exclusion_criteria: str = Field(default="", max_length=20_000)
+    # Respostas da equipe às perguntas da rodada anterior
+    answers: str = Field(default="", max_length=10_000)
+
+
+class TagSuggestIn(BaseModel):
+    sample: int = Field(default=40, ge=5, le=100)
+
+
+class ReasonGroupIn(BaseModel):
+    label: str = Field(min_length=1, max_length=200)
+    members: list[str] = Field(default_factory=list, max_length=200)
+
+
+class ApplyReasonsIn(BaseModel):
+    groups: list[ReasonGroupIn] = Field(max_length=30)
 
 
 class Estimate(BaseModel):

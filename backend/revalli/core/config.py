@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     enrichment_enabled: bool = True
     enrichment_contact_email: str = ""
     openalex_url: str = "https://api.openalex.org"
+    # Opcional e gratuita: eleva o limite de consultas com muitos operadores booleanos
+    openalex_api_key: str = ""
+    # Lista as revistas das coleções SciELO e PePSIC (busca no OpenAlex restrita a elas)
+    articlemeta_url: str = "https://articlemeta.scielo.org/api/v1"
 
     # Busca direta nas bases (PubMed, OpenAlex, Europe PMC) e snowballing de citações
     search_apis_enabled: bool = True

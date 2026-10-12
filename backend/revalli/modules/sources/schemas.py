@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SourceName = Literal["pubmed", "openalex", "europepmc"]
+SourceName = Literal["pubmed", "openalex", "europepmc", "scielo", "pepsic"]
 Target = Literal[
     "pubmed",
     "openalex",
@@ -15,6 +15,9 @@ Target = Literal[
     "psycinfo",
     "cochrane",
     "bvs",
+    "scielo",
+    "capes",
+    "pepsic",
 ]
 
 
@@ -58,6 +61,27 @@ class SnowballInfo(BaseModel):
 class TranslateIn(BaseModel):
     query: str = Field(min_length=1, max_length=20_000)
     target: Target
+
+
+class AssistMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
+
+
+class AssistIn(BaseModel):
+    messages: list[AssistMessage] = Field(min_length=1, max_length=30)
+
+
+class Strategy(BaseModel):
+    base: str
+    query: str
+    notes: list[str]
+
+
+class AssistOut(BaseModel):
+    reply: str
+    strategies: list[Strategy]
+    model: str
 
 
 class TranslateOut(BaseModel):

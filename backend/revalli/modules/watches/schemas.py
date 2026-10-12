@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class WatchIn(BaseModel):
     kind: Literal["api_search", "feed_url"]
     name: str = Field(default="", max_length=200)
-    source: Literal["pubmed", "openalex", "europepmc", ""] = ""
+    source: Literal["pubmed", "openalex", "europepmc", "scielo", "pepsic", ""] = ""
     query: str = Field(default="", max_length=20_000)
     url: str = Field(default="", max_length=2000, pattern=r"^(https?://.*)?$")
     # Cabeçalho de autorização, por exemplo "Bearer abc"; vazio mantém o atual no PUT

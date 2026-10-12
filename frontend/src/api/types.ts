@@ -102,8 +102,8 @@ export interface DuplicateGroup {
 
 export interface Job {
   id: string
-  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'pdf_zip' | 'pdf_oa' | 'ai_extract' | 'api_search' | 'snowball' | 'corpus_index' | 'watch_run'
-  status: 'queued' | 'running' | 'done' | 'failed'
+  kind: 'dedup' | 'enrich' | 'ai_screen' | 'ai_embed' | 'ai_criteria' | 'ai_tags' | 'ai_reasons' | 'pdf_zip' | 'pdf_oa' | 'ai_extract' | 'api_search' | 'snowball' | 'corpus_index' | 'watch_run'
+  status: 'queued' | 'running' | 'done' | 'failed' | 'cancelling' | 'cancelled'
   progress: number
   total: number
   result: Record<string, unknown>
@@ -124,6 +124,18 @@ export interface Summary {
 export type Phase = 'title_abstract' | 'full_text'
 export type DecisionKind = 'include' | 'exclude' | 'maybe'
 
+export interface CriterionItem {
+  kind: 'include' | 'exclude'
+  name: string
+  definition: string
+  examples: string[]
+}
+
+export interface TagItem {
+  name: string
+  description: string
+}
+
 export interface ScreeningSettings {
   blind: boolean
   reviewers_title_abstract: number
@@ -132,6 +144,8 @@ export interface ScreeningSettings {
   exclusion_criteria: string
   highlight_include: string[]
   highlight_exclude: string[]
+  criteria_items: CriterionItem[]
+  tag_vocabulary: TagItem[]
 }
 
 export interface Reason {
@@ -252,6 +266,9 @@ export interface ProjectAISettings {
   extra_instructions: string
   active_learning: boolean
   stop_after_irrelevant: number
+  suggest_tags: boolean
+  suggest_reasons: boolean
+  reveal_suggestions: 'after' | 'before'
 }
 export type AIScope = 'pending' | 'excluded' | 'calibration'
 export interface AIEstimate {
@@ -270,6 +287,8 @@ export interface AISuggestion {
   confidence: number | null
   justification: string
   criteria: { criterion: string; status: 'met' | 'violated' | 'unclear' }[]
+  tags: string[]
+  exclusion_reason: string
   model_key: string
   created_at: string
 }
@@ -469,7 +488,7 @@ export interface SourceCount {
   records: number
 }
 
-export type ApiSource = 'pubmed' | 'openalex' | 'europepmc'
+export type ApiSource = 'pubmed' | 'openalex' | 'europepmc' | 'scielo' | 'pepsic'
 
 export interface SourcePreview {
   count: number
@@ -764,4 +783,39 @@ export interface GapMap {
   cells: { row: string; col: string; studies: string[] }[]
   studies: Record<string, { label: string; title: string; year: number | null }>
   total_studies: number
+}
+
+export interface CriteriaDraft {
+  summary: string
+  items: CriterionItem[]
+  questions: string[]
+}
+
+export interface TagProposals {
+  tags: TagItem[]
+  sampled: number
+}
+
+export interface ReasonGroup {
+  label: string
+  existing: boolean
+  members: string[]
+  count: number
+}
+
+export interface ReasonGroups {
+  groups: ReasonGroup[]
+  total: number
+}
+
+export interface AssistStrategy {
+  base: string
+  query: string
+  notes: string[]
+}
+
+export interface AssistReply {
+  reply: string
+  strategies: AssistStrategy[]
+  model: string
 }

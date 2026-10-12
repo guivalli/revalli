@@ -76,7 +76,9 @@ async def execute(db: AsyncSession, job_id: uuid.UUID) -> None:
     job = await db.get(Job, job_id, populate_existing=True)
     try:
         job.result = await HANDLERS[job.kind](db, job)
-        job.status = JobStatus.done
+        # Um handler que parou a pedido da pessoa avisa em "stopped"; o que foi feito fica salvo
+        stopped = job.result.get("stopped") == "user"
+        job.status = JobStatus.cancelled if stopped else JobStatus.done
     except Exception as exc:  # registra a falha para a interface mostrar
         await db.rollback()
         job = await db.get(Job, job_id)

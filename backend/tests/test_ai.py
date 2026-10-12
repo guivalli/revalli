@@ -30,18 +30,66 @@ def _fake_llm(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"data": [{"id": "fake-8b"}, {"id": "fake-70b"}]})
     body = json.loads(request.content)
     CALLS.append(body)
+    system = body["messages"][0]["content"]
     record = body["messages"][-1]["content"]
-    if "broken" in record:
+    if system.startswith("You help a research team turn"):
+        content = json.dumps(
+            {
+                "summary": "Exercício para ansiedade em adultos.",
+                "items": [
+                    {
+                        "kind": "include",
+                        "name": "Adultos",
+                        "definition": "Participantes com 18 anos ou mais.",
+                        "examples": ["Universitários", ""],
+                    },
+                    {"kind": "exclude", "name": "Animais", "definition": "Estudos pré-clínicos."},
+                    {"kind": "bogus", "name": "Descartado"},
+                ],
+                "questions": ["Qual a definição de ansiedade?", ""],
+            }
+        )
+    elif system.startswith("You help a research team organise the reasons"):
+        content = json.dumps(
+            {
+                "groups": [
+                    {
+                        "label": "Estudo com animais",
+                        "existing": None,
+                        "members": ["estudo em animais", "Pesquisa pré-clínica"],
+                    },
+                    {"label": "Fora do tema", "existing": None, "members": ["Fora do tema"]},
+                ]
+            }
+        )
+    elif system.startswith("You help a research team organise"):
+        content = json.dumps(
+            {
+                "tags": [
+                    {"name": "Ansiedade", "description": "Transtornos de ansiedade."},
+                    {"name": "ansiedade", "description": "duplicada"},
+                    {"name": "Yoga", "description": "Práticas de yoga."},
+                ]
+            }
+        )
+    elif "broken" in record:
         content = "sorry, no json here"
     elif "rats" in record:
         content = '<think>animals</think>{"decision": "exclude", "confidence": 0.9, '
-        content += '"justification": "Estudo em animais.", '
+        content += (
+            '"justification": "Estudo em animais.", "exclusion_reason": "estudo em animais", '
+        )
         content += '"criteria": [{"criterion": "Humanos", "status": "violated"}]}'
     elif "unclear" in record:
         content = '```json\n{"decision": "maybe", "confidence": 0.4, "justification": "?"}\n```'
     else:
         content = json.dumps(
-            {"decision": "include", "confidence": 0.8, "justification": "Adultos com ansiedade."}
+            {
+                "decision": "include",
+                "confidence": 0.8,
+                "justification": "Adultos com ansiedade.",
+                "tags": ["ansiedade", "Novo tema", "ANSIEDADE", "a", "b", "c"],
+            }
         )
     return httpx.Response(
         200,
@@ -313,3 +361,277 @@ def test_logistic_regression_separates_classes():
     w = train_logistic(x, y)
     p = predict(w, np.array([[1, 0], [0, 1]], dtype=np.float32))
     assert p[0] > 0.5 > p[1]
+
+
+async def test_organize_criteria_returns_draft_without_saving(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety"])
+    body = {
+        "inclusion_criteria": "Adultos com ansiedade",
+        "exclusion_criteria": "Estudos em animais",
+    }
+    job = (await admin.post(f"/api/projects/{pid}/ai/criteria/organize", json=body)).json()
+    assert job["status"] == "done", job
+    out = job["result"]
+    # O item de tipo inválido some; exemplos vazios são limpos
+    assert [i["name"] for i in out["items"]] == ["Adultos", "Animais"]
+    assert out["items"][0]["examples"] == ["Universitários"]
+    assert out["questions"] == ["Qual a definição de ansiedade?"]
+    sent = CALLS[-1]["messages"][-1]["content"]
+    assert "Adultos com ansiedade" in sent and "Estudos em animais" in sent
+    # Nada foi salvo: o texto original continua valendo até a equipe aprovar
+    s = (await admin.get(f"/api/projects/{pid}/screening/settings")).json()
+    assert s["criteria_items"] == []
+    usage = (await admin.get(f"/api/projects/{pid}/ai/usage")).json()
+    assert usage["calls"] == 1
+
+
+async def test_organize_criteria_validation_and_permissions(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety"])
+    url = f"/api/projects/{pid}/ai/criteria/organize"
+    # Sem texto nenhum a IA propõe um rascunho a partir do título e da descrição
+    job = (await admin.post(url, json={})).json()
+    assert job["status"] == "done" and job["result"]["items"]
+    assert "has not written any criteria yet" in CALLS[-1]["messages"][-1]["content"]
+    ana = await invite_and_join(admin, "ana@ex.org", pid, "reviewer", name="Ana")
+    assert (await ana.post(url, json={"inclusion_criteria": "x"})).status_code == 403
+    await ana.aclose()
+    await admin.put(f"/api/projects/{pid}/ai/settings", json={"enabled": False})
+    r = await admin.post(url, json={"inclusion_criteria": "x"})
+    assert r.status_code == 409
+
+
+async def test_approved_criteria_replace_free_text_in_prompt(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety"])
+    await admin.post(f"/api/projects/{pid}/ai/run", json={})
+    free_prompt = CALLS[-1]["messages"][0]["content"]
+    assert "Adultos com ansiedade" in free_prompt
+    s = (await admin.get(f"/api/projects/{pid}/screening/settings")).json()
+    s["criteria_items"] = [
+        {"kind": "include", "name": "Adultos", "definition": "18 anos ou mais", "examples": ["x"]},
+        {"kind": "exclude", "name": "Animais", "definition": "", "examples": []},
+    ]
+    saved = await admin.put(f"/api/projects/{pid}/screening/settings", json=s)
+    assert saved.status_code == 200 and len(saved.json()["criteria_items"]) == 2
+    n = len(CALLS)
+    job = (await admin.post(f"/api/projects/{pid}/ai/run", json={})).json()
+    # O prompt mudou, então a resposta antiga não vale e o modelo é chamado de novo
+    assert job["result"]["cached"] == 0 and len(CALLS) == n + 1
+    prompt = CALLS[-1]["messages"][0]["content"]
+    assert "1. Adultos: 18 anos ou mais (examples: x)" in prompt
+    assert "1. Animais" in prompt and "Adultos com ansiedade" not in prompt
+
+
+async def test_tags_are_canonical_unique_and_capped(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety"])
+    s = (await admin.get(f"/api/projects/{pid}/screening/settings")).json()
+    s["tag_vocabulary"] = [
+        {"name": "Ansiedade", "description": "Transtornos de ansiedade"},
+        {"name": "ansiedade", "description": "repetida"},
+    ]
+    saved = (await admin.put(f"/api/projects/{pid}/screening/settings", json=s)).json()
+    assert [t["name"] for t in saved["tag_vocabulary"]] == ["Ansiedade"]
+    await admin.post(f"/api/projects/{pid}/ai/run", json={})
+    assert "Ansiedade: Transtornos de ansiedade" in CALLS[-1]["messages"][0]["content"]
+    sug = (await admin.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json()[0]
+    # Grafia do vocabulário, sem repetição e no máximo 4
+    assert sug["tags"] == ["Ansiedade", "Novo tema", "a", "b"]
+    # O vocabulário aparece nas etiquetas sugeridas ao digitar
+    labels = (await admin.get(f"/api/projects/{pid}/screening/labels")).json()
+    assert "Ansiedade" in labels
+
+
+async def test_tags_can_be_turned_off(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety"])
+    ai = {"enabled": True, "suggest_tags": False}
+    await admin.put(f"/api/projects/{pid}/ai/settings", json=ai)
+    await admin.post(f"/api/projects/{pid}/ai/run", json={})
+    assert "Tags:" not in CALLS[-1]["messages"][0]["content"]
+    sug = (await admin.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json()[0]
+    assert sug["tags"] == []
+
+
+async def test_suggest_tag_vocabulary(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety", "Yoga and anxiety"])
+    job = (await admin.post(f"/api/projects/{pid}/ai/tags/suggest", json={})).json()
+    assert job["status"] == "done", job
+    names = [t["name"] for t in job["result"]["tags"]]
+    assert names == ["Ansiedade", "Yoga"] and job["result"]["sampled"] == 2
+    sent = CALLS[-1]["messages"][-1]["content"]
+    assert "Exercise and anxiety" in sent and "Yoga and anxiety" in sent
+
+
+async def test_reveal_suggestions_before_deciding(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety"])
+    await admin.post(f"/api/projects/{pid}/ai/run", json={})
+    ana = await invite_and_join(admin, "ana@ex.org", pid, "reviewer", name="Ana")
+    assert (await ana.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json() == []
+    ai = {"enabled": True, "reveal_suggestions": "before"}
+    assert (await admin.put(f"/api/projects/{pid}/ai/settings", json=ai)).status_code == 200
+    assert len((await ana.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json()) == 1
+    await ana.aclose()
+
+
+async def test_exclusion_reason_is_suggested_only_for_exclusions(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety", "Anxiety in rats"])
+    await admin.post(f"/api/projects/{pid}/ai/run", json={})
+    assert "Exclusion reason:" in CALLS[-1]["messages"][0]["content"]
+    sugs = (await admin.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json()
+    by = {s["decision"]: s for s in sugs}
+    assert by["exclude"]["exclusion_reason"] == "estudo em animais"
+    assert by["include"]["exclusion_reason"] == ""
+
+
+async def test_exclusion_reason_can_be_turned_off(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Anxiety in rats"])
+    await admin.put(
+        f"/api/projects/{pid}/ai/settings", json={"enabled": True, "suggest_reasons": False}
+    )
+    await admin.post(f"/api/projects/{pid}/ai/run", json={})
+    assert "Exclusion reason:" not in CALLS[-1]["messages"][0]["content"]
+    sug = (await admin.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json()[0]
+    assert sug["exclusion_reason"] == ""
+
+
+async def test_group_and_apply_exclusion_reasons(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Anxiety in rats", "Rats and stress rats"])
+    url = f"/api/projects/{pid}/ai/reasons/organize"
+    # Sem sugestões ainda: nada para agrupar
+    job = (await admin.post(url, json={})).json()
+    assert job["status"] == "failed" and "no_reasons_to_group" in job["error"]
+    await admin.post(f"/api/projects/{pid}/ai/run", json={})
+    job = (await admin.post(url, json={})).json()
+    assert job["status"] == "done", job
+    groups = job["result"]["groups"]
+    # A IA agrupou um motivo e esqueceu outro: nenhum motivo bruto some
+    assert groups[0]["label"] == "Estudo com animais" and groups[0]["count"] == 2
+    assert groups[0]["existing"] is False
+    sent = CALLS[-1]["messages"][-1]["content"]
+    assert "estudo em animais (2)" in sent
+    # Aplicar cria o motivo no protocolo e aponta as sugestões para ele
+    body = {"groups": [{"label": "Estudo com animais", "members": groups[0]["members"]}]}
+    r = await admin.post(f"/api/projects/{pid}/ai/reasons/apply", json=body)
+    assert r.status_code == 200 and r.json() == {"created": 1, "updated": 2}
+    reasons = (await admin.get(f"/api/projects/{pid}/screening/reasons")).json()
+    assert [x["label"] for x in reasons] == ["Estudo com animais"]
+    sugs = (await admin.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json()
+    assert {s["exclusion_reason"] for s in sugs} == {"Estudo com animais"}
+    # Aplicar de novo reaproveita o motivo (e reativa se estava arquivado)
+    await admin.patch(
+        f"/api/projects/{pid}/screening/reasons/{reasons[0]['id']}", json={"archived": True}
+    )
+    r = await admin.post(f"/api/projects/{pid}/ai/reasons/apply", json=body)
+    assert r.json()["created"] == 0
+    reasons = (await admin.get(f"/api/projects/{pid}/screening/reasons")).json()
+    assert len(reasons) == 1 and reasons[0]["archived"] is False
+
+
+async def test_apply_reasons_is_lead_only(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Anxiety in rats"])
+    ana = await invite_and_join(admin, "ana@ex.org", pid, "reviewer", name="Ana")
+    body = {"groups": [{"label": "X", "members": []}]}
+    assert (await ana.post(f"/api/projects/{pid}/ai/reasons/apply", json=body)).status_code == 403
+    assert (await ana.post(f"/api/projects/{pid}/ai/reasons/organize", json={})).status_code == 403
+    await ana.aclose()
+
+
+async def test_screening_without_criteria_is_refused(admin):
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety"])
+    s = (await admin.get(f"/api/projects/{pid}/screening/settings")).json()
+    s["inclusion_criteria"] = "   "
+    await admin.put(f"/api/projects/{pid}/screening/settings", json=s)
+    for path in ("estimate", "run"):
+        r = await admin.post(f"/api/projects/{pid}/ai/{path}", json={})
+        assert r.status_code == 409 and r.json()["detail"] == "criteria_missing"
+    assert CALLS == []
+    # Critérios detalhados também valem
+    s["criteria_items"] = [{"kind": "include", "name": "Adultos", "definition": "", "examples": []}]
+    await admin.put(f"/api/projects/{pid}/screening/settings", json=s)
+    assert (await admin.post(f"/api/projects/{pid}/ai/estimate", json={})).status_code == 200
+
+
+async def test_stop_screening_keeps_what_was_done_then_continue_and_redo(admin):
+    from sqlalchemy import update
+
+    from revalli.core.db import SessionLocal
+    from revalli.models import Job
+
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety", "Yoga and anxiety", "Anxiety in rats"])
+    calls = {"n": 0}
+
+    async def stopping(request: httpx.Request) -> httpx.Response:
+        response = _fake_llm(request)
+        calls["n"] += 1
+        if calls["n"] == 1:
+            # A pessoa clica em "Parar" enquanto o primeiro registro é analisado
+            async with SessionLocal() as db:
+                await db.execute(
+                    update(Job).where(Job.kind == "ai_screen").values(status="cancelling")
+                )
+                await db.commit()
+        return response
+
+    client.set_transport(httpx.MockTransport(stopping))
+    job = (await admin.post(f"/api/projects/{pid}/ai/run", json={})).json()
+    assert job["status"] == "cancelled", job
+    assert job["result"]["done"] == 1 and job["result"]["stopped"] == "user"
+    sugs = (await admin.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json()
+    assert len(sugs) == 1
+    # Parado não é falha: não aparece como tarefa ativa nem como erro
+    assert (await admin.get(f"/api/projects/{pid}/jobs?active=true")).json() == []
+
+    # Continuar: o que já foi analisado vem do cache
+    client.set_transport(httpx.MockTransport(_fake_llm))
+    n = len(CALLS)
+    job = (await admin.post(f"/api/projects/{pid}/ai/run", json={})).json()
+    assert job["status"] == "done" and job["result"]["cached"] == 1 and job["result"]["done"] == 3
+    assert len(CALLS) == n + 2
+
+    # Refazer: analisa tudo de novo e atualiza as respostas, sem duplicá-las
+    n = len(CALLS)
+    est = (await admin.post(f"/api/projects/{pid}/ai/estimate", json={"force": True})).json()
+    assert est["cached"] == 0 and est["records"] == 3
+    job = (await admin.post(f"/api/projects/{pid}/ai/run", json={"force": True})).json()
+    assert job["result"]["cached"] == 0 and len(CALLS) == n + 3
+    sugs = (await admin.get(f"/api/projects/{pid}/ai/{TA}/suggestions")).json()
+    assert len(sugs) == 3
+
+
+async def test_cancel_endpoint_states_and_permissions(admin):
+    from revalli.core.db import SessionLocal
+    from revalli.models import Job
+
+    await _configure(admin)
+    pid = await _project(admin, ["Exercise and anxiety"])
+    ana = await invite_and_join(admin, "ana@ex.org", pid, "reviewer", name="Ana")
+    async with SessionLocal() as db:
+        queued = Job(project_id=pid, kind="ai_screen", status="queued")
+        running = Job(project_id=pid, kind="ai_screen", status="running")
+        done = Job(project_id=pid, kind="ai_screen", status="done")
+        other = Job(project_id=pid, kind="dedup", status="running")
+        db.add_all([queued, running, done, other])
+        await db.commit()
+        ids = [j.id for j in (queued, running, done, other)]
+    url = f"/api/projects/{pid}/jobs"
+    assert (await ana.post(f"{url}/{ids[0]}/cancel", json={})).status_code == 403
+    await ana.aclose()
+    assert (await admin.post(f"{url}/{ids[0]}/cancel", json={})).json()["status"] == "cancelled"
+    assert (await admin.post(f"{url}/{ids[1]}/cancel", json={})).json()["status"] == "cancelling"
+    assert (await admin.post(f"{url}/{ids[2]}/cancel", json={})).json()["status"] == "done"
+    r = await admin.post(f"{url}/{ids[3]}/cancel", json={})
+    assert r.status_code == 409 and r.json()["detail"] == "not_cancellable"
+    # Parando ainda conta como tarefa ativa, para a interface mostrar "parando…"
+    active = (await admin.get(f"{url}?active=true")).json()
+    assert {j["status"] for j in active} == {"cancelling", "running"}

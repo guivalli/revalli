@@ -11,6 +11,7 @@ import Members from './pages/project/Members'
 import Overview from './pages/project/Overview'
 import Protocol from './pages/project/Protocol'
 import ProjectLayout from './pages/project/ProjectLayout'
+import ProjectSettings from './pages/project/ProjectSettings'
 import Records from './pages/project/Records'
 import Screening from './pages/project/Screening'
 import ScreeningSession from './pages/project/ScreeningSession'
@@ -92,6 +93,7 @@ export default function App() {
           <Route path="conversa" element={<Lazy><Corpus /></Lazy>} />
           <Route path="relatorio" element={<Lazy><Report /></Lazy>} />
           <Route path="membros" element={<Members />} />
+          <Route path="configuracoes" element={<ProjectSettings />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

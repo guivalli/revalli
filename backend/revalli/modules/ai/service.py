@@ -2,12 +2,13 @@
 
 import hashlib
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from revalli.core.db import utcnow
 from revalli.models import (
     AIProvider,
     AISuggestion,
@@ -181,13 +182,34 @@ async def _cached(
     return {s.record_id: s for s in rows if hashes.get(s.record_id) == s.prompt_hash}
 
 
-async def estimate(db: AsyncSession, project: Project, phase: Phase, scope: str, limit: int | None):
+async def estimate(
+    db: AsyncSession,
+    project: Project,
+    phase: Phase,
+    scope: str,
+    limit: int | None,
+    force: bool = False,
+):
     ai = project_ai(project)
     res = await resolve(db, "screening", ai.local_only)
     settings = get_settings(project)
     records = await _records(db, await target_ids(db, project, phase, scope, limit))
-    msgs = {r.id: build_messages(project, settings, r, ai.extra_instructions) for r in records}
-    cache = await _cached(db, phase, res.model_key, {k: prompt_hash(m) for k, m in msgs.items()})
+    msgs = {
+        r.id: build_messages(
+            project,
+            settings,
+            r,
+            ai.extra_instructions,
+            suggest_tags=ai.suggest_tags,
+            suggest_reasons=ai.suggest_reasons,
+        )
+        for r in records
+    }
+    cache = {}
+    if not force:
+        cache = await _cached(
+            db, phase, res.model_key, {k: prompt_hash(m) for k, m in msgs.items()}
+        )
     todo = [m for k, m in msgs.items() if k not in cache]
     tin = sum(estimate_tokens(m) for m in todo)
     tout = OUTPUT_TOKENS_GUESS * len(todo)
@@ -230,11 +252,42 @@ def normalize_answer(data: dict) -> dict:
         "confidence": confidence,
         "justification": str(data.get("justification") or "")[:2000],
         "criteria": criteria[:30],
+        "tags": clean_tags(data.get("tags")),
+        "exclusion_reason": (
+            " ".join(str(data.get("exclusion_reason") or "").split())[:200]
+            if decision == "exclude"
+            else ""
+        ),
     }
 
 
+MAX_TAGS = 4
+
+
+def clean_tags(raw, vocabulary: list[str] | None = None) -> list[str]:
+    """Até 4 etiquetas únicas; as que existem no vocabulário voltam com a grafia dele."""
+    canon = {v.lower(): v for v in vocabulary or []}
+    if isinstance(raw, str):
+        raw = [t for t in raw.split(",")]
+    out: list[str] = []
+    for item in raw if isinstance(raw, list) else []:
+        name = item.get("name") if isinstance(item, dict) else item
+        name = " ".join(str(name or "").split())[:60]
+        key = name.lower()
+        if name and key not in {o.lower() for o in out}:
+            out.append(canon.get(key, name))
+    return out[:MAX_TAGS]
+
+
 async def screen_one(
-    db: AsyncSession, project: Project, res: Resolved, phase: Phase, record: Record, msgs, h
+    db: AsyncSession,
+    project: Project,
+    res: Resolved,
+    phase: Phase,
+    record: Record,
+    msgs,
+    h,
+    existing: AISuggestion | None = None,
 ) -> AISuggestion:
     result = await client.chat(res.endpoint, msgs)
     db.add(
@@ -249,6 +302,17 @@ async def screen_one(
         )
     )
     answer = normalize_answer(client.parse_json(result.content))
+    vocabulary = [t.name for t in get_settings(project).tag_vocabulary]
+    ai = project_ai(project)
+    answer["tags"] = clean_tags(answer["tags"], vocabulary) if ai.suggest_tags else []
+    if not ai.suggest_reasons:
+        answer["exclusion_reason"] = ""
+    if existing is not None:
+        # Refazer: a resposta nova substitui a antiga e passa a ser a mais recente
+        for key, value in answer.items():
+            setattr(existing, key, value)
+        existing.created_at = utcnow()
+        return existing
     sug = AISuggestion(
         project_id=project.id,
         record_id=record.id,
@@ -268,6 +332,8 @@ async def run_screening(
     scope: str,
     limit: int | None,
     progress: Callable[[int, int], None] | None = None,
+    force: bool = False,
+    should_stop: Callable[[], Awaitable[bool]] | None = None,
 ) -> dict:
     ai = project_ai(project)
     res = await resolve(db, "screening", ai.local_only)
@@ -276,13 +342,31 @@ async def run_screening(
     ids = await target_ids(db, project, phase, scope, limit)
     records = await _records(db, ids)
     as_reviewer = scope == "pending" and ai.mode == "second_reviewer"
-    stats = {"total": len(records), "done": 0, "cached": 0, "errors": 0, "stopped": None}
+    stats = {
+        "total": len(records),
+        "done": 0,
+        "cached": 0,
+        "errors": 0,
+        "stopped": None,
+        "phase": str(phase),
+    }
     used = await spent(db, project.id)
     consecutive_failures = 0
     for i, record in enumerate(records):
-        msgs = build_messages(project, settings, record, ai.extra_instructions)
+        if should_stop is not None and await should_stop():
+            stats["stopped"] = "user"
+            break
+        msgs = build_messages(
+            project,
+            settings,
+            record,
+            ai.extra_instructions,
+            suggest_tags=ai.suggest_tags,
+            suggest_reasons=ai.suggest_reasons,
+        )
         h = prompt_hash(msgs)
-        sug = (await _cached(db, phase, res.model_key, {record.id: h})).get(record.id)
+        old = (await _cached(db, phase, res.model_key, {record.id: h})).get(record.id)
+        sug = None if force else old
         if sug is not None:
             stats["cached"] += 1
         else:
@@ -291,7 +375,7 @@ async def run_screening(
                 stats["stopped"] = "budget"
                 break
             try:
-                sug = await screen_one(db, project, res, phase, record, msgs, h)
+                sug = await screen_one(db, project, res, phase, record, msgs, h, existing=old)
                 consecutive_failures = 0
             except AIError as exc:
                 stats["errors"] += 1

@@ -21,7 +21,7 @@ from revalli.core.deps import current_user, get_membership, require_lead
 from revalli.models import DuplicateGroup, Job, NotDuplicate, Record, Search, User
 from revalli.modules.imports.parsers import FORMATS, ImportFormatError, parse_file
 from revalli.modules.records.jobs import create_job, dispatch
-from revalli.modules.records.models import DuplicateStatus, JobStatus
+from revalli.modules.records.models import ACTIVE_STATUSES, DuplicateStatus, JobStatus
 from revalli.modules.records.schemas import (
     ConfirmIn,
     DuplicateGroupOut,
@@ -492,7 +492,7 @@ async def start_enrich(
             select(Job.id).where(
                 Job.project_id == project_id,
                 Job.kind == "enrich",
-                Job.status.in_([JobStatus.queued, JobStatus.running]),
+                Job.status.in_(ACTIVE_STATUSES),
             )
         )
     ).first()
@@ -513,9 +513,36 @@ async def list_jobs(
     await get_membership(db, project_id, user)
     stmt = select(Job).where(Job.project_id == project_id)
     if active:
-        stmt = stmt.where(Job.status.in_([JobStatus.queued, JobStatus.running]))
+        stmt = stmt.where(Job.status.in_(ACTIVE_STATUSES))
     rows = await db.execute(stmt.order_by(Job.created_at.desc()).limit(20))
     return rows.scalars().all()
+
+
+# Tarefas que sabem parar no meio e guardar o que já fizeram
+CANCELLABLE = {"ai_screen"}
+
+
+@router.post("/jobs/{job_id}/cancel", response_model=JobOut)
+async def cancel_job(
+    project_id: uuid.UUID,
+    job_id: uuid.UUID,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pede para a tarefa parar. Na fila, cancela na hora; rodando, para no próximo registro."""
+    await require_lead(db, project_id, user)
+    job = await db.get(Job, job_id)
+    if job is None or job.project_id != project_id:
+        raise HTTPException(404, "job_not_found")
+    if job.kind not in CANCELLABLE:
+        raise HTTPException(409, "not_cancellable")
+    if job.status == JobStatus.queued:
+        job.status = JobStatus.cancelled
+        job.finished_at = utcnow()
+    elif job.status == JobStatus.running:
+        job.status = JobStatus.cancelling
+    await db.commit()
+    return job
 
 
 @router.get("/jobs/{job_id}", response_model=JobOut)

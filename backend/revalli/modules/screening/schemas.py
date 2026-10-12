@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -16,6 +17,37 @@ def _clean_terms(values: list[str]) -> list[str]:
     return out[:300]
 
 
+class CriterionItem(BaseModel):
+    """Um critério de elegibilidade detalhado: uma condição que a triagem consegue aplicar."""
+
+    kind: Literal["include", "exclude"]
+    name: str = Field(min_length=1, max_length=150)
+    definition: str = Field(default="", max_length=2000)
+    examples: list[str] = Field(default_factory=list, max_length=10)
+
+    @field_validator("name", "definition")
+    @classmethod
+    def strip_text(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("examples")
+    @classmethod
+    def clean_examples(cls, v: list[str]) -> list[str]:
+        return [e.strip()[:300] for e in v if e.strip()]
+
+
+class TagItem(BaseModel):
+    """Uma etiqueta do vocabulário do projeto, com a descrição que orienta a IA."""
+
+    name: str = Field(min_length=1, max_length=60)
+    description: str = Field(default="", max_length=300)
+
+    @field_validator("name", "description")
+    @classmethod
+    def strip_text(cls, v: str) -> str:
+        return v.strip()
+
+
 class ScreeningSettings(BaseModel):
     blind: bool = True
     reviewers_title_abstract: int = Field(default=2, ge=1, le=5)
@@ -24,11 +56,24 @@ class ScreeningSettings(BaseModel):
     exclusion_criteria: str = Field(default="", max_length=20_000)
     highlight_include: list[str] = Field(default_factory=list)
     highlight_exclude: list[str] = Field(default_factory=list)
+    # Critérios detalhados e aprovados pela equipe; quando existem, a IA usa estes no lugar do texto
+    criteria_items: list[CriterionItem] = Field(default_factory=list, max_length=60)
+    tag_vocabulary: list[TagItem] = Field(default_factory=list, max_length=80)
 
     @field_validator("highlight_include", "highlight_exclude")
     @classmethod
     def clean_terms(cls, v: list[str]) -> list[str]:
         return _clean_terms(v)
+
+    @field_validator("tag_vocabulary")
+    @classmethod
+    def unique_tags(cls, v: list[TagItem]) -> list[TagItem]:
+        seen, out = set(), []
+        for tag in v:
+            if tag.name and tag.name.lower() not in seen:
+                seen.add(tag.name.lower())
+                out.append(tag)
+        return out
 
     def reviewers_for(self, phase: Phase) -> int:
         return (

@@ -11,17 +11,21 @@ from revalli.modules.ai import client
 from revalli.modules.ai.active import screening_curve
 from revalli.modules.ai.client import AIError, Endpoint
 from revalli.modules.ai.crypto import decrypt, encrypt
+from revalli.modules.ai.protocol import apply_reason_groups
 from revalli.modules.ai.schemas import (
+    ApplyReasonsIn,
     Calibration,
     Curve,
     Estimate,
     FlagOut,
     InstanceAISettings,
+    OrganizeIn,
     ProjectAISettings,
     ProviderIn,
     ProviderOut,
     RunIn,
     SuggestionOut,
+    TagSuggestIn,
     UsageOut,
 )
 from revalli.modules.ai.service import (
@@ -39,7 +43,7 @@ from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.schemas import JobOut
 from revalli.modules.screening.models import Phase
 from revalli.modules.screening.router import _item
-from revalli.modules.screening.service import State, compute_states
+from revalli.modules.screening.service import State, compute_states, get_settings
 
 router = APIRouter(tags=["ai"])
 
@@ -180,6 +184,13 @@ async def _enabled_project(db, project_id, user):
     return project
 
 
+def _require_criteria(project) -> None:
+    """Sem critérios a IA não tem o que aplicar: a interface leva a pessoa ao protocolo."""
+    st = get_settings(project)
+    if not (st.inclusion_criteria.strip() or st.exclusion_criteria.strip() or st.criteria_items):
+        raise HTTPException(409, "criteria_missing")
+
+
 @project_router.post("/estimate", response_model=Estimate)
 async def estimate_run(
     project_id: uuid.UUID,
@@ -188,8 +199,9 @@ async def estimate_run(
     db: AsyncSession = Depends(get_db),
 ):
     project = await _enabled_project(db, project_id, user)
+    _require_criteria(project)
     try:
-        out = await estimate(db, project, Phase(body.phase), body.scope, body.limit)
+        out = await estimate(db, project, Phase(body.phase), body.scope, body.limit, body.force)
     except AIError as exc:
         raise _ai_error(exc) from exc
     await db.commit()  # a conta da IA pode ter sido criada agora
@@ -204,6 +216,7 @@ async def start_run(
     db: AsyncSession = Depends(get_db),
 ):
     project = await _enabled_project(db, project_id, user)
+    _require_criteria(project)
     try:
         res = await resolve(db, "screening", project_ai(project).local_only)
     except AIError as exc:
@@ -211,6 +224,69 @@ async def start_run(
     job = await create_job(db, project_id, "ai_screen", body.model_dump())
     await dispatch(db, job, queue="gpu" if res.provider.is_local else "remote")
     return job
+
+
+@project_router.post("/criteria/organize", response_model=JobOut, status_code=202)
+async def organize(
+    project_id: uuid.UUID,
+    body: OrganizeIn,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """A IA detalha os critérios escritos pela equipe. O resultado fica no job; nada é salvo
+    até a equipe revisar e gravar o protocolo."""
+    project = await _enabled_project(db, project_id, user)
+    try:
+        res = await resolve(db, "screening", project_ai(project).local_only)
+    except AIError as exc:
+        raise _ai_error(exc) from exc
+    job = await create_job(db, project_id, "ai_criteria", body.model_dump())
+    await dispatch(db, job, queue="gpu" if res.provider.is_local else "remote")
+    return job
+
+
+@project_router.post("/tags/suggest", response_model=JobOut, status_code=202)
+async def suggest_vocabulary(
+    project_id: uuid.UUID,
+    body: TagSuggestIn,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await _enabled_project(db, project_id, user)
+    try:
+        res = await resolve(db, "screening", project_ai(project).local_only)
+    except AIError as exc:
+        raise _ai_error(exc) from exc
+    job = await create_job(db, project_id, "ai_tags", body.model_dump())
+    await dispatch(db, job, queue="gpu" if res.provider.is_local else "remote")
+    return job
+
+
+@project_router.post("/reasons/organize", response_model=JobOut, status_code=202)
+async def organize_exclusion_reasons(
+    project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    """Agrupa os motivos de exclusão propostos pela IA. O resultado fica no job até a equipe
+    aplicar."""
+    project = await _enabled_project(db, project_id, user)
+    try:
+        res = await resolve(db, "screening", project_ai(project).local_only)
+    except AIError as exc:
+        raise _ai_error(exc) from exc
+    job = await create_job(db, project_id, "ai_reasons")
+    await dispatch(db, job, queue="gpu" if res.provider.is_local else "remote")
+    return job
+
+
+@project_router.post("/reasons/apply", response_model=dict)
+async def apply_exclusion_reasons(
+    project_id: uuid.UUID,
+    body: ApplyReasonsIn,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await require_lead(db, project_id, user)
+    return await apply_reason_groups(db, project, [(g.label, g.members) for g in body.groups])
 
 
 @project_router.get("/{phase}/suggestions", response_model=list[SuggestionOut])
@@ -221,15 +297,16 @@ async def suggestions(
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Sugestões da IA. Revisores só veem a sugestão depois de decidir, para não se ancorarem
-    nela; líderes e árbitros veem todas."""
+    """Sugestões da IA. Por padrão, revisores só veem a sugestão depois de decidir, para não se
+    ancorarem nela; o projeto pode liberar antes. Líderes e árbitros veem todas."""
     project, role = await get_membership(db, project_id, user)
     try:
         wanted = [uuid.UUID(x) for x in ids.split(",") if x.strip()][:500]
     except ValueError as exc:
         raise HTTPException(422, "invalid_ids") from exc
     sugs = await latest_suggestions(db, project_id, phase, wanted or None)
-    if role not in (Role.lead, Role.arbitrator) and not user.is_admin:
+    reveal_first = project_ai(project).reveal_suggestions == "before"
+    if role not in (Role.lead, Role.arbitrator) and not user.is_admin and not reveal_first:
         states = await compute_states(db, project, phase, list(sugs))
         sugs = {rid: s for rid, s in sugs.items() if user.id in states[rid].votes}
     return list(sugs.values())

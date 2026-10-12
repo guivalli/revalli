@@ -13,7 +13,9 @@ import {
 import { useMe } from '../../api/hooks'
 import type { AIScope, Phase, ProjectAISettings } from '../../api/types'
 import { AISuggestionChip } from '../../components/AISuggestionChip'
+import { CriteriaMissing } from '../../components/CriteriaMissing'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
+import { ApiError } from '../../api/client'
 import { useProjectContext } from './context'
 
 const area =
@@ -32,12 +34,14 @@ function SettingsCard({ initial }: { initial: ProjectAISettings }) {
           ['enabled', 'ai.enabled', 'ai.enabled_hint'],
           ['local_only', 'ai.local_only', 'ai.local_only_hint'],
           ['active_learning', 'ai.active_learning', 'ai.active_learning_hint'],
+          ['suggest_tags', 'ai.suggest_tags', 'ai.suggest_tags_hint'],
+          ['suggest_reasons', 'ai.suggest_reasons', 'ai.suggest_reasons_hint'],
         ].map(([k, label, hint]) => (
           <label key={k} className="flex items-start gap-3">
             <input
               type="checkbox"
               className="mt-1 size-4 accent-brand-600"
-              checked={s[k as 'enabled' | 'local_only' | 'active_learning']}
+              checked={s[k as 'enabled' | 'local_only' | 'active_learning' | 'suggest_tags' | 'suggest_reasons']}
               onChange={(e) => setS({ ...s, [k]: e.target.checked })}
             />
             <span>
@@ -60,6 +64,24 @@ function SettingsCard({ initial }: { initial: ProjectAISettings }) {
               <span>
                 <span className="block text-sm">{t(`ai.mode_${m}`)}</span>
                 <span className="block text-xs text-stone-500">{t(`ai.mode_${m}_hint`)}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t('ai.reveal')}</p>
+          {(['after', 'before'] as const).map((m) => (
+            <label key={m} className="flex items-start gap-3">
+              <input
+                type="radio"
+                name="reveal"
+                className="mt-1 size-4 accent-brand-600"
+                checked={s.reveal_suggestions === m}
+                onChange={() => setS({ ...s, reveal_suggestions: m })}
+              />
+              <span>
+                <span className="block text-sm">{t(`ai.reveal_${m}`)}</span>
+                <span className="block text-xs text-stone-500">{t(`ai.reveal_${m}_hint`)}</span>
               </span>
             </label>
           ))}
@@ -106,6 +128,8 @@ function SettingsCard({ initial }: { initial: ProjectAISettings }) {
     </Card>
   )
 }
+
+const isCriteriaMissing = (e: unknown) => e instanceof ApiError && e.code === 'criteria_missing'
 
 function RunCard({ phase }: { phase: Phase }) {
   const { t, i18n } = useTranslation()
@@ -170,7 +194,8 @@ function RunCard({ phase }: { phase: Phase }) {
         </p>
       )}
       {run.isSuccess && <p className="text-sm text-brand-700 dark:text-brand-100">{t('ai.started')}</p>}
-      <ErrorText error={estimate.error ?? run.error} />
+      <CriteriaMissing error={estimate.error ?? run.error} pid={project.id} />
+      <ErrorText error={isCriteriaMissing(estimate.error ?? run.error) ? null : (estimate.error ?? run.error)} />
     </Card>
   )
 }

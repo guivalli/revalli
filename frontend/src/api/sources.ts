@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { ApiSource, Job, SourcePreview, Translation } from './types'
+import type { ApiSource, AssistReply, Job, SourcePreview, Translation } from './types'
 
 const base = (pid: string) => `/projects/${pid}/sources`
 
@@ -28,6 +28,10 @@ export function useSourceActions(pid: string) {
       mutationFn: (body: { direction: 'backward' | 'forward' | 'both'; record_ids?: string[] }) =>
         api.post<Job>(`${base(pid)}/snowball`, body),
       onSuccess: refresh,
+    }),
+    assist: useMutation({
+      mutationFn: (messages: { role: 'user' | 'assistant'; content: string }[]) =>
+        api.post<AssistReply>(`${base(pid)}/assist`, { messages }),
     }),
     translate: useMutation({
       mutationFn: (body: { query: string; target: string }) =>

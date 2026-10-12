@@ -169,7 +169,7 @@ async def list_labels(
     project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
 ):
     """Etiquetas já usadas no projeto, para sugerir ao digitar."""
-    await get_membership(db, project_id, user)
+    project, _ = await get_membership(db, project_id, user)
     rows = await db.execute(
         select(func.jsonb_array_elements_text(DecisionEvent.labels).label("l"))
         .where(DecisionEvent.project_id == project_id)
@@ -177,7 +177,11 @@ async def list_labels(
         .order_by("l")
         .limit(500)
     )
-    return list(rows.scalars())
+    used = list(rows.scalars())
+    # O vocabulário do projeto também entra nas sugestões, mesmo antes de ser usado
+    seen = {u.lower() for u in used}
+    vocab = [t.name for t in get_settings(project).tag_vocabulary if t.name.lower() not in seen]
+    return sorted(used + vocab, key=str.lower)
 
 
 # --- Triagem ---------------------------------------------------------------------

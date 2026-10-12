@@ -1,19 +1,81 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useProjectAI, useSuggestions } from '../../api/ai'
 import {
   useLabels,
   useQueue,
   useReasons,
   useScreeningActions,
   useScreeningSettings,
+  useSettingsActions,
 } from '../../api/screening'
 import type { DecisionKind, Phase, ScreeningItem } from '../../api/types'
+import { AISuggestionPanel } from '../../components/AISuggestionPanel'
 import { FullTextPanel } from '../../components/FullTextPanel'
 import { HighlightedText } from '../../components/HighlightedText'
 import { RecordLinks } from '../../components/RecordView'
 import { Button, Card, ErrorText, Input } from '../../components/ui'
 import { useProjectContext } from './context'
+
+/** Cria um motivo de exclusão na hora e já o marca; o texto sugerido pela IA pode ser editado. */
+function NewReason({ initial, onCreated }: { initial: string; onCreated: (id: string) => void }) {
+  const { t } = useTranslation()
+  const { project } = useProjectContext()
+  const { addReason } = useSettingsActions(project.id)
+  const [text, setText] = useState(initial)
+  const create = () => {
+    const label = text.trim()
+    if (!label) return
+    addReason.mutate(label, {
+      onSuccess: (reason) => {
+        onCreated(reason.id)
+        setText('')
+      },
+    })
+  }
+  return (
+    <div className="space-y-1">
+      <div className="flex gap-2">
+        <Input
+          value={text}
+          maxLength={200}
+          aria-label={t('ai_panel.new_reason')}
+          placeholder={t('ai_panel.new_reason')}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              create()
+            }
+          }}
+        />
+        <Button variant="ghost" onClick={create} disabled={addReason.isPending || !text.trim()}>
+          {t('ai_panel.create_reason')}
+        </Button>
+      </div>
+      <ErrorText error={addReason.error} />
+    </div>
+  )
+}
+
+// Preferência de quem está triando: ver a sugestão da IA antes ou só depois de decidir
+const prefKey = (pid: string) => `revalli:suggestion-first:${pid}`
+function readPref(pid: string): boolean | null {
+  try {
+    const v = localStorage.getItem(prefKey(pid))
+    return v === null ? null : v === '1'
+  } catch {
+    return null
+  }
+}
+function writePref(pid: string, v: boolean) {
+  try {
+    localStorage.setItem(prefKey(pid), v ? '1' : '0')
+  } catch {
+    // sem armazenamento: a escolha vale só nesta sessão
+  }
+}
 
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
@@ -73,7 +135,7 @@ function LabelsInput({
 
 export default function ScreeningSession() {
   const { t } = useTranslation()
-  const { project } = useProjectContext()
+  const { project, canManage } = useProjectContext()
   const [params] = useSearchParams()
   const phase = (params.get('fase') === 'full_text' ? 'full_text' : 'title_abstract') as Phase
   const settings = useScreeningSettings(project.id)
@@ -81,6 +143,10 @@ export default function ScreeningSession() {
   const labelsQuery = useLabels(project.id)
   const queue = useQueue(project.id, phase)
   const { decide } = useScreeningActions(project.id, phase)
+  const projectAI = useProjectAI(project.id).data
+  const aiOn = !!projectAI?.enabled
+  const [pref, setPref] = useState<boolean | null>(() => readPref(project.id))
+  const showFirst = pref ?? projectAI?.reveal_suggestions === 'before'
 
   // Fila local: o que já decidi nesta sessão sai da lista; dá para voltar pelo histórico
   const [done, setDone] = useState<Set<string>>(new Set())
@@ -100,7 +166,18 @@ export default function ScreeningSession() {
   }, [queue.data, done, skipped])
 
   const current = viewing ?? pending[0] ?? null
+  const suggestions = useSuggestions(project.id, phase, current ? [current.id] : [], aiOn)
+  const suggestion = current ? suggestions.data?.get(current.id) : undefined
+  // A sugestão só aparece quando já decidi ou quando escolhi ver antes
+  const visibleSuggestion = suggestion && (current?.my_decision || showFirst) ? suggestion : undefined
   const activeReasons = (reasons.data ?? []).filter((r) => !r.archived)
+  const suggestedReason =
+    visibleSuggestion?.decision === 'exclude' ? visibleSuggestion.exclusion_reason.trim() : ''
+  const suggestedMatch = suggestedReason
+    ? activeReasons.find((r) => r.label.toLowerCase() === suggestedReason.toLowerCase())
+    : undefined
+  // Sem motivos cadastrados e sem sugestão, excluir é direto
+  const needsReasonBox = activeReasons.length > 0 || !!suggestedReason
 
   // Ao trocar de registro, carrega o que eu já tinha marcado nele (ajuste durante o render)
   const formKey = current ? `${current.id}:${current.my_decision?.created_at ?? ''}` : ''
@@ -197,7 +274,7 @@ export default function ScreeningSession() {
       if (k === 'i') submit('include')
       else if (k === 'm') submit('maybe')
       else if (k === 'e') {
-        if (activeReasons.length) setExcluding(true)
+        if (needsReasonBox) setExcluding(true)
         else submit('exclude')
       } else if (k === 'u') {
         // Desfaz a decisão do registro aberto ou, se ele não tem, a última desta sessão
@@ -211,7 +288,7 @@ export default function ScreeningSession() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [excluding, activeReasons, submit, goBack, skip, current, history, decide.isPending])
+  }, [excluding, activeReasons, needsReasonBox, submit, goBack, skip, current, history, decide.isPending])
 
   const s = settings.data
   const hlInc = s?.highlight_include ?? []
@@ -294,6 +371,34 @@ export default function ScreeningSession() {
         )}
 
         <div className="space-y-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          {aiOn && (
+            <Card className="space-y-3 p-4">
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 accent-brand-600"
+                  checked={showFirst}
+                  onChange={(e) => {
+                    setPref(e.target.checked)
+                    writePref(project.id, e.target.checked)
+                  }}
+                />
+                <span>{t('ai_panel.show_first')}</span>
+              </label>
+              {visibleSuggestion ? (
+                <AISuggestionPanel
+                  s={visibleSuggestion}
+                  vocabulary={s?.tag_vocabulary ?? []}
+                  labels={labels}
+                  onLabels={setLabels}
+                />
+              ) : (
+                <p className="text-xs text-stone-500">
+                  {suggestion ? t('ai_panel.hidden') : t('ai_panel.none')}
+                </p>
+              )}
+            </Card>
+          )}
           <Card className="space-y-3 p-4">
             {my && (
               <p className="text-sm text-stone-500">
@@ -318,7 +423,7 @@ export default function ScreeningSession() {
               <Button
                 className="bg-red-700 hover:bg-red-800"
                 disabled={decide.isPending}
-                onClick={() => (activeReasons.length ? setExcluding(true) : submit('exclude'))}
+                onClick={() => (needsReasonBox ? setExcluding(true) : submit('exclude'))}
               >
                 {t('decision.exclude')} <kbd className="ml-1 opacity-70">E</kbd>
               </Button>
@@ -326,6 +431,26 @@ export default function ScreeningSession() {
             {excluding && (
               <div className="space-y-2 rounded-md border border-red-200 p-3 dark:border-red-900">
                 <p className="text-sm font-medium">{t('screening.reasons')}</p>
+                {suggestedReason && (
+                  <div className="space-y-1 rounded-md bg-red-50 p-2 text-xs dark:bg-red-950/40">
+                    <p>{t('ai_panel.reason', { reason: suggestedReason })}</p>
+                    {suggestedMatch ? (
+                      reasonIds.includes(suggestedMatch.id) ? (
+                        <p className="font-medium">✓ {t('ai_panel.reason_in_use')}</p>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          className="px-2 py-1 text-xs"
+                          onClick={() => setReasonIds((x) => [...x, suggestedMatch.id])}
+                        >
+                          {t('ai_panel.use_reason')}
+                        </Button>
+                      )
+                    ) : (
+                      !canManage && <p>{t('ai_panel.reason_needs_lead')}</p>
+                    )}
+                  </div>
+                )}
                 <ul className="space-y-1">
                   {activeReasons.map((r, i) => (
                     <li key={r.id}>
@@ -344,6 +469,13 @@ export default function ScreeningSession() {
                     </li>
                   ))}
                 </ul>
+                {canManage && (
+                  <NewReason
+                    key={`${current.id}:${suggestedMatch ? '' : suggestedReason}`}
+                    initial={suggestedMatch ? '' : suggestedReason}
+                    onCreated={(id) => setReasonIds((x) => [...x, id])}
+                  />
+                )}
                 <p className="text-xs text-stone-500">{t('screening.reasons_hint')}</p>
                 <Button className="w-full bg-red-700 hover:bg-red-800" onClick={() => submit('exclude')}>
                   {t('screening.confirm_exclude')}
@@ -380,20 +512,46 @@ export default function ScreeningSession() {
               />
             </label>
           </Card>
-          {(s?.inclusion_criteria || s?.exclusion_criteria) && (
+          {(s?.inclusion_criteria || s?.exclusion_criteria || s?.criteria_items.length) && (
             <Card className="space-y-2 p-4 text-sm">
               <p className="font-medium">{t('screening.criteria')}</p>
-              {s.inclusion_criteria && (
-                <div>
-                  <p className="text-xs text-green-700 dark:text-green-400">{t('screening.inclusion')}</p>
-                  <p className="whitespace-pre-line">{s.inclusion_criteria}</p>
-                </div>
-              )}
-              {s.exclusion_criteria && (
-                <div>
-                  <p className="text-xs text-red-700 dark:text-red-400">{t('screening.exclusion')}</p>
-                  <p className="whitespace-pre-line">{s.exclusion_criteria}</p>
-                </div>
+              {s.criteria_items.length > 0 ? (
+                (['include', 'exclude'] as const).map((kind) => {
+                  const list = s.criteria_items.filter((c) => c.kind === kind)
+                  if (!list.length) return null
+                  return (
+                    <div key={kind}>
+                      <p
+                        className={`text-xs ${kind === 'include' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}
+                      >
+                        {t(`screening.${kind === 'include' ? 'inclusion' : 'exclusion'}`)}
+                      </p>
+                      <ul className="list-inside list-disc">
+                        {list.map((c) => (
+                          <li key={c.name}>
+                            <span className="font-medium">{c.name}</span>
+                            {c.definition && `: ${c.definition}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })
+              ) : (
+                <>
+                  {s.inclusion_criteria && (
+                    <div>
+                      <p className="text-xs text-green-700 dark:text-green-400">{t('screening.inclusion')}</p>
+                      <p className="whitespace-pre-line">{s.inclusion_criteria}</p>
+                    </div>
+                  )}
+                  {s.exclusion_criteria && (
+                    <div>
+                      <p className="text-xs text-red-700 dark:text-red-400">{t('screening.exclusion')}</p>
+                      <p className="whitespace-pre-line">{s.exclusion_criteria}</p>
+                    </div>
+                  )}
+                </>
               )}
             </Card>
           )}

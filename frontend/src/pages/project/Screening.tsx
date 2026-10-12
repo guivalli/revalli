@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useAIBot, useProjectAI, useSuggestions } from '../../api/ai'
+import { useAIBot, useInstanceAI, useProjectAI, useProjectAIActions, useSuggestions } from '../../api/ai'
+import { ApiError } from '../../api/client'
 import { useFileActions, useFilesSummary } from '../../api/files'
 import { useMe } from '../../api/hooks'
-import { useRecentJobs } from '../../api/records'
+import { useActiveJobs, useCancelJob, useRecentJobs } from '../../api/records'
 import {
   useAgreement,
   useConflicts,
@@ -15,6 +16,7 @@ import {
 } from '../../api/screening'
 import type { AISuggestion, DecisionInfo, DecisionKind, Job, Phase, Reason, ScreenedItem } from '../../api/types'
 import { AISuggestionChip } from '../../components/AISuggestionChip'
+import { CriteriaMissing } from '../../components/CriteriaMissing'
 import { RecordLinks } from '../../components/RecordView'
 import { Button, Card, ErrorText, Select } from '../../components/ui'
 import { useProjectContext } from './context'
@@ -515,6 +517,137 @@ function FullTextSection() {
   )
 }
 
+const isCriteriaMissing = (e: unknown) => e instanceof ApiError && e.code === 'criteria_missing'
+
+function AIScreenCard({ phase }: { phase: Phase }) {
+  const { t, i18n } = useTranslation()
+  const { project, canManage } = useProjectContext()
+  const instance = useInstanceAI()
+  const ai = useProjectAI(project.id)
+  const { save, estimate, run } = useProjectAIActions(project.id)
+  const jobs = useActiveJobs(project.id)
+  const recent = useRecentJobs(project.id)
+  const cancel = useCancelJob(project.id)
+  const [started, setStarted] = useState(false)
+  const [force, setForce] = useState(false)
+  if (!canManage || !instance.data || !ai.data) return null
+  const configured = !!instance.data.screening.provider_id && !!instance.data.screening.model
+  const money = (v: number) =>
+    v.toLocaleString(i18n.language, { style: 'currency', currency: 'USD', maximumFractionDigits: 4 })
+  const body = { phase, scope: 'pending' as const, limit: null, force }
+  const activeJob = (jobs.data ?? []).find((j) => j.kind === 'ai_screen')
+  const running = !!activeJob
+  // A última triagem desta fase, para oferecer Continuar e Refazer quando foi interrompida
+  const last = (recent.data ?? []).find(
+    (j) => j.kind === 'ai_screen' && (j.result as { phase?: string }).phase === phase,
+  )
+  const stopped = !running && last?.status === 'cancelled' ? last : undefined
+  const begin = (redo: boolean) => {
+    setStarted(false)
+    setForce(redo)
+    estimate.mutate(
+      { ...body, force: redo },
+      {
+        onSuccess: (est) => {
+          // Local ou sem custo roda direto; com custo, pede confirmação
+          if (est.records > 0 && (est.local || est.cost_usd === 0)) start(redo)
+        },
+      },
+    )
+  }
+  const start = (redo = force) =>
+    run.mutate({ ...body, force: redo }, {
+      onSuccess: () => {
+        setStarted(true)
+        estimate.reset()
+      },
+    })
+  const e = estimate.data
+  return (
+    <Card className="space-y-3">
+      <div>
+        <h2 className="font-semibold">{t('ai_screen.title')}</h2>
+        <p className="text-sm text-stone-500">{t('ai_screen.intro')}</p>
+      </div>
+      {!configured ? (
+        <p className="text-sm text-amber-700 dark:text-amber-300">
+          {t('protocol_ai.not_configured')}{' '}
+          <Link to="/ia" className="underline">
+            {t('protocol_ai.go_ai')}
+          </Link>
+        </p>
+      ) : !ai.data.enabled ? (
+        <Button onClick={() => save.mutate({ ...ai.data, enabled: true })} disabled={save.isPending}>
+          {t('ai_screen.enable')}
+        </Button>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={() => begin(false)} disabled={estimate.isPending || run.isPending || running}>
+              {running ? t('ai_screen.running') : t('ai_screen.button')}
+            </Button>
+            {activeJob && (
+              <Button
+                variant="danger"
+                className="border border-red-300 dark:border-red-800"
+                disabled={cancel.isPending || activeJob.status === 'cancelling'}
+                onClick={() => cancel.mutate(activeJob.id)}
+              >
+                {activeJob.status === 'cancelling' ? t('ai_screen.stopping') : t('ai_screen.stop')}
+              </Button>
+            )}
+            {started && !running && (
+              <Link to="sessao" className="text-sm text-brand-600 underline">
+                {t('ai_screen.open_session')}
+              </Link>
+            )}
+          </div>
+          {stopped && !estimate.isPending && !run.isPending && (
+            <div className="space-y-2 rounded-md border border-stone-300 p-3 text-sm dark:border-stone-700">
+              <p>
+                {t('ai_screen.stopped', {
+                  done: (stopped.result as { done?: number }).done ?? 0,
+                  total: (stopped.result as { total?: number }).total ?? 0,
+                })}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" className="border border-stone-300 dark:border-stone-700" onClick={() => begin(false)}>
+                  {t('ai_screen.continue')}
+                </Button>
+                <Button variant="ghost" className="border border-stone-300 dark:border-stone-700" onClick={() => begin(true)}>
+                  {t('ai_screen.redo')}
+                </Button>
+              </div>
+              <p className="text-xs text-stone-500">{t('ai_screen.redo_hint')}</p>
+            </div>
+          )}
+          {e && e.records === 0 && <p className="text-sm text-stone-500">{t('ai_screen.nothing')}</p>}
+          {e && e.records > 0 && !e.local && e.cost_usd > 0 && !started && (
+            <div className="space-y-2 rounded-md border border-amber-300 p-3 text-sm dark:border-amber-700">
+              <p>
+                {t('ai.estimate_result', { records: e.records, cached: e.cached })}{' '}
+                {t('ai.estimate_cost', { cost: money(e.cost_usd), spent: money(e.spent_usd) })}
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={() => start()} disabled={run.isPending}>
+                  {t('ai_screen.confirm')}
+                </Button>
+                <Button variant="ghost" onClick={() => estimate.reset()}>
+                  {t('projects.cancel')}
+                </Button>
+              </div>
+            </div>
+          )}
+          <CriteriaMissing error={estimate.error ?? run.error} pid={project.id} />
+          <ErrorText
+            error={isCriteriaMissing(estimate.error ?? run.error) ? null : (estimate.error ?? run.error ?? cancel.error ?? save.error)}
+          />
+        </div>
+      )}
+    </Card>
+  )
+}
+
 export default function Screening() {
   const { t } = useTranslation()
   const { project } = useProjectContext()
@@ -539,6 +672,7 @@ export default function Screening() {
           </button>
         ))}
       </div>
+      <AIScreenCard key={`a-${phase}`} phase={phase} />
       <ProgressSection key={`p-${phase}`} phase={phase} />
       {phase === 'full_text' && <FullTextSection />}
       {phase === 'full_text' && <StudiesSection />}

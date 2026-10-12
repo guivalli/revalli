@@ -1,10 +1,13 @@
-"""Clientes das APIs públicas de busca: PubMed (E-utilities), OpenAlex e Europe PMC.
+"""Clientes das APIs públicas de busca: PubMed (E-utilities), OpenAlex e Europe PMC, além de
+SciELO e PePSIC, que são buscas no OpenAlex restritas às revistas dessas coleções.
 
 Cada fonte sabe contar os resultados de uma busca (com uma amostra, para a pessoa conferir a
 string antes de importar) e trazer os registros em lotes, já no formato do importador.
 """
 
 import asyncio
+import re
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
@@ -43,14 +46,77 @@ async def pause() -> None:
         await asyncio.sleep(delay)
 
 
-async def get(client: httpx.AsyncClient, url: str, params: dict) -> httpx.Response:
+RETRY_STATUS = {429, 502, 503, 504}
+MAX_ATTEMPTS = 5
+MAX_WAIT = 30.0
+# O OpenAlex limita consultas com mais de 5 operadores booleanos a 1 por segundo (5 por segundo
+# com chave de API). Espaçar as chamadas evita o 429 em vez de depender de tentar de novo.
+HEAVY_OPERATORS = 5
+HEAVY_INTERVAL = 1.1
+HEAVY_INTERVAL_WITH_KEY = 0.25
+_BOOLEAN = re.compile(r"\b(?:AND|OR|NOT)\b")
+_next_heavy: dict[str, float] = {}
+
+
+def is_heavy(params: dict) -> bool:
+    return any(
+        len(_BOOLEAN.findall(str(params.get(k) or ""))) > HEAVY_OPERATORS
+        for k in ("search", "search.exact")
+    )
+
+
+async def throttle(url: str, params: dict) -> None:
+    """Espera o intervalo mínimo entre consultas pesadas ao mesmo servidor. Sem espera nos testes."""
+    settings = get_settings()
+    if settings.api_delay_seconds <= 0 or not is_heavy(params):
+        return
+    host = httpx.URL(url).host
+    interval = HEAVY_INTERVAL_WITH_KEY if settings.openalex_api_key else HEAVY_INTERVAL
+    wait = _next_heavy.get(host, 0.0) - time.monotonic()
+    if wait > 0:
+        await asyncio.sleep(wait)
+    _next_heavy[host] = time.monotonic() + interval
+
+
+def retry_after_seconds(resp: httpx.Response | None) -> float:
+    if resp is None:
+        return 0.0
+    header = resp.headers.get("retry-after", "")
+    if header.isdigit():
+        return float(header)
     try:
-        resp = await client.get(url, params=params)
-    except httpx.HTTPError as exc:
-        raise SourceError(f"connection: {type(exc).__name__}") from exc
-    if resp.status_code >= 400:
-        raise SourceError(f"http {resp.status_code}: {resp.text[:200]}")
-    return resp
+        return float(resp.json().get("retryAfter") or 0)
+    except (ValueError, AttributeError, TypeError):
+        return 0.0
+
+
+async def backoff(attempt: int, resp: httpx.Response | None) -> None:
+    """Espera antes de tentar de novo; respeita Retry-After. Sem espera nos testes (delay 0)."""
+    if get_settings().api_delay_seconds <= 0:
+        return
+    await asyncio.sleep(min(max(retry_after_seconds(resp), 1.0) * attempt, 20.0))
+
+
+async def get(client: httpx.AsyncClient, url: str, params: dict) -> httpx.Response:
+    """GET com nova tentativa quando a base pede calma (429) ou falha por instantes (5xx)."""
+    last = ""
+    for attempt in range(MAX_ATTEMPTS):
+        await throttle(url, params)
+        resp = None
+        try:
+            resp = await client.get(url, params=params)
+        except httpx.HTTPError as exc:
+            last = f"connection: {type(exc).__name__}"
+        else:
+            if resp.status_code < 400:
+                return resp
+            last = f"http {resp.status_code}: {resp.text[:700]}"
+            # Esperas longas (orçamento diário esgotado) não adiantam: falha na hora
+            if resp.status_code not in RETRY_STATUS or retry_after_seconds(resp) > MAX_WAIT:
+                raise SourceError(last)
+        if attempt < MAX_ATTEMPTS - 1:
+            await backoff(attempt + 1, resp)
+    raise SourceError(last)
 
 
 @dataclass
@@ -66,8 +132,35 @@ class Preview:
 
 
 def openalex_params() -> dict:
-    email = get_settings().enrichment_contact_email
-    return {"mailto": email} if email else {}
+    s = get_settings()
+    params = {"mailto": s.enrichment_contact_email} if s.enrichment_contact_email else {}
+    if s.openalex_api_key:
+        params["api_key"] = s.openalex_api_key
+    return params
+
+
+_QUOTED = re.compile(r'"([^"]*)"')
+
+
+def adapt_query(query: str) -> str:
+    """O OpenAlex recusa curingas dentro de frases entre aspas ("efeito* adverso*"). A frase
+    vira as palavras ligadas por AND, o que é um pouco mais amplo mas é aceito."""
+
+    def unquote(m: re.Match) -> str:
+        phrase = m.group(1)
+        if "*" not in phrase and "?" not in phrase:
+            return m.group(0)
+        words = phrase.split()
+        return words[0] if len(words) == 1 else "(" + " AND ".join(words) + ")"
+
+    return _QUOTED.sub(unquote, query)
+
+
+def search_param(query: str) -> dict:
+    """Curingas (* ou ?) só funcionam na busca exata do OpenAlex, que não radicaliza as palavras."""
+    query = adapt_query(query)
+    exact = "*" in query or "?" in query
+    return {"search.exact" if exact else "search": query}
 
 
 def short_openalex_id(value: str | None) -> str:
@@ -126,18 +219,20 @@ async def openalex_pages(
 
 async def openalex_preview(client: httpx.AsyncClient, query: str) -> Preview:
     url = get_settings().openalex_url.rstrip("/") + "/works"
-    resp = await get(client, url, {**openalex_params(), "search": query, "per-page": 5})
+    resp = await get(client, url, {**openalex_params(), **search_param(query), "per-page": 5})
     data = resp.json()
+    adapted = adapt_query(query)
     return Preview(
         int((data.get("meta") or {}).get("count") or 0),
         [openalex_work(w) for w in data.get("results") or []],
+        translation=adapted if adapted != query else "",
     )
 
 
 async def openalex_fetch(
     client: httpx.AsyncClient, query: str, limit: int
 ) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
-    async for total, works in openalex_pages(client, {"search": query}, limit):
+    async for total, works in openalex_pages(client, search_param(query), limit):
         yield total, [openalex_work(w) for w in works]
 
 
@@ -293,8 +388,97 @@ async def europepmc_fetch(
         await pause()
 
 
+# --- SciELO e PePSIC (OpenAlex restrito às revistas da coleção) ---------------------
+
+# O OpenAlex aceita até 50 valores por filtro; a coleção SciELO Brasil tem cerca de 430 revistas
+ISSN_CHUNK = 50
+_COLLECTION_TTL = 24 * 3600
+_collections: dict[str, tuple[float, list[str]]] = {}
+
+
+async def collection_issns(client: httpx.AsyncClient, collection: str) -> list[str]:
+    """ISSNs das revistas de uma coleção do SciELO (scl = Brasil, psi = PePSIC), via ArticleMeta."""
+    cached = _collections.get(collection)
+    if cached and time.monotonic() - cached[0] < _COLLECTION_TTL:
+        return cached[1]
+    url = get_settings().articlemeta_url.rstrip("/") + "/journal/identifiers/"
+    issns: list[str] = []
+    offset = 0
+    while True:
+        resp = await get(client, url, {"collection": collection, "limit": 1000, "offset": offset})
+        objects = resp.json().get("objects") or []
+        issns += [o["code"] for o in objects if o.get("code")]
+        if len(objects) < 1000:
+            break
+        offset += 1000
+    issns = sorted(set(issns))
+    if not issns:
+        raise SourceError(f"empty_collection: {collection}")
+    _collections[collection] = (time.monotonic(), issns)
+    return issns
+
+
+def _issn_filters(issns: list[str]) -> list[str]:
+    return [
+        "primary_location.source.issn:" + "|".join(issns[n : n + ISSN_CHUNK])
+        for n in range(0, len(issns), ISSN_CHUNK)
+    ]
+
+
+async def collection_preview(client: httpx.AsyncClient, collection: str, query: str) -> Preview:
+    url = get_settings().openalex_url.rstrip("/") + "/works"
+    total, sample = 0, []
+    for flt in _issn_filters(await collection_issns(client, collection)):
+        resp = await get(
+            client,
+            url,
+            {**openalex_params(), **search_param(query), "filter": flt, "per-page": 5},
+        )
+        data = resp.json()
+        total += int((data.get("meta") or {}).get("count") or 0)
+        if len(sample) < 5:
+            sample += [openalex_work(w) for w in data.get("results") or []][: 5 - len(sample)]
+        await pause()
+    adapted = adapt_query(query)
+    return Preview(total, sample, translation=adapted if adapted != query else "")
+
+
+async def collection_fetch(
+    client: httpx.AsyncClient, collection: str, query: str, limit: int
+) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
+    """Um lote de revistas por vez. O total acumula as contagens de cada lote; ao atingir o
+    limite, os lotes restantes só são contados, para o total informado ser o da base inteira."""
+    url = get_settings().openalex_url.rstrip("/") + "/works"
+    total = seen = 0
+    for flt in _issn_filters(await collection_issns(client, collection)):
+        params = {**search_param(query), "filter": flt}
+        if seen >= limit:
+            resp = await get(client, url, {**openalex_params(), **params, "per-page": 1})
+            total += int((resp.json().get("meta") or {}).get("count") or 0)
+            await pause()
+            continue
+        chunk_total = 0
+        async for chunk_total, works in openalex_pages(client, params, limit - seen):
+            seen += len(works)
+            yield total + chunk_total, [openalex_work(w) for w in works]
+        total += chunk_total
+    yield total, []
+
+
+def _collection_source(label: str, collection: str):
+    async def preview(client: httpx.AsyncClient, query: str) -> Preview:
+        return await collection_preview(client, collection, query)
+
+    def fetch(client: httpx.AsyncClient, query: str, limit: int):
+        return collection_fetch(client, collection, query, limit)
+
+    return (label, preview, fetch)
+
+
 SOURCES = {
     "pubmed": ("PubMed", pubmed_preview, pubmed_fetch),
     "openalex": ("OpenAlex", openalex_preview, openalex_fetch),
     "europepmc": ("Europe PMC", europepmc_preview, europepmc_fetch),
+    "scielo": _collection_source("SciELO (via OpenAlex)", "scl"),
+    "pepsic": _collection_source("PePSIC (via OpenAlex)", "psi"),
 }

@@ -4,6 +4,7 @@ import { useReasons, useScreeningSettings, useSettingsActions } from '../../api/
 import type { ScreeningSettings } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input } from '../../components/ui'
 import { useProjectContext } from './context'
+import { CriteriaCard, ReasonGroupsCard, TagsCard } from './ProtocolAI'
 
 const area =
   'w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 disabled:opacity-70'
@@ -15,13 +16,17 @@ function SettingsForm({ initial, canManage }: { initial: ScreeningSettings; canM
   const { t } = useTranslation()
   const { project } = useProjectContext()
   const { save } = useSettingsActions(project.id)
+  // Os critérios detalhados e as etiquetas são salvos pelos cartões abaixo; aqui só se
+  // sobrescrevem os campos deste formulário, partindo do que está salvo agora.
+  const latest = useScreeningSettings(project.id).data
   const [s, setS] = useState(initial)
   const [inc, setInc] = useState(toLines(initial.highlight_include))
   const [exc, setExc] = useState(toLines(initial.highlight_exclude))
   const submit = (e: FormEvent) => {
     e.preventDefault()
     save.mutate(
-      { ...s, highlight_include: fromLines(inc), highlight_exclude: fromLines(exc) },
+      { ...(latest ?? s), ...s, highlight_include: fromLines(inc), highlight_exclude: fromLines(exc),
+        criteria_items: (latest ?? s).criteria_items, tag_vocabulary: (latest ?? s).tag_vocabulary },
       {
         // Mostra os termos como o servidor guardou (limpos e sem repetição)
         onSuccess: (saved) => {
@@ -117,6 +122,7 @@ function ReasonsCard({ canManage }: { canManage: boolean }) {
   const { data } = useReasons(project.id)
   const { addReason, updateReason } = useSettingsActions(project.id)
   const [label, setLabel] = useState('')
+  const [editing, setEditing] = useState<{ id: string; label: string } | null>(null)
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!label.trim()) return
@@ -128,17 +134,52 @@ function ReasonsCard({ canManage }: { canManage: boolean }) {
       <ol className="space-y-1">
         {data?.map((r, i) => (
           <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
-            <span className={r.archived ? 'text-stone-400 line-through' : ''}>
-              <span className="mr-2 inline-block w-5 text-right tabular-nums text-stone-500">{i + 1}.</span>
-              {r.label}
-            </span>
-            {canManage && (
-              <Button
-                variant="ghost"
-                onClick={() => updateReason.mutate({ id: r.id, archived: !r.archived })}
+            {editing?.id === r.id ? (
+              <form
+                className="flex flex-1 gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (!editing.label.trim()) return
+                  updateReason.mutate(
+                    { id: r.id, label: editing.label.trim() },
+                    { onSuccess: () => setEditing(null) },
+                  )
+                }}
               >
-                {r.archived ? t('protocol.unarchive') : t('protocol.archive')}
-              </Button>
+                <Input
+                  autoFocus
+                  aria-label={t('protocol.edit_reason')}
+                  maxLength={200}
+                  value={editing.label}
+                  onChange={(e) => setEditing({ id: r.id, label: e.target.value })}
+                />
+                <Button type="submit" disabled={updateReason.isPending}>
+                  {t('protocol.save_reason')}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
+                  {t('projects.cancel')}
+                </Button>
+              </form>
+            ) : (
+              <>
+                <span className={r.archived ? 'text-stone-400 line-through' : ''}>
+                  <span className="mr-2 inline-block w-5 text-right tabular-nums text-stone-500">{i + 1}.</span>
+                  {r.label}
+                </span>
+                {canManage && (
+                  <span className="flex shrink-0">
+                    <Button variant="ghost" onClick={() => setEditing({ id: r.id, label: r.label })}>
+                      {t('protocol.edit_reason')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => updateReason.mutate({ id: r.id, archived: !r.archived })}
+                    >
+                      {r.archived ? t('protocol.unarchive') : t('protocol.archive')}
+                    </Button>
+                  </span>
+                )}
+              </>
             )}
           </li>
         ))}
@@ -167,8 +208,17 @@ export default function Protocol() {
   const { data } = useScreeningSettings(project.id)
   return (
     <div className="space-y-6">
-      {data && <SettingsForm initial={data} canManage={canManage} />}
+      {data && (
+        <SettingsForm
+          key={`${data.inclusion_criteria}\u0000${data.exclusion_criteria}`}
+          initial={data}
+          canManage={canManage}
+        />
+      )}
+      {data && <CriteriaCard settings={data} canManage={canManage} />}
+      {data && <TagsCard settings={data} canManage={canManage} />}
       <ReasonsCard canManage={canManage} />
+      <ReasonGroupsCard canManage={canManage} />
     </div>
   )
 }

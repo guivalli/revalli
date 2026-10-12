@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
 import { useMe, useProject } from '../../api/hooks'
-import { useActiveJobs, useSummary } from '../../api/records'
+import { useActiveJobs, useCancelJob, useSummary } from '../../api/records'
 import type { ProjectContext } from './context'
 
-function JobBanner({ pid }: { pid: string }) {
+function JobBanner({ pid, canStop }: { pid: string; canStop: boolean }) {
   const { t } = useTranslation()
   const { data } = useActiveJobs(pid)
+  const cancel = useCancelJob(pid)
   if (!data?.length) return null
   // Uma linha por tipo de tarefa, mesmo que haja várias na fila
   const byKind = [...new Map(data.map((j) => [j.kind, j])).values()]
@@ -21,9 +22,21 @@ function JobBanner({ pid }: { pid: string }) {
             className="flex items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-stone-800 dark:text-brand-100"
           >
             <span className="size-2 animate-pulse rounded-full bg-brand-500" />
-            {job.total > 0
-              ? t('jobs.progress', { label, done: job.progress, total: job.total })
-              : t('jobs.running', { label })}
+            {job.status === 'cancelling'
+              ? t('jobs.cancelling', { label })
+              : job.total > 0
+                ? t('jobs.progress', { label, done: job.progress, total: job.total })
+                : t('jobs.running', { label })}
+            {canStop && job.kind === 'ai_screen' && job.status !== 'cancelling' && (
+              <button
+                type="button"
+                onClick={() => cancel.mutate(job.id)}
+                disabled={cancel.isPending}
+                className="ml-auto rounded-md border border-red-300 px-2 py-0.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+              >
+                {t('jobs.stop')}
+              </button>
+            )}
           </p>
         )
       })}
@@ -57,6 +70,7 @@ export default function ProjectLayout() {
     { to: 'conversa', label: t('tabs.corpus') },
     { to: 'relatorio', label: t('tabs.report') },
     { to: 'membros', label: t('tabs.members') },
+    ...(canManage ? [{ to: 'configuracoes', label: t('tabs.settings') }] : []),
   ]
 
   return (
@@ -94,7 +108,7 @@ export default function ProjectLayout() {
           ))}
         </ul>
       </nav>
-      <JobBanner pid={id} />
+      <JobBanner pid={id} canStop={canManage} />
       <Outlet context={{ project: p, canManage } satisfies ProjectContext} />
     </div>
   )

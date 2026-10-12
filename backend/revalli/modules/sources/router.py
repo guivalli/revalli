@@ -17,6 +17,8 @@ from revalli.modules.records.schemas import JobOut
 from revalli.modules.sources import service
 from revalli.modules.sources.clients import SourceError
 from revalli.modules.sources.schemas import (
+    AssistIn,
+    AssistOut,
     PreviewOut,
     QueryIn,
     SampleRecord,
@@ -28,6 +30,14 @@ from revalli.modules.sources.schemas import (
 )
 
 router = APIRouter(prefix="/projects/{project_id}/sources", tags=["sources"])
+
+
+def _source_error(exc: SourceError) -> HTTPException:
+    msg = str(exc)
+    # O OpenAlex sem chave tem um orçamento diário gratuito por rede; a chave é grátis
+    if "daily budget" in msg or "Insufficient budget" in msg:
+        return HTTPException(502, f"openalex_key_needed: {msg[:600]}")
+    return HTTPException(502, f"source_unavailable: {msg[:600]}")
 
 
 def _enabled() -> None:
@@ -62,7 +72,7 @@ async def preview(
     try:
         result = await service.preview(body.source, body.query)
     except SourceError as exc:
-        raise HTTPException(502, "source_unavailable") from exc
+        raise _source_error(exc) from exc
     return PreviewOut(
         count=result.count,
         max=get_settings().api_search_max,
@@ -145,6 +155,28 @@ async def snowball(
     job = await create_job(db, project_id, "snowball", params)
     await dispatch(db, job, queue="remote")
     return job
+
+
+@router.post("/assist", response_model=AssistOut)
+async def assist(
+    project_id: uuid.UUID,
+    body: AssistIn,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Conversa para montar a estratégia: a IA diz o que entendeu e propõe uma string por base."""
+    project = await require_lead(db, project_id, user)
+    if not project_ai(project).enabled:
+        raise HTTPException(409, "ai_disabled")
+    if body.messages[-1].role != "user":
+        raise HTTPException(422, "last_message_must_be_user")
+    history = [m.model_dump() for m in body.messages]
+    try:
+        return await service.assist_search(db, project, history)
+    except AIError as exc:
+        raise _ai_error(exc) from exc
+    except service.TranslationError as exc:
+        raise HTTPException(409 if str(exc) == "budget_exceeded" else 502, f"ai_{exc}") from exc
 
 
 @router.post("/translate", response_model=TranslateOut)

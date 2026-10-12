@@ -16,6 +16,8 @@ const SOURCES = [
   'LILACS',
   'BVS',
   'SciELO',
+  'Portal CAPES',
+  'PePSIC',
   'CINAHL',
   'PsycINFO',
   'Cochrane Library',

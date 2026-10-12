@@ -330,6 +330,21 @@ TARGETS = {
     "psycinfo": "APA PsycInfo via Ovid (exp headings/, .ti,ab. fields, adjN proximity)",
     "cochrane": "Cochrane Library (MeSH descriptor:[] explode all trees, :ti,ab,kw fields)",
     "bvs": "BVS/LILACS (DeCS descriptors with mh:, ti:, ab: fields, multilingual terms)",
+    "scielo": (
+        "SciELO (searched through OpenAlex, also valid in the SciELO portal search): plain "
+        "words, quoted phrases, AND/OR/NOT in uppercase and parentheses; no field tags and no "
+        "truncation; add Portuguese and Spanish synonyms because most records are not in English"
+    ),
+    "capes": (
+        "Portal de Periódicos CAPES (subject search): plain words, quoted phrases, AND/OR/NOT in "
+        "uppercase, parentheses and * truncation; fields are chosen in the advanced search form, "
+        "not written in the query; add Portuguese and Spanish synonyms"
+    ),
+    "pepsic": (
+        "PePSIC, Periódicos Eletrônicos em Psicologia (searched through OpenAlex): plain words, "
+        "quoted phrases, AND/OR/NOT in uppercase and parentheses; no field tags and no "
+        "truncation; psychology terms, add Portuguese and Spanish synonyms"
+    ),
 }
 
 TRANSLATE_SYSTEM = """You translate literature search strategies between bibliographic databases.
@@ -382,3 +397,85 @@ async def translate_query(db: AsyncSession, project: Project, query: str, target
         "notes": [str(n) for n in notes if n][:10],
         "model": res.choice.model,
     }
+
+
+# --- Conversa para montar a estratégia -----------------------------------------------
+
+ASSIST_SYSTEM = """You are an expert health-sciences librarian helping a research team build
+database search strategies for a literature review.
+
+How to work:
+- Say briefly what you understood (population, concept, outcome, study types, languages). If
+  something essential is missing, ask at most 3 short questions, but still propose a first
+  strategy from what you understood.
+- Build each strategy in concept blocks joined by AND. Usually 2 to 4 blocks, one per concept:
+  the population or context, the phenomenon or exposure, the outcome or effect and, when
+  relevant, the intervention or study design. Never merge two concepts into one block.
+- Inside a block join synonyms, spelling variants and translations with OR. Quote multi-word
+  phrases. Use truncation (*) to cover word endings (for example iatrogeni*, effect*,
+  interven*). In PubMed, truncated words work in [tiab] but not with [mh].
+- Include terms in the languages of the databases (Portuguese, English and Spanish for the
+  Latin American ones).
+- Write each strategy in the syntax of its database. Databases and their syntax:
+{targets}
+- Give strategies only for the databases the team asked for; if they named none, give PubMed
+  and SciELO.
+- Reply to the team in the language they write in. The query text keeps the languages of the
+  search terms.
+
+Answer with a single JSON object and nothing else:
+{{"reply": "what you understood and your questions",
+  "strategies": [{{"base": "one of: {keys}", "query": "...", "notes": ["short note"]}}]}}"""
+
+MAX_STRATEGIES = 6
+
+
+def parse_assist(data: dict) -> dict:
+    reply = str(data.get("reply") or "").strip()[:4000]
+    strategies, seen = [], set()
+    for raw in data.get("strategies") or []:
+        if not isinstance(raw, dict):
+            continue
+        base = str(raw.get("base") or "").strip().lower()
+        query = str(raw.get("query") or "").strip()[:20_000]
+        if base not in TARGETS or base in seen or not query:
+            continue
+        seen.add(base)
+        notes = raw.get("notes") or []
+        if isinstance(notes, str):
+            notes = [notes]
+        strategies.append(
+            {"base": base, "query": query, "notes": [str(n)[:300] for n in notes if n][:5]}
+        )
+    if not reply and not strategies:
+        raise TranslationError("invalid_answer")
+    return {"reply": reply, "strategies": strategies[:MAX_STRATEGIES]}
+
+
+async def assist_search(db: AsyncSession, project: Project, history: list[dict]) -> dict:
+    ai = project_ai(project)
+    res = await resolve(db, "screening", ai.local_only)
+    if ai.budget_usd is not None and await spent(db, project.id) >= ai.budget_usd:
+        raise TranslationError("budget_exceeded")
+    context = f"Review title: {project.title}"
+    if project.description.strip():
+        context += f"\nReview description: {project.description.strip()}"
+    system = ASSIST_SYSTEM.format(
+        targets="\n".join(f"- {k}: {v}" for k, v in TARGETS.items()), keys=", ".join(TARGETS)
+    )
+    messages = [{"role": "system", "content": f"{system}\n\n{context}"}, *history]
+    result = await ai_client.chat(res.endpoint, messages)
+    db.add(
+        AIUsage(
+            project_id=project.id,
+            provider_id=res.provider.id,
+            model=res.choice.model,
+            task="search_assistant",
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            cost_usd=res.cost(result.input_tokens, result.output_tokens),
+        )
+    )
+    await db.commit()
+    out = parse_assist(ai_client.parse_json(result.content))
+    return {**out, "model": res.choice.model}

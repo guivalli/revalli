@@ -51,6 +51,26 @@ export function useCreateProject() {
   })
 }
 
+export function useUpdateProject(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { title: string; description: string; review_type: ReviewType }) =>
+      api.patch<Project>(`/projects/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
+export function useDeleteProject(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete<void>(`/projects/${id}`),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: ['projects', id] })
+      return qc.invalidateQueries({ queryKey: ['projects'], exact: true })
+    },
+  })
+}
+
 export function useMembers(projectId: string) {
   return useQuery({
     queryKey: ['projects', projectId, 'members'],

@@ -107,6 +107,8 @@ export interface RunPayload {
   phase: Phase
   scope: AIScope
   limit?: number | null
+  // Refaz a análise mesmo onde já há resposta guardada
+  force?: boolean
 }
 
 export function useProjectAIActions(pid: string) {
@@ -124,6 +126,34 @@ export function useProjectAIActions(pid: string) {
     run: useMutation({
       mutationFn: (body: RunPayload) => api.post<Job>(`${base(pid)}/run`, body),
       onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', pid, 'jobs'] }),
+    }),
+  }
+}
+
+export function useProtocolAI(pid: string) {
+  const qc = useQueryClient()
+  const started = () => qc.invalidateQueries({ queryKey: ['projects', pid, 'jobs'] })
+  return {
+    organize: useMutation({
+      mutationFn: (body: { inclusion_criteria: string; exclusion_criteria: string; answers?: string }) =>
+        api.post<Job>(`${base(pid)}/criteria/organize`, body),
+      onSuccess: started,
+    }),
+    suggestTags: useMutation({
+      mutationFn: () => api.post<Job>(`${base(pid)}/tags/suggest`, {}),
+      onSuccess: started,
+    }),
+    organizeReasons: useMutation({
+      mutationFn: () => api.post<Job>(`${base(pid)}/reasons/organize`, {}),
+      onSuccess: started,
+    }),
+    applyReasons: useMutation({
+      mutationFn: (groups: { label: string; members: string[] }[]) =>
+        api.post<{ created: number; updated: number }>(`${base(pid)}/reasons/apply`, { groups }),
+      onSuccess: () => {
+        void qc.invalidateQueries({ queryKey: ['projects', pid, 'screening', 'reasons'] })
+        void qc.invalidateQueries({ queryKey: ['projects', pid, 'ai'] })
+      },
     }),
   }
 }

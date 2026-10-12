@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRecentJobs } from '../../api/records'
 import { useSnowballInfo, useSourceActions } from '../../api/sources'
-import type { ApiSource, Job } from '../../api/types'
+import type { ApiSource, AssistStrategy, Job } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
 
-const API_SOURCES: ApiSource[] = ['pubmed', 'openalex', 'europepmc']
+const API_SOURCES: ApiSource[] = ['pubmed', 'openalex', 'europepmc', 'scielo', 'pepsic']
 const TARGETS = [
   'pubmed',
   'openalex',
@@ -18,6 +18,9 @@ const TARGETS = [
   'psycinfo',
   'cochrane',
   'bvs',
+  'scielo',
+  'capes',
+  'pepsic',
 ] as const
 
 const textarea =
@@ -136,6 +139,140 @@ function Translate({ query, onUse }: { query: string; onUse: (source: ApiSource,
   )
 }
 
+interface ChatTurn {
+  role: 'user' | 'assistant'
+  content: string
+  strategies?: AssistStrategy[]
+  model?: string
+}
+
+/** O que o modelo vê de uma resposta anterior: o texto e as estratégias que ele propôs. */
+const asHistory = (turn: ChatTurn) =>
+  turn.role === 'assistant' && turn.strategies?.length
+    ? `${turn.content}\n\n${turn.strategies.map((s) => `${s.base}: ${s.query}`).join('\n')}`
+    : turn.content
+
+function SearchAssistant({ onUse }: { onUse: (source: ApiSource, q: string) => void }) {
+  const { t } = useTranslation()
+  const { project } = useProjectContext()
+  const { assist } = useSourceActions(project.id)
+  const [turns, setTurns] = useState<ChatTurn[]>([])
+  const [text, setText] = useState('')
+
+  const send = () => {
+    const content = text.trim()
+    if (!content || assist.isPending) return
+    const next: ChatTurn[] = [...turns, { role: 'user', content }]
+    setTurns(next)
+    setText('')
+    assist.mutate(
+      next.map((x) => ({ role: x.role, content: asHistory(x) })),
+      {
+        onSuccess: (r) =>
+          setTurns([
+            ...next,
+            { role: 'assistant', content: r.reply, strategies: r.strategies, model: r.model },
+          ]),
+        // Devolve a mensagem ao campo para a pessoa tentar de novo
+        onError: () => {
+          setTurns(turns)
+          setText(content)
+        },
+      },
+    )
+  }
+
+  return (
+    <section className="space-y-3 rounded-md border border-brand-200 p-3 dark:border-brand-800">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="font-medium">{t('sources.assist_title')}</h3>
+          <p className="text-sm text-stone-500">{t('sources.assist_intro')}</p>
+        </div>
+        {turns.length > 0 && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setTurns([])
+              assist.reset()
+            }}
+          >
+            {t('sources.assist_reset')}
+          </Button>
+        )}
+      </div>
+      {turns.length > 0 && (
+        <ul className="space-y-3">
+          {turns.map((turn, i) => (
+            <li
+              key={i}
+              className={`space-y-2 rounded-md p-3 text-sm ${
+                turn.role === 'user' ? 'bg-stone-100 dark:bg-stone-800' : 'bg-brand-50 dark:bg-brand-900/30'
+              }`}
+            >
+              <p className="text-xs font-medium text-stone-500">
+                {turn.role === 'user' ? t('sources.assist_you') : t('sources.assist_ai')}
+              </p>
+              <p className="whitespace-pre-line">{turn.content}</p>
+              {turn.strategies?.map((st) => (
+                <div key={st.base} className="space-y-1 rounded-md border border-stone-200 bg-white p-2 dark:border-stone-700 dark:bg-stone-900">
+                  <p className="text-xs font-medium">{t(`sources.db_${st.base}`, { defaultValue: st.base })}</p>
+                  <textarea readOnly rows={3} className={textarea} value={st.query} aria-label={st.base} />
+                  {st.notes.length > 0 && (
+                    <ul className="list-disc pl-5 text-xs text-stone-600 dark:text-stone-400">
+                      {st.notes.map((n, k) => (
+                        <li key={k}>{n}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="ghost" onClick={() => void navigator.clipboard?.writeText(st.query)}>
+                      {t('sources.copy')}
+                    </Button>
+                    {(API_SOURCES as string[]).includes(st.base) && (
+                      <Button variant="ghost" onClick={() => onUse(st.base as ApiSource, st.query)}>
+                        {t('sources.use_here')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {turn.model && turn.strategies?.length ? (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  {t('sources.translate_review', { model: turn.model })}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+      <textarea
+        rows={3}
+        className={`${textarea} font-sans`}
+        aria-label={t('sources.assist_title')}
+        placeholder={turns.length ? t('sources.assist_reply_placeholder') : t('sources.assist_placeholder')}
+        value={text}
+        disabled={assist.isPending}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault()
+            send()
+          }
+        }}
+      />
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={send} disabled={!text.trim() || assist.isPending}>
+          {assist.isPending ? t('sources.assist_thinking') : t('sources.assist_send')}
+        </Button>
+        <span className="text-xs text-stone-500">{t('sources.assist_hint')}</span>
+      </div>
+      {assist.isPending && <p className="text-xs text-stone-500">{t('sources.assist_wait')}</p>}
+      <ErrorText error={assist.error} />
+    </section>
+  )
+}
+
 export function ApiSearchCard() {
   const { t, i18n } = useTranslation()
   const { project } = useProjectContext()
@@ -157,7 +294,14 @@ export function ApiSearchCard() {
       <div>
         <h2 className="font-semibold">{t('sources.title')}</h2>
         <p className="text-sm text-stone-500">{t('sources.hint')}</p>
+        <p className="text-xs text-stone-500">{t('sources.no_direct')}</p>
       </div>
+      <SearchAssistant
+        onUse={(s, q) => {
+          setSource(s)
+          changeQuery(q)
+        }}
+      />
       <div className="grid gap-4 sm:grid-cols-[14rem_1fr]">
         <Field label={t('sources.source')}>
           <Select

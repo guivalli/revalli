@@ -103,6 +103,8 @@ export function useScreeningActions(pid: string, phase: Phase) {
     void qc.invalidateQueries({ queryKey: ['projects', pid, 'screening', phase, 'progress'] })
     void qc.invalidateQueries({ queryKey: ['projects', pid, 'screening', phase, 'screened'] })
     void qc.invalidateQueries({ queryKey: ['projects', pid, 'screening', 'labels'] })
+    // A sugestão da IA fica visível depois que o revisor decide
+    void qc.invalidateQueries({ queryKey: ['projects', pid, 'ai', phase, 'suggestions'] })
   }
   return {
     decide: useMutation({

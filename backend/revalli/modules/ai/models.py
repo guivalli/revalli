@@ -59,6 +59,10 @@ class AISuggestion(IdMixin, TimestampMixin, Base):
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     justification: Mapped[str] = mapped_column(Text, default="")
     criteria: Mapped[list] = mapped_column(JSONB, default=list)
+    # Até 4 etiquetas sugeridas para o registro
+    tags: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
+    # Motivo principal da exclusão, num rótulo curto (vazio quando a IA não exclui)
+    exclusion_reason: Mapped[str] = mapped_column(String(200), default="", server_default="")
 
 
 class AIUsage(IdMixin, TimestampMixin, Base):

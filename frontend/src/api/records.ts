@@ -67,6 +67,24 @@ export function useActiveJobs(pid: string) {
   return query
 }
 
+export function useCancelJob(pid: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (jobId: string) => api.post<Job>(`${base(pid)}/jobs/${jobId}/cancel`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', pid, 'jobs'] }),
+  })
+}
+
+export function useJob(pid: string, id: string | null) {
+  return useQuery({
+    queryKey: ['projects', pid, 'jobs', 'one', id],
+    queryFn: () => api.get<Job>(`${base(pid)}/jobs/${id}`),
+    enabled: !!id,
+    refetchInterval: (q) =>
+      q.state.data && ['done', 'failed'].includes(q.state.data.status) ? false : 1500,
+  })
+}
+
 export function useRecentJobs(pid: string) {
   return useQuery({
     queryKey: ['projects', pid, 'jobs', 'recent'],

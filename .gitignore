@@ -16,3 +16,5 @@ dist/
 deploy/backups/
 *.log
 .DS_Store
+deploy/.env.*
+!deploy/.env.example

@@ -32,6 +32,7 @@ export function AISuggestionChip({ s }: { s: AISuggestion }) {
               {mark[c.status]} {c.criterion}
             </span>
           ))}
+          {s.tags?.length > 0 && <span className="block text-stone-500">{s.tags.join(' · ')}</span>}
         </span>
       )}
     </span>
