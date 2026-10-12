@@ -18,7 +18,11 @@ O botão **Buscar PDFs de acesso aberto** (só líderes) procura versões gratui
 3. **Europe PMC**, por PMID ou DOI (PubMed Central e preprints).
 4. **Página do artigo**, pelo link do registro (o campo `UR` das exportações da BVS, por exemplo), pelo DOI ou por páginas que as fontes anteriores indicaram. O ReValli lê as marcas `citation_pdf_url` e `link rel="alternate"` que SciELO, PePSIC, revistas OJS e a maioria das editoras publicam.
 
+As páginas conhecidas pelo OpenAlex (por exemplo, a do SciELO) também entram como candidatas na etapa 4, mesmo quando o DOI não resolve. Páginas do próprio OpenAlex ficam de fora, porque não são o artigo.
+
 O primeiro PDF válido vale. Todo download passa pela mesma proteção: não alcança a rede interna, tem limite de tamanho e confere que o arquivo é um PDF. Se uma fonte bloquear, o ReValli não tenta contornar: o registro segue para a lista de pendentes.
+
+A busca trata 4 registros ao mesmo tempo e grava o andamento a cada um. Páginas de revista que não respondem em 20 segundos são abandonadas, e, se um endereço do servidor não conecta (comum com IPv6 dentro de contêiner), o próximo é tentado. Servidores que respondem 403 (bloqueio anti-robô, como o do PePSIC pela BVS) caem na lista de pendentes.
 
 O resultado mostra quantas foram verificadas, quantas tinham versão aberta, quantas foram baixadas e **quantas vieram de cada fonte**. Um registro sem DOI também é tentado, se tiver PMID ou link.
 

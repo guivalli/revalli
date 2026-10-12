@@ -15,6 +15,7 @@ from revalli.core import safefetch
 from revalli.core.config import get_settings
 
 PAGE_MAX_BYTES = 2 * 1024 * 1024
+PAGE_TIMEOUT = 20
 _OPEN = {"free", "open access", "open"}
 
 
@@ -104,7 +105,12 @@ async def article_page(client: httpx.AsyncClient, url: str) -> list[str]:
     """Abre a página do artigo e devolve os PDFs que ela declara. Se o endereço já for o PDF,
     devolve o próprio endereço."""
     got = await safefetch.get_bytes(
-        client, url, max_bytes=PAGE_MAX_BYTES, headers={"Accept": "text/html,application/pdf"}
+        client,
+        url,
+        max_bytes=PAGE_MAX_BYTES,
+        headers={"Accept": "text/html,application/pdf"},
+        # Páginas de revista que travam não podem segurar a busca inteira
+        read_timeout=PAGE_TIMEOUT,
     )
     if got.data[:1024].lstrip().startswith(b"%PDF-"):
         return [got.url]

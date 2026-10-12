@@ -16,7 +16,7 @@ import httpx
 
 from revalli.core.config import get_settings
 
-MAX_REDIRECTS = 3
+MAX_REDIRECTS = 5
 Resolver = Callable[[str, int], Awaitable[list[str]]]
 
 
@@ -87,6 +87,10 @@ def _pin(parts, ip: str) -> str:
     return urlunsplit((parts.scheme, netloc, parts.path or "/", parts.query, ""))
 
 
+def _ipv4_first(ips: list[str]) -> list[str]:
+    return sorted(ips, key=lambda ip: (":" in ip, ip))
+
+
 async def get_bytes(
     client: httpx.AsyncClient,
     url: str,
@@ -103,30 +107,40 @@ async def get_bytes(
             raise FetchError("invalid_url")
         host = parts.hostname
         port = parts.port or (443 if parts.scheme == "https" else 80)
-        ips = await public_ips(host, port)
+        ips = _ipv4_first(await public_ips(host, port))
         request_headers = {**(headers or {}), "Host": parts.netloc.split("@")[-1]}
         if secret_headers and host == origin:
             request_headers.update(secret_headers)
-        try:
-            async with client.stream(
-                "GET",
-                _pin(parts, ips[0]),
-                headers=request_headers,
-                extensions={"sni_hostname": host},
-                timeout=read_timeout,
-            ) as resp:
-                if resp.is_redirect and resp.headers.get("location"):
-                    url = urljoin(url, resp.headers["location"])
-                    continue
-                if resp.status_code != 200:
-                    raise FetchError(f"http_{resp.status_code}")
-                size, chunks = 0, []
-                async for chunk in resp.aiter_bytes():
-                    size += len(chunk)
-                    if size > max_bytes:
-                        raise FetchError("too_large")
-                    chunks.append(chunk)
-                return Fetched(url, b"".join(chunks), resp.headers.get("content-type", ""))
-        except httpx.HTTPError as exc:
-            raise FetchError(f"connection: {type(exc).__name__}") from exc
+        redirect = None
+        last_error: httpx.HTTPError | None = None
+        # Se um endereço não conecta (comum com IPv6 dentro de contêiner), tenta o próximo
+        for ip in ips:
+            try:
+                async with client.stream(
+                    "GET",
+                    _pin(parts, ip),
+                    headers=request_headers,
+                    extensions={"sni_hostname": host},
+                    timeout=read_timeout,
+                ) as resp:
+                    if resp.is_redirect and resp.headers.get("location"):
+                        redirect = urljoin(url, resp.headers["location"])
+                        break
+                    if resp.status_code != 200:
+                        raise FetchError(f"http_{resp.status_code}")
+                    size, chunks = 0, []
+                    async for chunk in resp.aiter_bytes():
+                        size += len(chunk)
+                        if size > max_bytes:
+                            raise FetchError("too_large")
+                        chunks.append(chunk)
+                    return Fetched(url, b"".join(chunks), resp.headers.get("content-type", ""))
+            except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+                last_error = exc
+                continue
+            except httpx.HTTPError as exc:
+                raise FetchError(f"connection: {type(exc).__name__}") from exc
+        if redirect is None:
+            raise FetchError(f"connection: {type(last_error).__name__}") from last_error
+        url = redirect
     raise FetchError("too_many_redirects")

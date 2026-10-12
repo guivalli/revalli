@@ -7,6 +7,7 @@ import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlsplit
 
 import httpx
 from rapidfuzz import fuzz
@@ -24,6 +25,8 @@ from revalli.modules.screening.models import Phase
 from revalli.modules.screening.service import compute_states, eligible_ids_query
 
 TITLE_MATCH = 90
+# Quantos registros a busca de acesso aberto trata ao mesmo tempo (só a rede; o banco é serial)
+CHAIN_PARALLEL = 4
 ZIP_MAX_TOTAL = 3 * 1024**3
 
 
@@ -231,6 +234,16 @@ async def import_zip(
 # --- Acesso aberto -----------------------------------------------------------------------
 
 
+def _landing_urls(work: dict) -> list[str]:
+    """Páginas do artigo que o OpenAlex conhece (SciELO, repositórios, editoras)."""
+    urls = []
+    for loc in [work.get("best_oa_location") or {}, *(work.get("locations") or [])]:
+        url = (loc or {}).get("landing_page_url")
+        if url and url not in urls:
+            urls.append(url)
+    return urls
+
+
 def _pdf_urls(work: dict) -> list[str]:
     urls = []
     for loc in [work.get("best_oa_location") or {}, *(work.get("locations") or [])]:
@@ -287,7 +300,10 @@ async def find_open_access(
     done = 0
     got: set[uuid.UUID] = set()
     found: set[uuid.UUID] = set()
+    landing_known: dict[uuid.UUID, list[str]] = {}
     errors: dict[str, int] = {}
+    # A rede roda em paralelo; a sessão do banco é usada por uma tarefa de cada vez
+    db_lock = asyncio.Lock()
 
     async def take(rec: Record, urls: list[str], label: str) -> bool:
         if urls:
@@ -296,24 +312,34 @@ async def find_open_access(
             data = await _download(client, url)
             if data is None:
                 continue
-            try:
-                await attach(
-                    db,
-                    project.id,
-                    rec,
-                    data,
-                    f"{(rec.doi or rec.id.hex).replace('/', '_')}.pdf",
-                    source="open_access",
-                    source_url=url,
-                )
-            except PDFError:
-                continue
-            stats["downloaded"] += 1
-            stats["by_source"][label] = stats["by_source"].get(label, 0) + 1
-            got.add(rec.id)
-            await db.commit()
+            async with db_lock:
+                try:
+                    await attach(
+                        db,
+                        project.id,
+                        rec,
+                        data,
+                        f"{(rec.doi or rec.id.hex).replace('/', '_')}.pdf",
+                        source="open_access",
+                        source_url=url,
+                    )
+                except PDFError:
+                    continue
+                stats["downloaded"] += 1
+                stats["by_source"][label] = stats["by_source"].get(label, 0) + 1
+                got.add(rec.id)
+                await db.commit()
             return True
         return False
+
+    async def report(n: int) -> None:
+        """Atualiza o andamento e grava, para a tela mostrar o progresso em tempo real."""
+        nonlocal done
+        done += n
+        if progress:
+            async with db_lock:
+                progress(done, total)
+                await db.commit()
 
     try:
         # 1) OpenAlex, em lotes de 50 DOIs
@@ -339,19 +365,21 @@ async def find_open_access(
             for work in works:
                 rec = by_doi.get(normalize_doi(work.get("doi")))
                 if rec is not None:
+                    landing_known[rec.id] = _landing_urls(work)
                     await take(rec, _pdf_urls(work), "openalex")
-            done += len(chunk)
-            if progress:
-                progress(done, total)
+            await report(len(chunk))
 
-        # 2) Os que sobraram, um a um: Unpaywall, Europe PMC e a página do artigo
+        # 2) Os que sobraram: Unpaywall, Europe PMC e a página do artigo, 4 por vez
         done = len(records)
-        for rec in records:
+        gate = asyncio.Semaphore(CHAIN_PARALLEL)
+
+        async def one(rec: Record) -> None:
             if rec.id not in got:
-                await _chain(rec, take, client, stats, errors)
-            done += 1
-            if progress:
-                progress(done, total)
+                async with gate:
+                    await _chain(rec, take, client, stats, errors, landing_known.get(rec.id, []))
+            await report(1)
+
+        await asyncio.gather(*(one(r) for r in records))
     finally:
         if own:
             await client.aclose()
@@ -361,8 +389,10 @@ async def find_open_access(
     return stats
 
 
-async def _chain(rec: Record, take, client: httpx.AsyncClient, stats: dict, errors: dict) -> None:
-    landing: list[str] = []
+async def _chain(
+    rec: Record, take, client: httpx.AsyncClient, stats: dict, errors: dict, known: list[str]
+) -> None:
+    landing: list[str] = list(known)
 
     async def attempt(label: str, call) -> bool:
         try:
@@ -385,7 +415,12 @@ async def _chain(rec: Record, take, client: httpx.AsyncClient, stats: dict, erro
     if rec.pmid or rec.doi:
         if await attempt("europepmc", lambda: finders.europepmc(client, rec.doi, rec.pmid)):
             return
-    candidates = list(dict.fromkeys([rec.url, finders.doi_link(rec.doi), *landing]))
+    # Páginas do próprio OpenAlex não são o artigo (e recusam robôs): ficam de fora
+    candidates = [
+        c
+        for c in dict.fromkeys([rec.url, finders.doi_link(rec.doi), *landing])
+        if c and not (urlsplit(c).hostname or "").endswith("openalex.org")
+    ]
     delay = get_settings().api_delay_seconds
     for page in [c for c in candidates if c][:4]:
         if delay > 0:

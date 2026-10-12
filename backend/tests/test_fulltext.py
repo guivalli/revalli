@@ -466,3 +466,74 @@ def test_pdf_links_in_page_markup():
         "https://rev.org/files/y.pdf",
     ]
     assert pdf_links_in_html("<html><body>sem marcas", "https://rev.org/") == []
+
+
+async def test_open_access_uses_landing_pages_known_to_openalex(admin, monkeypatch):
+    pdf = make_pdf("Paper G open on the journal site")
+    content = (
+        b"TY  - JOUR\nTI  - Paper G whose DOI does not resolve but OpenAlex knows the page\n"
+        b"AU  - Silva, J\nPY  - 2021\nDO  - 10.5555/g\nER  - \n"
+        b"TY  - JOUR\nTI  - Paper H that only has an OpenAlex page as link\n"
+        b"AU  - Souza, M\nPY  - 2022\nUR  - https://openalex.org/W999\nER  - \n"
+    )
+    pid, _ = await _project_ft(admin, content)
+    asked: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        host = request.headers.get("host", request.url.host)
+        asked.append(host)
+        if host == "api.openalex.org":
+            work = {
+                "doi": "https://doi.org/10.5555/g",
+                "best_oa_location": {
+                    "pdf_url": None,
+                    "landing_page_url": "https://revista.example.org/g",
+                },
+                "locations": [
+                    {"pdf_url": None, "landing_page_url": "https://revista.example.org/g"}
+                ],
+            }
+            return httpx.Response(200, json={"results": [work]})
+        if host == "revista.example.org" and request.url.path == "/g":
+            page = '<meta name="citation_pdf_url" content="https://revista.example.org/g.pdf">'
+            return httpx.Response(200, content=page.encode(), headers={"content-type": "text/html"})
+        if host == "revista.example.org" and request.url.path == "/g.pdf":
+            return httpx.Response(200, content=pdf)
+        if host in ("api.unpaywall.org", "doi.org"):
+            return httpx.Response(404)
+        if host == "www.ebi.ac.uk":
+            return httpx.Response(200, json={"resultList": {"result": []}})
+        raise AssertionError(f"unexpected request {request.url}")
+
+    real = httpx.AsyncClient
+
+    def fake_client(*args, **kwargs):
+        kwargs.pop("transport", None)
+        return real(*args, transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(ft_service.httpx, "AsyncClient", fake_client)
+    r = await admin.post(f"/api/projects/{pid}/files/open-access", json={})
+    result = r.json()["result"]
+    assert result["downloaded"] == 1 and result["by_source"] == {"article_page": 1}, result
+    # A página do próprio OpenAlex nunca é aberta como se fosse o artigo
+    assert "openalex.org" not in asked
+
+
+async def test_fetch_tries_the_next_address_when_one_does_not_connect():
+    from revalli.core import safefetch
+
+    async def two_addresses(host: str, port: int) -> list[str]:
+        return ["93.184.216.34", "2606:4700:4700::1111"]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "93.184.216.34":
+            raise httpx.ConnectError("sem rota")
+        return httpx.Response(200, content=b"%PDF-1.4 ok")
+
+    safefetch.set_resolver(two_addresses)
+    try:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+            got = await safefetch.get_bytes(c, "https://journal.example.org/a.pdf", max_bytes=1000)
+        assert got.data.startswith(b"%PDF")
+    finally:
+        safefetch.set_resolver(None)
