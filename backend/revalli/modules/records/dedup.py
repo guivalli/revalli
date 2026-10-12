@@ -3,6 +3,8 @@
 Regras:
 1. Mesmo DOI ou mesmo PMID: duplicata confirmada automaticamente
    (a menos que os títulos sejam muito diferentes, aí vai para revisão).
+   Quando o título muda de idioma entre as bases, vale também o título traduzido (campo TT
+   das exportações da BVS): o título de um registro é comparado com o traduzido do outro.
 2. Título parecido (>= 92), ano igual ou vizinho e mesmo sobrenome do primeiro autor:
    vai para revisão manual. Se o título for praticamente idêntico (>= 98), com mesmo ano
    e mesmo autor, é confirmada automaticamente.
@@ -38,6 +40,7 @@ class _Rec:
     author: str
     completeness: tuple
     group_id: uuid.UUID | None
+    alt_title: str = ""
 
 
 class _UnionFind:
@@ -69,6 +72,16 @@ def _completeness(r: Record) -> tuple:
     )
 
 
+def _doi_title_score(a: _Rec, b: _Rec) -> int:
+    if not (a.title and b.title):
+        return 100
+    scores = [int(fuzz.token_sort_ratio(a.title, b.title))]
+    for x, y in ((a.alt_title, b.title), (a.title, b.alt_title)):
+        if x and y:
+            scores.append(int(fuzz.token_sort_ratio(x, y)))
+    return max(scores)
+
+
 def find_edges(
     recs: list[_Rec], blocked: set[frozenset]
 ) -> list[tuple[uuid.UUID, uuid.UUID, str, int, bool]]:
@@ -89,8 +102,12 @@ def find_edges(
                 a, b = group[0], group[i]
                 if not ok(a, b):
                     continue
-                score = int(fuzz.token_sort_ratio(a.title, b.title)) if a.title and b.title else 100
-                edges.append((a.id, b.id, key, score, score >= DOI_TITLE_SANITY))
+                score = _doi_title_score(a, b)
+                # O mesmo DOI com o mesmo primeiro autor e o mesmo ano basta, mesmo que o título
+                # esteja em outro idioma
+                same_work = bool(a.author) and a.author == b.author and a.year is not None
+                same_work = same_work and a.year == b.year
+                edges.append((a.id, b.id, key, score, score >= DOI_TITLE_SANITY or same_work))
 
     by_year: dict[int | None, list[int]] = defaultdict(list)
     for idx, r in enumerate(recs):
@@ -141,7 +158,44 @@ def find_edges(
                 and len(r.title) >= 30
             )
             edges.append((r.id, other.id, "title", score, auto))
+
+    # Título de um registro contra o título traduzido do outro: sempre vai para revisão
+    # (os DOIs podem diferir entre a versão impressa e a eletrônica)
+    already = {frozenset((a, b)) for a, b, *_ in edges}
+    by_alt = [i for i, r in enumerate(recs) if len(r.alt_title) >= 10]
+    for y in sorted({recs[i].year for i in by_alt if recs[i].year is not None}):
+        queries = [i for i in by_alt if recs[i].year == y]
+        choices = [j for yy in (y - 1, y, y + 1) for j in by_year.get(yy, [])]
+        if not choices:
+            continue
+        matrix = process.cdist(
+            [recs[i].alt_title for i in queries],
+            [recs[j].title for j in choices],
+            scorer=fuzz.token_sort_ratio,
+            score_cutoff=TITLE_REVIEW,
+            dtype=np.uint8,
+            workers=-1,
+        )
+        for qi, cj in zip(*np.nonzero(matrix), strict=True):
+            r, other = recs[queries[qi]], recs[choices[cj]]
+            pair = frozenset((r.id, other.id))
+            if r.id == other.id or pair in already or not ok(r, other):
+                continue
+            if r.author and other.author and r.author != other.author:
+                continue
+            if r.pmid and other.pmid and r.pmid != other.pmid:
+                continue
+            already.add(pair)
+            edges.append((r.id, other.id, "title", int(matrix[qi, cj]), False))
     return edges
+
+
+def _alt_title(r: Record) -> str:
+    """Título traduzido que algumas bases (BVS) trazem no campo TT."""
+    value = (r.raw or {}).get("TT")
+    if isinstance(value, list):
+        value = value[0] if value else ""
+    return normalize_title(value) if isinstance(value, str) else ""
 
 
 async def run_dedup(db: AsyncSession, project_id: uuid.UUID) -> dict:
@@ -187,6 +241,7 @@ async def run_dedup(db: AsyncSession, project_id: uuid.UUID) -> dict:
             author=first_author_key(r.authors or []),
             completeness=_completeness(r),
             group_id=r.duplicate_group_id if r.duplicate_group_id in confirmed else None,
+            alt_title=_alt_title(r),
         )
         for r in rows
     ]

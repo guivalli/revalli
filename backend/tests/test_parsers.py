@@ -121,3 +121,29 @@ def test_normalizers():
     )
     assert first_author_key(["Souza-Lima, Maria"]) == "souzalima"
     assert first_author_key(["M. Souza"]) == "souza"
+
+
+def test_ris_bvs_export():
+    """Exportação real da BVS (LILACS e INDEXPSI): TT, MH, páginas zeradas e marca (AU)."""
+    fmt, recs = load("sample_bvs.ris")
+    assert fmt == "ris" and len(recs) == 7
+    editorial, en_title, pt_title = recs[0], recs[1], recs[2]
+    # Sem palavras-chave do autor, os descritores (MH) entram como palavras-chave
+    assert editorial.keywords == ["Terapia Gestalt"]
+    assert editorial.pages == "VI-IX" and editorial.doi is None
+    assert editorial.language == "pt"
+    # O caractere de controle do Windows-1252 volta a ser a aspa
+    assert "\x92" not in en_title.abstract
+    assert "doesn’t" in en_title.abstract
+    # A marca de resumo de autor não fica no texto
+    assert not en_title.abstract.endswith("(AU)") and "(AU)" not in pt_title.abstract
+    # Páginas "0-0" não são páginas
+    assert pt_title.pages == ""
+    # Os dois resumos (inglês e português) ficam juntos
+    assert (
+        "This text discusses" in en_title.abstract and "Este texto apresenta" in en_title.abstract
+    )
+    # Palavras-chave do autor têm prioridade sobre os descritores
+    assert "Terapia Gestalt" not in en_title.keywords and "Supervisão" in en_title.keywords
+    # O título traduzido fica no registro bruto
+    assert en_title.raw["TT"].startswith("A Gestalt-terapia na universidade")

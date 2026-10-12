@@ -8,6 +8,9 @@ DOI_RE = re.compile(r"10\.\d{4,9}/[^\s\"<>]+", re.IGNORECASE)
 YEAR_RE = re.compile(r"(1[5-9]\d\d|20\d\d|21\d\d)")
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 SPACES_RE = re.compile(r"\s+")
+# Caracteres de controle C1 (U+0080 a U+009F) são aspas e travessões do Windows-1252 que
+# chegaram sem conversão (comum nas exportações da BVS): voltam ao caractere certo ou somem
+_C1_TABLE = {cp: bytes([cp]).decode("cp1252", errors="ignore") or None for cp in range(0x80, 0xA0)}
 
 
 @dataclass
@@ -36,6 +39,9 @@ class ParsedRecord:
         self.volume = clean_text(self.volume)[:50]
         self.issue = clean_text(self.issue)[:50]
         self.pages = clean_text(self.pages)[:50]
+        if re.fullmatch(r"0+(\s*-\s*0+)?", self.pages):
+            # Algumas bases preenchem páginas com zeros quando não sabem
+            self.pages = ""
         self.doi = normalize_doi(self.doi) or normalize_doi(self.url)
         self.pmid = normalize_pmid(self.pmid)
         self.url = clean_text(self.url)[:2000]
@@ -61,6 +67,7 @@ def clean_text(value: str | None) -> str:
         return ""
 
     value = html.unescape(str(value))
+    value = value.translate(_C1_TABLE)
     value = HTML_TAG_RE.sub(" ", value)
     value = unicodedata.normalize("NFC", value)
     return SPACES_RE.sub(" ", value).strip()

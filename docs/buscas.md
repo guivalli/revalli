@@ -38,6 +38,16 @@ O ReValli não contorna desafios anti-robô. O fluxo para estas bases é:
 2. Rode a busca no portal e exporte os resultados em RIS ou CSV.
 3. Em **Importar**, envie o arquivo e escolha a base no campo **Base de dados** (LILACS, BVS, SciELO, Portal CAPES e PePSIC já aparecem na lista). A data, a estratégia e o número informado pela base entram no registro da busca (PRISMA-S).
 
+#### O que o ReValli faz com a exportação da BVS
+
+Conferido com uma exportação real em RIS (22 registros, LILACS e INDEXPSI, 2026-10-12):
+
+- **Descritores (DeCS/MeSH):** quando o registro não tem palavras-chave do autor, os descritores entram como palavras-chave.
+- **Dois idiomas:** os resumos em português e em inglês ficam juntos no resumo. O título traduzido (campo `TT`) fica no registro bruto e é usado na deduplicação.
+- **Duplicatas entre LILACS e INDEXPSI:** o mesmo artigo costuma vir duas vezes, com o título em idiomas diferentes. Mesmo DOI, mesmo primeiro autor e mesmo ano viram duplicata confirmada. Quando o DOI difere (versão eletrônica e impressa) mas o título de um é o título traduzido do outro, o par vai para revisão manual.
+- **Limpeza:** aspas e travessões do Windows-1252 que chegam como caracteres de controle voltam ao caractere certo, a marca `(AU)` de resumo de autor sai do texto e páginas `0-0` ficam em branco.
+- **Não resolvido:** a exportação não indica qual dos dois títulos é o original. O título principal é o campo `TI`, que pode estar em inglês mesmo com o artigo em português.
+
 ### Limites do OpenAlex e a chave gratuita
 
 PubMed, Europe PMC e OpenAlex são consultados sem cadastro, mas o OpenAlex (usado também por SciELO, PePSIC e snowballing) impõe limites que apareceram nos testes:

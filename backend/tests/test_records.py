@@ -299,3 +299,58 @@ async def test_jobs_list(admin):
 async def test_abstract_from_index():
     assert enrich_mod.abstract_from_index({"b": [1], "a": [0, 2]}) == "a b a"
     assert enrich_mod.abstract_from_index(None) == ""
+
+
+def test_dedup_uses_translated_title_and_doi():
+    """Pares da BVS: mesmo artigo com o título em outro idioma e, às vezes, outro DOI."""
+    import uuid
+
+    from revalli.modules.imports.normalize import first_author_key, normalize_title
+    from revalli.modules.imports.parsers import parse_file
+    from revalli.modules.records.dedup import _Rec, find_edges
+
+    data = (Path(__file__).parent / "fixtures" / "sample_bvs.ris").read_bytes()
+    _, parsed = parse_file("sample_bvs.ris", data)
+    recs = []
+    for p in (r.clean() for r in parsed):
+        tt = p.raw.get("TT")
+        recs.append(
+            _Rec(
+                id=uuid.uuid4(),
+                doi=p.doi,
+                pmid=p.pmid,
+                title=normalize_title(p.title),
+                year=p.year,
+                author=first_author_key(p.authors),
+                completeness=(),
+                group_id=None,
+                alt_title=normalize_title(tt) if isinstance(tt, str) else "",
+            )
+        )
+    pos = {r.id: i for i, r in enumerate(recs)}
+    edges = {
+        frozenset((pos[a], pos[b])): (method, auto)
+        for a, b, method, _score, auto in find_edges(recs, set())
+    }
+    # Mesmo DOI, mesmo autor e ano, títulos em idiomas diferentes: confirmada
+    assert edges[frozenset((3, 4))] == ("doi", True)
+    assert edges[frozenset((5, 6))] == ("doi", True)
+    # DOIs diferentes, mas o título de um é o título traduzido do outro: só vai para revisão
+    assert edges[frozenset((1, 2))] == ("title", False)
+    # Nada além desses pares
+    assert len(edges) == 3
+
+
+async def test_import_bvs_export_and_dedup(admin):
+    """Exportação real da BVS: pares com o título em outro idioma são agrupados."""
+    pid = await _project(admin)
+    r = await _import(admin, pid, "sample_bvs.ris", source="BVS")
+    assert r.status_code == 201, r.text
+    assert r.json()["imported"] == 7
+    summary = (await admin.get(f"/api/projects/{pid}/summary")).json()
+    # Mesmo DOI, mesmo autor e ano: 2 duplicatas confirmadas; o par de DOIs diferentes espera revisão
+    assert summary["duplicates_removed"] == 2
+    assert summary["pending_groups"] == 1
+    page = (await admin.get(f"/api/projects/{pid}/records", params={"q": "universidade"})).json()
+    assert page["total"] >= 1
+    assert all("\x92" not in rec["abstract"] for rec in page["items"])

@@ -67,6 +67,12 @@ def parse_ris(text: str) -> list[ParsedRecord]:
         keywords = []
         for kw in e.get("KW", []):
             keywords.extend(split_keywords(kw) if ";" in kw else [kw])
+        if not keywords:
+            # Descritores (DeCS/MeSH) das exportações da BVS
+            for mh in e.get("MH", []):
+                keywords.extend(split_keywords(mh) if ";" in mh else [mh])
+        # A BVS marca resumos de autor com "(AU)" no fim
+        abstracts = [re.sub(r"\s*\(AU\)\s*$", "", ab) for ab in e.get("AB", []) or e.get("N2", [])]
         pmid = ""
         for value in e.get("AN", []) + e.get("C2", []) + e.get("M2", []):
             if re.fullmatch(r"\s*(PMID:?\s*)?\d{5,9}\s*", value, re.IGNORECASE):
@@ -75,7 +81,7 @@ def parse_ris(text: str) -> list[ParsedRecord]:
         records.append(
             ParsedRecord(
                 title=_first(e, "TI", "T1", "CT", "BT"),
-                abstract=" ".join(e.get("AB", []) or e.get("N2", [])),
+                abstract=" ".join(abstracts),
                 authors=e.get("AU", []) or e.get("A1", []),
                 year=parse_year(_first(e, "PY", "Y1", "DA")),
                 journal=_first(e, "JF", "T2", "JO", "JA", "J2"),

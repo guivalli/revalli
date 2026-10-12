@@ -25,7 +25,7 @@ Lista viva do que falta. O que cada marco já entrega está no [roteiro](docs/ro
 - [ ] Medir a triagem por IA com critérios detalhados: calibração em decisões humanas reais e o benchmark em mais conjuntos, com um modelo maior (o llama3.1 8B ficou com 93% de sensibilidade e 29% de especificidade num conjunto).
 - [ ] Avaliar o agrupamento de motivos de exclusão com volume real (o teste teve 6 motivos distintos, nada para juntar).
 - [ ] Testar o assistente de busca com um modelo maior: no teste local faltaram blocos de conceito e houve `[mh]` em termo truncado.
-- [ ] Importar exportações reais de LILACS/BVS, SciELO, PePSIC e Portal CAPES (RIS e CSV) e conferir o parser.
+- [ ] Importar exportações reais de SciELO, PePSIC e Portal CAPES (RIS e CSV) e conferir o parser. LILACS/BVS em RIS já foi conferido com uma exportação real (22 registros) e gerou correções; veja [docs/buscas.md](docs/buscas.md).
 - [ ] Testar um provedor de login único além do Keycloak.
 
 ## 4. Funcionalidades que faltam
