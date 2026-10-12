@@ -182,7 +182,7 @@ function ConflictsSection({ phase, reasons }: { phase: Phase; reasons: Reason[] 
       {blind ? (
         <p className="text-sm text-stone-500">
           {t('screening.blind_conflicts')}{' '}
-          <Link to="../protocolo" className="text-brand-600 underline">
+          <Link to="../protocolo" className="text-brand-600 dark:text-brand-300 underline">
             {t('tabs.protocol')}
           </Link>
         </p>
@@ -432,7 +432,7 @@ function PendingList({ pid }: { pid: string }) {
   if (rows.length === 0) return null
   const copy = () =>
     void navigator.clipboard?.writeText(
-      rows.map((r) => [r.doi ?? '', r.proxy_link || r.link].filter(Boolean).join('\t')).join('\n'),
+      rows.map((r) => [r.doi ?? '', r.link].filter(Boolean).join('\t')).join('\n'),
     )
   return (
     <details className="rounded-md border border-stone-200 p-3 dark:border-stone-800">
@@ -463,18 +463,8 @@ function PendingList({ pid }: { pid: string }) {
               <p className="flex flex-wrap gap-x-3 text-xs text-stone-600 dark:text-stone-400">
                 {r.doi && <span>DOI: {r.doi}</span>}
                 {r.link && (
-                  <a href={r.link} target="_blank" rel="noreferrer noopener" className="text-brand-600 hover:underline">
+                  <a href={r.link} target="_blank" rel="noreferrer noopener" className="text-brand-600 dark:text-brand-300 hover:underline">
                     {t('pdf.pending_open')}
-                  </a>
-                )}
-                {r.proxy_link && (
-                  <a
-                    href={r.proxy_link}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-brand-600 hover:underline"
-                  >
-                    {t('pdf.pending_proxy')}
                   </a>
                 )}
                 {!r.link && <span>{t('pdf.pending_nolink')}</span>}
@@ -693,7 +683,7 @@ function AIScreenCard({ phase }: { phase: Phase }) {
               </Button>
             )}
             {started && !running && (
-              <Link to="sessao" className="text-sm text-brand-600 underline">
+              <Link to="sessao" className="text-sm text-brand-600 dark:text-brand-300 underline">
                 {t('ai_screen.open_session')}
               </Link>
             )}

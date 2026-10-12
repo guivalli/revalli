@@ -31,7 +31,6 @@ from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.schemas import JobOut
 from revalli.modules.screening.models import Phase
 from revalli.modules.screening.service import can_see_others, compute_states
-from revalli.modules.sources import keys
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["fulltext"])
 
@@ -210,7 +209,7 @@ async def summary(
     )
 
 
-async def _pending(db: AsyncSession, project, template: str) -> list[PendingOut]:
+async def _pending(db: AsyncSession, project) -> list[PendingOut]:
     ids = list(await compute_states(db, project, Phase.full_text))
     with_pdf = set(
         (await db.execute(select(RecordFile.record_id).where(RecordFile.record_id.in_(ids))))
@@ -242,7 +241,6 @@ async def _pending(db: AsyncSession, project, template: str) -> list[PendingOut]
                 pmid=r.pmid,
                 url=r.url,
                 link=link,
-                proxy_link=finders.proxy_link(template, link) if template else "",
             )
         )
     return out
@@ -254,7 +252,7 @@ async def pending(
 ):
     """Estudos do texto completo ainda sem PDF, com DOI e link para baixar à mão."""
     project, _ = await get_membership(db, project_id, user)
-    return await _pending(db, project, await keys.institution_proxy(db))
+    return await _pending(db, project)
 
 
 @router.get("/files/pending.csv")
@@ -262,10 +260,10 @@ async def pending_csv(
     project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
 ):
     project, _ = await get_membership(db, project_id, user)
-    rows = await _pending(db, project, await keys.institution_proxy(db))
+    rows = await _pending(db, project)
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["title", "authors", "year", "journal", "doi", "pmid", "link", "proxy_link"])
+    writer.writerow(["title", "authors", "year", "journal", "doi", "pmid", "link"])
 
     def safe(value: object) -> str:
         # Texto que vem de bases externas não pode virar fórmula na planilha
@@ -282,7 +280,6 @@ async def pending_csv(
                 r.doi or "",
                 r.pmid or "",
                 r.link,
-                r.proxy_link,
             ]
         )
     return Response(

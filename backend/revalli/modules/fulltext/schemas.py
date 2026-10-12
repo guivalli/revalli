@@ -39,8 +39,6 @@ class PendingOut(BaseModel):
     url: str
     # https://doi.org/..., ou o endereço do registro quando não há DOI
     link: str
-    # O mesmo link aberto pelo proxy da instituição (CAFe, EZproxy), se houver modelo salvo
-    proxy_link: str
 
 
 class StudyRecord(BaseModel):

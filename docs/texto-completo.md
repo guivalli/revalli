@@ -31,50 +31,7 @@ O resultado mostra quantas foram verificadas, quantas tinham versão aberta, qua
 O que nenhuma fonte achou fica em **Sem PDF (N)**, com título, ano, **DOI** e o **link** do artigo (`https://doi.org/...`, ou o link do registro quando não há DOI). Você pode:
 
 - abrir cada link e baixar o PDF;
-- **Baixar a lista (CSV)**: título, autores, ano, revista, DOI, PMID, link e link pela instituição;
+- **Baixar a lista (CSV)**: título, autores, ano, revista, DOI, PMID e link;
 - **Copiar DOI e link** para colar numa planilha.
 
 Depois, envie os PDFs pelo ZIP: eles são ligados às referências pelo DOI.
-
-## 4. Acesso pela instituição (CAFe)
-
-Muitos artigos que não são abertos estão disponíveis pela assinatura da sua instituição, via **Portal de Periódicos CAPES com login CAFe**.
-
-**O que o ReValli faz:** guarda o modelo do link do proxy da instituição e, na lista de pendentes, mostra ao lado de cada artigo um segundo link, **Abrir pela instituição**. Você já está (ou entra) logado com a sua conta CAFe no navegador, baixa o PDF e envia.
-
-**Configuração** (administrador): menu **IA**, cartão **Acesso pela instituição (CAFe)**. O modelo usa:
-
-- `{url}`: o endereço inteiro do artigo;
-- `{host}`: o servidor com os pontos trocados por hífens (é o que o Portal CAPES faz);
-- `{host_ez}`: igual, mas com os hífens do nome dobrados, como o EZproxy padrão (só use se o seu proxy fizer assim);
-- `{path}`: o resto do endereço.
-
-Exemplos:
-
-| Instituição | Modelo |
-|---|---|
-| Portal CAPES com CAFe | `https://{host}.ez128.periodicos.capes.gov.br{path}` |
-| EZproxy por prefixo | `https://ezproxy.suainstituicao.br/login?url={url}` |
-
-Confira o formato do seu caso: faça login no Portal de Periódicos CAPES pela CAFe, abra um artigo e compare o endereço com o modelo. O trecho `ez128` identifica o servidor de proxy e pode ser outro número em outra instituição: use o que aparece no seu endereço.
-
-Exemplo conferido (2026-10-12), um item aberto pelo portal depois do login CAFe:
-
-```
-https://www-periodicos-capes-gov-br.ez128.periodicos.capes.gov.br/index.php/acervo/buscador.html?task=detalhes&source=digital&id=W4323920691
-```
-
-O servidor `www.periodicos.capes.gov.br` virou `www-periodicos-capes-gov-br` (pontos viram hífens), seguido de `.ez128.periodicos.capes.gov.br`. É o que o modelo `https://{host}.ez128.periodicos.capes.gov.br{path}` produz.
-
-Um segundo exemplo, de uma editora, mostra que os hífens do nome **não** são dobrados: `https://alz-journals.onlinelibrary.wiley.com/doi/10.1002/alz.13025` abre como
-
-```
-https://alz-journals-onlinelibrary-wiley-com.ez128.periodicos.capes.gov.br/doi/10.1002/alz.13025
-```
-
-Não foi conferido: o link que parte de `https://doi.org/<DOI>` (vira `doi-org.ez128...`). Teste com um artigo da lista de pendentes e, se o proxy recusar, me avise.
-
-**O que o ReValli não faz, de propósito:**
-
-- **Não faz login por você nem guarda a sua senha.** O CAFe usa uma federação com login interativo (SAML), ligada à sua sessão no navegador.
-- **Não baixa em lote pelo proxy.** As editoras detectam downloads em sequência e podem bloquear o acesso de toda a instituição. Por isso o fluxo é você abrir e baixar, artigo a artigo.

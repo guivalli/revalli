@@ -7,7 +7,7 @@ a lista de pendentes.
 
 import html.parser
 import re
-from urllib.parse import quote, urljoin, urlsplit
+from urllib.parse import quote, urljoin
 
 import httpx
 
@@ -123,43 +123,3 @@ DOI_LINK = re.compile(r"^10\.\d{4,9}/\S+$")
 
 def doi_link(doi: str | None) -> str:
     return f"https://doi.org/{doi}" if doi and DOI_LINK.match(doi) else ""
-
-
-PROXY_PLACEHOLDERS = ("{url}", "{host}", "{host_ez}", "{path}")
-
-
-def valid_proxy_template(template: str) -> bool:
-    """Modelo do proxy da instituição: começa por http(s)://, não tem espaço e usa {url} ou {host}."""
-    if not template.startswith(("http://", "https://")) or re.search(r"\s", template):
-        return False
-    if not any(ph in template for ph in ("{url}", "{host}", "{host_ez}")):
-        return False
-    rest = template
-    for ph in PROXY_PLACEHOLDERS:
-        rest = rest.replace(ph, "")
-    return "{" not in rest and "}" not in rest
-
-
-def proxy_link(template: str, target: str) -> str:
-    """Endereço do artigo aberto pelo proxy da instituição (CAFe, EZproxy...).
-
-    {url}: endereço inteiro; {host}: o servidor com os pontos trocados por hífens (é o que o
-    Portal CAPES faz: alz-journals.onlinelibrary.wiley.com vira
-    alz-journals-onlinelibrary-wiley-com); {host_ez}: igual, mas hífens do nome viram dois,
-    como o EZproxy padrão faz; {path}: o resto do endereço."""
-    parts = urlsplit(target)
-    if not template or not target or not parts.hostname:
-        return ""
-    path = parts.path or "/"
-    if parts.query:
-        path += "?" + parts.query
-    if parts.fragment:
-        path += "#" + parts.fragment
-    host = parts.hostname.replace(".", "-")
-    host_ez = parts.hostname.replace("-", "--").replace(".", "-")
-    return (
-        template.replace("{url}", target)
-        .replace("{host_ez}", host_ez)
-        .replace("{host}", host)
-        .replace("{path}", path)
-    )

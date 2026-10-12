@@ -30,11 +30,7 @@ export function useSourcesSettings(enabled = true) {
 export function useSaveSourcesSettings() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: {
-      openalex_api_key?: string
-      clear_openalex_key?: boolean
-      institution_proxy?: string
-    }) =>
+    mutationFn: (body: { openalex_api_key?: string; clear_openalex_key?: boolean }) =>
       api.put<SourcesSettings>('/sources/settings', body),
     onSuccess: (data) => qc.setQueryData(['sources', 'settings'], data),
   })
