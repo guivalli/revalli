@@ -1,8 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { ApiSource, AssistReply, Job, SourcePreview, SourcesSettings, Translation } from './types'
+import type {
+  ApiSource,
+  AssistReply,
+  AssistTurn,
+  Job,
+  SourcePreview,
+  SourcesSettings,
+  Translation,
+} from './types'
 
 const base = (pid: string) => `/projects/${pid}/sources`
+
+export function useAssistChat(pid: string) {
+  return useQuery({
+    queryKey: ['projects', pid, 'sources', 'assist'],
+    queryFn: () => api.get<{ messages: AssistTurn[] }>(`${base(pid)}/assist`),
+  })
+}
 
 export function useSourcesSettings(enabled = true) {
   return useQuery({
@@ -47,8 +62,15 @@ export function useSourceActions(pid: string) {
       onSuccess: refresh,
     }),
     assist: useMutation({
-      mutationFn: (messages: { role: 'user' | 'assistant'; content: string }[]) =>
+      mutationFn: (messages: AssistTurn[]) =>
         api.post<AssistReply>(`${base(pid)}/assist`, { messages }),
+      // O servidor guarda a conversa; atualiza a cópia da tela com o que ele guardou
+      onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', pid, 'sources', 'assist'] }),
+    }),
+    resetAssist: useMutation({
+      mutationFn: () => api.delete<void>(`${base(pid)}/assist`),
+      onSuccess: () =>
+        qc.setQueryData(['projects', pid, 'sources', 'assist'], { messages: [] as AssistTurn[] }),
     }),
     translate: useMutation({
       mutationFn: (body: { query: string; target: string }) =>

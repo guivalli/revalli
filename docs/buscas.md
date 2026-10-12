@@ -48,6 +48,15 @@ Conferido com uma exportação real em RIS (22 registros, LILACS e INDEXPSI, 202
 - **Limpeza:** aspas e travessões do Windows-1252 que chegam como caracteres de controle voltam ao caractere certo, a marca `(AU)` de resumo de autor sai do texto e páginas `0-0` ficam em branco.
 - **Não resolvido:** a exportação não indica qual dos dois títulos é o original. O título principal é o campo `TI`, que pode estar em inglês mesmo com o artigo em português.
 
+### Assistente de busca (IA)
+
+Na aba **Importar**, em **Buscar direto na base**, o assistente (**Conversar com a IA para montar a busca**) conversa com você para montar a estratégia: descreva o tema em linguagem natural, ele diz o que entendeu, pergunta o que falta e propõe uma string por base (PubMed, OpenAlex, Europe PMC, SciELO, PePSIC, Scopus, Web of Science, Embase, CINAHL, PsycInfo, Cochrane, BVS/LILACS e Portal CAPES). Cada proposta tem **Copiar** e, nas bases com busca direta, **Usar aqui**.
+
+- **Conversa salva:** ela fica guardada para você, por projeto, e volta quando você reabre a tela, em outro navegador ou outro dia. Cada pessoa tem a sua. **Recomeçar** apaga.
+- **Limite:** só as últimas 28 mensagens (14 trocas) são guardadas; as mais antigas saem de duas em duas.
+- **Estratégias:** o modelo vê, em cada resposta anterior dele, as strings que propôs, então "troque o termo X" funciona.
+- Exige a IA ligada no projeto, respeita "só IA local" e o orçamento do projeto, e usa o modelo de triagem. A proposta é um rascunho: confira os termos e o número de resultados antes de importar.
+
 ### Limites do OpenAlex e a chave gratuita
 
 PubMed, Europe PMC e OpenAlex são consultados sem cadastro, mas o OpenAlex (usado também por SciELO, PePSIC e snowballing) impõe limites que apareceram nos testes:

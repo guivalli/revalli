@@ -63,19 +63,22 @@ class TranslateIn(BaseModel):
     target: Target
 
 
-class AssistMessage(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str = Field(min_length=1, max_length=8000)
-
-
-class AssistIn(BaseModel):
-    messages: list[AssistMessage] = Field(min_length=1, max_length=30)
-
-
 class Strategy(BaseModel):
     base: str
     query: str
     notes: list[str]
+
+
+class AssistMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
+    # Só nas respostas da IA: o que ela propôs e com qual modelo
+    strategies: list[Strategy] = Field(default_factory=list, max_length=15)
+    model: str = Field(default="", max_length=200)
+
+
+class AssistIn(BaseModel):
+    messages: list[AssistMessage] = Field(min_length=1, max_length=30)
 
 
 class AssistOut(BaseModel):
@@ -102,3 +105,7 @@ class SourcesSettingsOut(BaseModel):
     openalex_key_hint: str
     # De onde vem a chave em uso: "ui" (salva na interface), "env" (OPENALEX_API_KEY) ou "none"
     openalex_key_source: Literal["ui", "env", "none"]
+
+
+class AssistChat(BaseModel):
+    messages: list[AssistMessage]

@@ -21,11 +21,13 @@ from revalli.modules.records.models import (
     Search,
 )
 from revalli.modules.screening.models import DecisionEvent, ExclusionReason
+from revalli.modules.sources.models import SearchAssistantChat
 from revalli.modules.synthesis.models import ChecklistEntry, Code, Excerpt, ExcerptCode
 from revalli.modules.tokens.models import ApiToken
 from revalli.modules.watches.models import Watch
 
 __all__ = [
+    "SearchAssistantChat",
     "Watch",
     "ApiToken",
     "Chunk",

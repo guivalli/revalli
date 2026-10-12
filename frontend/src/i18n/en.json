@@ -832,7 +832,9 @@
     "assist_hint": "Ctrl+Enter sends. Always check the count in the database before importing.",
     "assist_you": "You",
     "assist_ai": "AI",
-    "assist_wait": "The first answer can take longer while the model loads into memory."
+    "assist_wait": "The first answer can take longer while the model loads into memory.",
+    "assist_saved": "The conversation is saved for you in this project. Only the latest exchanges are kept.",
+    "assist_loading": "Loading the saved conversation…"
   },
   "checklist_items": {
     "prisma2020": {

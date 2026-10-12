@@ -832,7 +832,9 @@
     "assist_hint": "Ctrl+Enter envia. Confira sempre a contagem na base antes de importar.",
     "assist_you": "Você",
     "assist_ai": "IA",
-    "assist_wait": "A primeira resposta pode demorar enquanto o modelo é carregado na memória."
+    "assist_wait": "A primeira resposta pode demorar enquanto o modelo é carregado na memória.",
+    "assist_saved": "A conversa fica salva para você neste projeto. Só as últimas trocas são guardadas.",
+    "assist_loading": "Carregando a conversa salva…"
   },
   "checklist_items": {
     "prisma2020": {

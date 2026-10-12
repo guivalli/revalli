@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRecentJobs } from '../../api/records'
-import { useSnowballInfo, useSourceActions } from '../../api/sources'
-import type { ApiSource, AssistStrategy, Job } from '../../api/types'
+import { useAssistChat, useSnowballInfo, useSourceActions } from '../../api/sources'
+import type { ApiSource, AssistTurn, Job } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
 
@@ -139,47 +139,27 @@ function Translate({ query, onUse }: { query: string; onUse: (source: ApiSource,
   )
 }
 
-interface ChatTurn {
-  role: 'user' | 'assistant'
-  content: string
-  strategies?: AssistStrategy[]
-  model?: string
-}
-
-/** O que o modelo vê de uma resposta anterior: o texto e as estratégias que ele propôs. */
-const asHistory = (turn: ChatTurn) =>
-  turn.role === 'assistant' && turn.strategies?.length
-    ? `${turn.content}\n\n${turn.strategies.map((s) => `${s.base}: ${s.query}`).join('\n')}`
-    : turn.content
-
 function SearchAssistant({ onUse }: { onUse: (source: ApiSource, q: string) => void }) {
   const { t } = useTranslation()
   const { project } = useProjectContext()
-  const { assist } = useSourceActions(project.id)
-  const [turns, setTurns] = useState<ChatTurn[]>([])
+  const { assist, resetAssist } = useSourceActions(project.id)
+  const chat = useAssistChat(project.id)
+  const saved: AssistTurn[] = chat.data?.messages ?? []
   const [text, setText] = useState('')
+  // A fala enviada fica na tela enquanto a IA responde
+  const [sending, setSending] = useState<string | null>(null)
+  const turns: AssistTurn[] = sending ? [...saved, { role: 'user', content: sending }] : saved
 
   const send = () => {
     const content = text.trim()
     if (!content || assist.isPending) return
-    const next: ChatTurn[] = [...turns, { role: 'user', content }]
-    setTurns(next)
+    setSending(content)
     setText('')
-    assist.mutate(
-      next.map((x) => ({ role: x.role, content: asHistory(x) })),
-      {
-        onSuccess: (r) =>
-          setTurns([
-            ...next,
-            { role: 'assistant', content: r.reply, strategies: r.strategies, model: r.model },
-          ]),
-        // Devolve a mensagem ao campo para a pessoa tentar de novo
-        onError: () => {
-          setTurns(turns)
-          setText(content)
-        },
-      },
-    )
+    assist.mutate([...saved, { role: 'user', content }], {
+      // Devolve a mensagem ao campo para a pessoa tentar de novo
+      onError: () => setText(content),
+      onSettled: () => setSending(null),
+    })
   }
 
   return (
@@ -188,12 +168,16 @@ function SearchAssistant({ onUse }: { onUse: (source: ApiSource, q: string) => v
         <div>
           <h3 className="font-medium">{t('sources.assist_title')}</h3>
           <p className="text-sm text-stone-500">{t('sources.assist_intro')}</p>
+          <p className="text-xs text-stone-500">
+            {chat.isLoading ? t('sources.assist_loading') : t('sources.assist_saved')}
+          </p>
         </div>
         {turns.length > 0 && (
           <Button
             variant="ghost"
+            disabled={resetAssist.isPending || assist.isPending}
             onClick={() => {
-              setTurns([])
+              resetAssist.mutate()
               assist.reset()
             }}
           >

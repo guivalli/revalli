@@ -715,3 +715,59 @@ async def test_openalex_key_saved_in_the_interface_is_used_and_never_returned(ad
     assert (await member.get("/api/sources/settings")).status_code == 403
     r = await member.put("/api/sources/settings", json={"openalex_api_key": "outrachave1"})
     assert r.status_code == 403
+
+
+async def test_search_assistant_conversation_is_saved_per_person_and_project(admin):
+    from tests.conftest import invite_and_join
+
+    pid = (await admin.post("/api/projects", json={"title": "Bullying"})).json()["id"]
+    url = f"/api/projects/{pid}/sources/assist"
+    await admin.put(f"/api/projects/{pid}/ai/settings", json={"enabled": True})
+    await _configure(admin)
+    # Sem conversa ainda
+    assert (await admin.get(url)).json() == {"messages": []}
+    sent: list = []
+    ai_client.set_transport(httpx.MockTransport(_assistant(sent)))
+    try:
+        first = {
+            "messages": [{"role": "user", "content": "Efeitos iatrogênicos de falar de bullying"}]
+        }
+        out = (await admin.post(url, json=first)).json()
+        saved = (await admin.get(url)).json()["messages"]
+        assert [m["role"] for m in saved] == ["user", "assistant"]
+        assert saved[1]["content"] == out["reply"] and saved[1]["model"] == out["model"]
+        assert [s["base"] for s in saved[1]["strategies"]] == ["pubmed", "scielo"]
+
+        # Retomar depois: a pessoa manda o que está salvo mais a fala nova, e a IA vê as
+        # estratégias que ela mesma propôs
+        follow = {"messages": [*saved, {"role": "user", "content": "Adolescentes"}]}
+        assert (await admin.post(url, json=follow)).status_code == 200
+        ai_saw = sent[-1][2]["content"]
+        assert ai_saw.startswith("Entendi") and "pubmed: (bullying OR cyberbullying)" in ai_saw
+        assert [m["role"] for m in (await admin.get(url)).json()["messages"]] == [
+            "user",
+            "assistant",
+            "user",
+            "assistant",
+        ]
+
+        # Cada pessoa tem a sua conversa
+        other = await invite_and_join(admin, "colega@example.org", pid, "lead")
+        assert (await other.get(url)).json() == {"messages": []}
+
+        # Conversas longas guardam só o final, sempre começando pela fala da pessoa
+        long = {
+            "messages": [
+                {"role": "user" if i % 2 == 0 else "assistant", "content": f"m{i}"}
+                for i in range(29)
+            ]
+        }
+        assert (await admin.post(url, json=long)).status_code == 200
+        kept = (await admin.get(url)).json()["messages"]
+        assert len(kept) <= 28 and kept[0]["role"] == "user" and kept[-1]["role"] == "assistant"
+
+        # Recomeçar apaga
+        assert (await admin.delete(url)).status_code == 204
+        assert (await admin.get(url)).json() == {"messages": []}
+    finally:
+        ai_client.set_transport(None)

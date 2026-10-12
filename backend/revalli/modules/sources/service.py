@@ -11,11 +11,11 @@ from datetime import date
 
 import httpx
 from rapidfuzz import fuzz
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from revalli.core.config import get_settings
-from revalli.models import AIUsage, Project, Record, Search
+from revalli.models import AIUsage, Project, Record, Search, SearchAssistantChat
 from revalli.modules.ai import client as ai_client
 from revalli.modules.ai.service import project_ai, resolve, spent
 from revalli.modules.fulltext.studies import default_label
@@ -455,6 +455,55 @@ def parse_assist(data: dict) -> dict:
     return {"reply": reply, "strategies": strategies[:MAX_STRATEGIES]}
 
 
+def assist_history(messages: list[dict]) -> list[dict]:
+    """O que o modelo vê: o texto de cada turno e, nas respostas dele, as estratégias propostas."""
+    out = []
+    for m in messages:
+        content = m["content"]
+        strategies = m.get("strategies") or []
+        if m["role"] == "assistant" and strategies:
+            lines = "\n".join(f"{s['base']}: {s['query']}" for s in strategies)
+            content = f"{content}\n\n{lines}"
+        out.append({"role": m["role"], "content": content})
+    return out
+
+
+def _chat_query(project_id: uuid.UUID, user_id: uuid.UUID):
+    return select(SearchAssistantChat).where(
+        SearchAssistantChat.project_id == project_id, SearchAssistantChat.user_id == user_id
+    )
+
+
+async def load_chat(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> list[dict]:
+    chat = (await db.execute(_chat_query(project_id, user_id))).scalar_one_or_none()
+    return list(chat.messages) if chat else []
+
+
+# Guarda no máximo isto; o próximo pedido (com a mensagem nova) ainda cabe no limite de 30
+CHAT_KEEP = 28
+
+
+async def save_chat(
+    db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID, messages: list[dict]
+) -> None:
+    # Descarta as trocas mais antigas, de duas em duas, para a conversa começar por quem pergunta
+    while len(messages) > CHAT_KEEP:
+        messages = messages[2:]
+    chat = (await db.execute(_chat_query(project_id, user_id))).scalar_one_or_none()
+    if chat is None:
+        db.add(SearchAssistantChat(project_id=project_id, user_id=user_id, messages=messages))
+    else:
+        chat.messages = messages
+
+
+async def clear_chat(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    await db.execute(
+        delete(SearchAssistantChat).where(
+            SearchAssistantChat.project_id == project_id, SearchAssistantChat.user_id == user_id
+        )
+    )
+
+
 async def assist_search(db: AsyncSession, project: Project, history: list[dict]) -> dict:
     ai = project_ai(project)
     res = await resolve(db, "screening", ai.local_only)
@@ -466,7 +515,10 @@ async def assist_search(db: AsyncSession, project: Project, history: list[dict])
     system = ASSIST_SYSTEM.format(
         targets="\n".join(f"- {k}: {v}" for k, v in TARGETS.items()), keys=", ".join(TARGETS)
     )
-    messages = [{"role": "system", "content": f"{system}\n\n{context}"}, *history]
+    messages = [
+        {"role": "system", "content": f"{system}\n\n{context}"},
+        *assist_history(history),
+    ]
     result = await ai_client.chat(res.endpoint, messages)
     db.add(
         AIUsage(

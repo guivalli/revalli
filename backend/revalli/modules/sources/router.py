@@ -17,6 +17,7 @@ from revalli.modules.records.schemas import JobOut
 from revalli.modules.sources import keys, service
 from revalli.modules.sources.clients import SourceError
 from revalli.modules.sources.schemas import (
+    AssistChat,
     AssistIn,
     AssistOut,
     PreviewOut,
@@ -204,11 +205,39 @@ async def assist(
         raise HTTPException(422, "last_message_must_be_user")
     history = [m.model_dump() for m in body.messages]
     try:
-        return await service.assist_search(db, project, history)
+        out = await service.assist_search(db, project, history)
+        # A conversa fica salva por pessoa e projeto: sobrevive a fechar a tela
+        reply = {
+            "role": "assistant",
+            "content": out["reply"],
+            "strategies": out["strategies"],
+            "model": out["model"],
+        }
+        await service.save_chat(db, project_id, user.id, [*history, reply])
+        await db.commit()
+        return out
     except AIError as exc:
         raise _ai_error(exc) from exc
     except service.TranslationError as exc:
         raise HTTPException(409 if str(exc) == "budget_exceeded" else 502, f"ai_{exc}") from exc
+
+
+@router.get("/assist", response_model=AssistChat)
+async def assist_chat(
+    project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    """A conversa salva da pessoa com o assistente neste projeto."""
+    await require_lead(db, project_id, user)
+    return AssistChat(messages=await service.load_chat(db, project_id, user.id))
+
+
+@router.delete("/assist", status_code=204)
+async def assist_chat_reset(
+    project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    await require_lead(db, project_id, user)
+    await service.clear_chat(db, project_id, user.id)
+    await db.commit()
 
 
 @router.post("/translate", response_model=TranslateOut)

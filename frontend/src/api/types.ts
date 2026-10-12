@@ -814,6 +814,13 @@ export interface AssistStrategy {
   notes: string[]
 }
 
+export interface AssistTurn {
+  role: 'user' | 'assistant'
+  content: string
+  strategies?: AssistStrategy[]
+  model?: string
+}
+
 export interface AssistReply {
   reply: string
   strategies: AssistStrategy[]
