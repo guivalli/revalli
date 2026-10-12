@@ -10,6 +10,7 @@ import type {
   AIUsage,
   InstanceAISettings,
   Job,
+  OllamaState,
   Phase,
   ProjectAISettings,
   Provider,
@@ -35,6 +36,22 @@ export function useProviders(enabled = true) {
 
 export function useInstanceAI() {
   return useQuery({ queryKey: ['ai', 'settings'], queryFn: () => api.get<InstanceAISettings>('/ai/settings') })
+}
+
+export function useOllama(enabled = true) {
+  return useQuery({
+    queryKey: ['ai', 'ollama'],
+    queryFn: () => api.get<OllamaState>('/ai/local/ollama'),
+    enabled,
+  })
+}
+
+export function useOllamaAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (action: 'start' | 'stop') => api.post<OllamaState>('/ai/local/ollama', { action }),
+    onSuccess: (state) => qc.setQueryData(['ai', 'ollama'], state),
+  })
 }
 
 export function useProviderActions() {

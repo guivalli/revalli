@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { useInstanceAI, useProviderActions, useProviders, type ProviderPayload } from '../api/ai'
+import {
+  useInstanceAI,
+  useOllama,
+  useOllamaAction,
+  useProviderActions,
+  useProviders,
+  type ProviderPayload,
+} from '../api/ai'
 import { useMe } from '../api/hooks'
 import type { InstanceAISettings, Provider, ProviderKind, TaskModel } from '../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../components/ui'
@@ -129,6 +136,62 @@ function ProviderRow({ p, onEdit }: { p: Provider; onEdit: () => void }) {
       )}
       <ErrorText error={test.error} />
     </li>
+  )
+}
+
+function OllamaControl() {
+  const { t } = useTranslation()
+  const { data } = useOllama()
+  const act = useOllamaAction()
+  if (!data?.configured) return null
+  const known = data.reachable
+  const label = !known ? t('ai.ollama_unknown') : data.active ? t('ai.ollama_active') : t('ai.ollama_inactive')
+  const problem = !known
+    ? data.error === 'rejected'
+      ? t('ai.ollama_rejected')
+      : t('ai.ollama_unreachable')
+    : data.error
+      ? t('ai.ollama_failed', { error: data.error })
+      : null
+  return (
+    <Card className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="font-semibold">{t('ai.ollama_title')}</h2>
+        <span
+          role="status"
+          className={`rounded-full px-2 text-xs ${
+            known && data.active
+              ? 'bg-brand-100 text-brand-700 dark:bg-brand-700/30 dark:text-brand-100'
+              : 'bg-stone-100 dark:bg-stone-800'
+          }`}
+        >
+          {label}
+        </span>
+        {known && (
+          <span className="text-xs text-stone-500">
+            {data.enabled ? t('ai.ollama_boot_on') : t('ai.ollama_boot_off')}
+          </span>
+        )}
+        <span className="ml-auto">
+          {known && data.active ? (
+            <Button variant="ghost" onClick={() => act.mutate('stop')} disabled={act.isPending}>
+              {t('ai.ollama_stop')}
+            </Button>
+          ) : (
+            <Button onClick={() => act.mutate('start')} disabled={act.isPending || !known}>
+              {t('ai.ollama_start')}
+            </Button>
+          )}
+        </span>
+      </div>
+      <p className="text-xs text-stone-500">{t('ai.ollama_hint')}</p>
+      {problem && (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {problem}
+        </p>
+      )}
+      <ErrorText error={act.error} />
+    </Card>
   )
 }
 
@@ -261,6 +324,7 @@ export default function AISettings() {
         <h1 className="mt-2 text-2xl font-semibold">{t('ai.title')}</h1>
         <p className="text-sm text-stone-500">{t('ai.intro')}</p>
       </div>
+      <OllamaControl />
       <Card className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">{t('ai.providers')}</h2>

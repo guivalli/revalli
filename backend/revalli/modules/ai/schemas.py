@@ -163,3 +163,18 @@ class Curve(BaseModel):
     should_stop: bool
     prioritized: bool
     points: list[CurvePoint]
+
+
+class OllamaState(BaseModel):
+    """Estado do Ollama do computador. `configured` é falso quando não há auxiliar instalado."""
+
+    configured: bool
+    reachable: bool = False
+    active: bool = False
+    state: str = ""
+    enabled: bool = False
+    error: str | None = None
+
+
+class OllamaAction(BaseModel):
+    action: Literal["start", "stop"]

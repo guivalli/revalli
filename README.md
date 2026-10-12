@@ -44,6 +44,7 @@ Versão **0.1.0.dev0 (M0 a M6)**. O que já funciona:
 - Atualizações automáticas (revisões vivas): repete uma busca ou relê um arquivo de referências numa URL e importa só o que é novo, com aviso na visão geral. Também lê e exporta CSL JSON. Veja [docs/atualizacoes.md](docs/atualizacoes.md).
 - Login único por OpenID Connect (opcional), com a entrada por senha mantida. Veja [docs/login-unico.md](docs/login-unico.md).
 - IA que detalha os critérios de inclusão e exclusão, sugere incluir ou excluir com o motivo e propõe até 4 etiquetas por registro; edição e exclusão de projetos. Veja [docs/triagem-ia.md](docs/triagem-ia.md).
+- Ligar e desligar o Ollama local pela tela IA (com um auxiliar opcional no computador), e como restringir o acesso a ele: [docs/ollama.md](docs/ollama.md).
 - Mapa de lacunas de evidência: estudos incluídos cruzados por duas dimensões (códigos ou campos de extração), com as lacunas em destaque. Veja [docs/sintese.md](docs/sintese.md).
 - Conversa com os PDFs: perguntas sobre os estudos com resposta só a partir do texto, cada afirmação com trecho e página, e cada citação conferida no PDF. Veja [docs/conversa.md](docs/conversa.md).
 - API pública somente leitura (chaves por pessoa ou por projeto, em Minha conta) e servidor MCP para consultar os projetos de um assistente de IA. Veja [docs/api.md](docs/api.md).

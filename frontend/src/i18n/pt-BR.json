@@ -155,7 +155,8 @@
     "invalid_dimension": "Dimensão inválida.",
     "criteria_empty": "Escreva os critérios de inclusão ou exclusão e salve o protocolo antes.",
     "criteria_missing": "O projeto ainda não tem critérios de inclusão e exclusão. A IA precisa deles para triar.",
-    "openalex_key_needed": "O limite diário gratuito do OpenAlex sem chave acabou (ele é compartilhado por toda a sua rede e volta à meia-noite UTC). Crie uma chave gratuita em openalex.org/settings/api e ponha OPENALEX_API_KEY no deploy/.env."
+    "openalex_key_needed": "O limite diário gratuito do OpenAlex sem chave acabou (ele é compartilhado por toda a sua rede e volta à meia-noite UTC). Crie uma chave gratuita em openalex.org/settings/api e ponha OPENALEX_API_KEY no deploy/.env.",
+    "ollama_helper_not_configured": "O auxiliar que liga e desliga o Ollama não está instalado. Veja docs/ollama.md."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -545,7 +546,19 @@
     "reveal_before": "Antes de decidir",
     "reveal_before_hint": "A sugestão aparece junto do registro, como apoio.",
     "suggest_reasons": "Sugerir o motivo de exclusão",
-    "suggest_reasons_hint": "Quando a IA excluir, ela diz o motivo principal em poucas palavras; depois você agrupa os motivos parecidos."
+    "suggest_reasons_hint": "Quando a IA excluir, ela diz o motivo principal em poucas palavras; depois você agrupa os motivos parecidos.",
+    "ollama_title": "Ollama neste computador",
+    "ollama_hint": "Liga e desliga o serviço do Ollama do computador onde o ReValli roda. Desligado, a IA local não responde e a GPU fica livre.",
+    "ollama_active": "Ligado",
+    "ollama_inactive": "Desligado",
+    "ollama_unknown": "Estado desconhecido",
+    "ollama_start": "Ligar",
+    "ollama_stop": "Desligar",
+    "ollama_unreachable": "O auxiliar do computador não respondeu. Confira se o serviço revalli-ollama-helper está rodando.",
+    "ollama_rejected": "O auxiliar recusou o pedido. Confira o OLLAMA_HELPER_TOKEN no deploy/.env.",
+    "ollama_failed": "O sistema não aceitou o comando: {{error}}",
+    "ollama_boot_on": "Sobe junto com o computador",
+    "ollama_boot_off": "Não sobe junto com o computador"
   },
   "pdf": {
     "zoom_out": "Diminuir zoom",

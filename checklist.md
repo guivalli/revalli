@@ -10,6 +10,7 @@ Lista viva do que falta. O que cada marco já entrega está no [roteiro](docs/ro
 - [ ] Ver no navegador as telas novas: aba Configurações, cartões do Protocolo, painel de sugestão na sessão de triagem, assistente em Importar, Parar/Continuar/Refazer. Hoje só passaram por tipos, build e testes de API.
 - [ ] Testar Parar e Continuar com o worker real pelo navegador (os testes cobrem o mecanismo, não o clique).
 - [x] Trocar a porta local de 8080 para 1515 (`HTTP_PORT` e `PUBLIC_URL` em `deploy/.env`).
+- [ ] Instalar o auxiliar do Ollama (`bash deploy/ollama-helper/install.sh`) e testar Ligar/Desligar na tela IA. Veja [docs/ollama.md](docs/ollama.md).
 - [ ] Arquivar ou apagar o `HANDOFF.md`, que descreve outro ambiente.
 
 ## 2. Publicar

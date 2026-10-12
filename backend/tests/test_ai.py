@@ -635,3 +635,79 @@ async def test_cancel_endpoint_states_and_permissions(admin):
     # Parando ainda conta como tarefa ativa, para a interface mostrar "parando…"
     active = (await admin.get(f"{url}?active=true")).json()
     assert {j["status"] for j in active} == {"cancelling", "running"}
+
+
+async def test_ollama_helper_controls_local_service(admin, monkeypatch):
+    from revalli.core.config import get_settings
+    from revalli.modules.ai import host
+
+    # Sem auxiliar instalado: a interface esconde o botão e a ação é recusada
+    off = (await admin.get("/api/ai/local/ollama")).json()
+    assert off["configured"] is False
+    assert (await admin.post("/api/ai/local/ollama", json={"action": "start"})).status_code == 409
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "ollama_helper_url", "http://helper:11435")
+    monkeypatch.setattr(settings, "ollama_helper_token", "t" * 32)
+    running = {"active": False}
+    seen: list[tuple[str, str, str]] = []
+
+    def helper(request: httpx.Request) -> httpx.Response:
+        seen.append((request.method, request.url.path, request.headers.get("authorization", "")))
+        if request.headers.get("authorization") != "Bearer " + "t" * 32:
+            return httpx.Response(401, json={"error": "unauthorized"})
+        if request.url.path == "/start":
+            running["active"] = True
+        if request.url.path == "/stop":
+            running["active"] = False
+        state = "active" if running["active"] else "inactive"
+        return httpx.Response(
+            200, json={"active": running["active"], "state": state, "enabled": True, "ok": True}
+        )
+
+    host.set_transport(httpx.MockTransport(helper))
+    try:
+        status = (await admin.get("/api/ai/local/ollama")).json()
+        assert status == {
+            "configured": True,
+            "reachable": True,
+            "active": False,
+            "state": "inactive",
+            "enabled": True,
+            "error": None,
+        }
+        started = (await admin.post("/api/ai/local/ollama", json={"action": "start"})).json()
+        assert started["active"] is True
+        stopped = (await admin.post("/api/ai/local/ollama", json={"action": "stop"})).json()
+        assert stopped["active"] is False
+        assert [(m, p) for m, p, _ in seen] == [
+            ("GET", "/status"),
+            ("POST", "/start"),
+            ("POST", "/stop"),
+        ]
+        # Ação desconhecida não chega ao auxiliar
+        bad = await admin.post("/api/ai/local/ollama", json={"action": "restart"})
+        assert bad.status_code == 422
+        assert len(seen) == 3
+
+        # Auxiliar fora do ar ou recusando o token vira estado, não erro 500
+        def down(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("sem rota")
+
+        host.set_transport(httpx.MockTransport(down))
+        gone = (await admin.get("/api/ai/local/ollama")).json()
+        assert gone["configured"] is True and gone["reachable"] is False
+        assert gone["error"] == "unreachable"
+
+        monkeypatch.setattr(settings, "ollama_helper_token", "x" * 32)
+        host.set_transport(httpx.MockTransport(helper))
+        refused = (await admin.get("/api/ai/local/ollama")).json()
+        assert refused["error"] == "rejected"
+    finally:
+        host.set_transport(None)
+
+
+async def test_ollama_helper_admin_only(admin):
+    member = await invite_and_join(admin, "membro@example.org")
+    assert (await member.get("/api/ai/local/ollama")).status_code == 403
+    assert (await member.post("/api/ai/local/ollama", json={"action": "stop"})).status_code == 403

@@ -155,7 +155,8 @@
     "invalid_dimension": "Invalid dimension.",
     "criteria_empty": "Write the inclusion or exclusion criteria and save the protocol first.",
     "criteria_missing": "This project has no inclusion or exclusion criteria yet. The AI needs them to screen.",
-    "openalex_key_needed": "The free daily OpenAlex limit without a key is used up (it is shared by your whole network and resets at midnight UTC). Create a free key at openalex.org/settings/api and set OPENALEX_API_KEY in deploy/.env."
+    "openalex_key_needed": "The free daily OpenAlex limit without a key is used up (it is shared by your whole network and resets at midnight UTC). Create a free key at openalex.org/settings/api and set OPENALEX_API_KEY in deploy/.env.",
+    "ollama_helper_not_configured": "The helper that starts and stops Ollama is not installed. See docs/ollama.md."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -545,7 +546,19 @@
     "reveal_before": "Before deciding",
     "reveal_before_hint": "The suggestion appears next to the record, as support.",
     "suggest_reasons": "Suggest the exclusion reason",
-    "suggest_reasons_hint": "When the AI excludes, it names the main reason in a few words; you then group similar reasons."
+    "suggest_reasons_hint": "When the AI excludes, it names the main reason in a few words; you then group similar reasons.",
+    "ollama_title": "Ollama on this computer",
+    "ollama_hint": "Starts and stops the Ollama service on the computer where ReValli runs. When stopped, local AI does not answer and the GPU is free.",
+    "ollama_active": "Running",
+    "ollama_inactive": "Stopped",
+    "ollama_unknown": "Unknown state",
+    "ollama_start": "Start",
+    "ollama_stop": "Stop",
+    "ollama_unreachable": "The helper on the computer did not answer. Check that the revalli-ollama-helper service is running.",
+    "ollama_rejected": "The helper refused the request. Check OLLAMA_HELPER_TOKEN in deploy/.env.",
+    "ollama_failed": "The system rejected the command: {{error}}",
+    "ollama_boot_on": "Starts with the computer",
+    "ollama_boot_off": "Does not start with the computer"
   },
   "pdf": {
     "zoom_out": "Zoom out",

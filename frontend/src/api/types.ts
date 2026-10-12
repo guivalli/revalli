@@ -819,3 +819,12 @@ export interface AssistReply {
   strategies: AssistStrategy[]
   model: string
 }
+
+export interface OllamaState {
+  configured: boolean
+  reachable: boolean
+  active: boolean
+  state: string
+  enabled: boolean
+  error: string | null
+}

@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     data_dir: str = "/data"
     # Tempo máximo de uma chamada a um modelo de IA, em segundos
     ai_timeout: int = 120
+    # Auxiliar no computador que liga e desliga o Ollama (deploy/ollama-helper). Vazio: sem botão
+    ollama_helper_url: str = ""
+    ollama_helper_token: str = ""
     # Quanto texto do PDF vai para a IA na extração (~4 caracteres por token)
     ai_extract_max_chars: int = 40_000
 

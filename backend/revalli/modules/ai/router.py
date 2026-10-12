@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from revalli.core.db import get_db
 from revalli.core.deps import admin_user, current_user, get_membership, require_lead
 from revalli.models import AIProvider, AIUsage, Record, User
-from revalli.modules.ai import client
+from revalli.modules.ai import client, host
 from revalli.modules.ai.active import screening_curve
 from revalli.modules.ai.client import AIError, Endpoint
 from revalli.modules.ai.crypto import decrypt, encrypt
@@ -19,6 +19,8 @@ from revalli.modules.ai.schemas import (
     Estimate,
     FlagOut,
     InstanceAISettings,
+    OllamaAction,
+    OllamaState,
     OrganizeIn,
     ProjectAISettings,
     ProviderIn,
@@ -149,6 +151,38 @@ async def write_instance_settings(
     await save_instance_ai(db, body)
     await db.commit()
     return body
+
+
+# --- Ollama do computador ------------------------------------------------------------
+
+
+async def _ollama_state(method: str, path: str) -> OllamaState:
+    if not host.configured():
+        return OllamaState(configured=False)
+    try:
+        data = await host.call(method, path)
+    except host.HelperError as exc:
+        return OllamaState(configured=True, error=str(exc))
+    return OllamaState(
+        configured=True,
+        reachable=True,
+        active=bool(data.get("active")),
+        state=str(data.get("state", "")),
+        enabled=bool(data.get("enabled")),
+        error=data.get("error") if data.get("ok") is False else None,
+    )
+
+
+@router.get("/ai/local/ollama", response_model=OllamaState)
+async def ollama_status(_: User = Depends(admin_user)):
+    return await _ollama_state("GET", "/status")
+
+
+@router.post("/ai/local/ollama", response_model=OllamaState)
+async def ollama_action(body: OllamaAction, _: User = Depends(admin_user)):
+    if not host.configured():
+        raise HTTPException(409, "ollama_helper_not_configured")
+    return await _ollama_state("POST", f"/{body.action}")
 
 
 # --- Projeto --------------------------------------------------------------------------
