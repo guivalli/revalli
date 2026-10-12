@@ -165,7 +165,8 @@ function ConflictsSection({ phase, reasons }: { phase: Phase; reasons: Reason[] 
   // Com cegamento, só árbitros veem as decisões dos outros
   const blind = !!progress.data?.blind && project.my_role !== 'arbitrator'
   const conflicts = useConflicts(project.id, phase, page, canResolve && !!progress.data && !blind)
-  const aiOn = !!useProjectAI(project.id).data?.enabled
+  // A IA só tria título e resumo: no texto completo não há sugestão para mostrar
+  const aiOn = !!useProjectAI(project.id).data?.enabled && phase === 'title_abstract'
   const sugs = useSuggestions(project.id, phase, conflicts.data?.items.map((i) => i.record.id) ?? [], aiOn)
   const bot = useAIBot(project.id, aiOn).data?.user_id
   const { resolve } = useScreeningActions(project.id, phase)
@@ -353,7 +354,7 @@ function ScreenedSection({ phase, reasons }: { phase: Phase; reasons: Reason[] }
   const [decision, setDecision] = useState<DecisionKind | ''>('')
   const [page, setPage] = useState(1)
   const { data } = useScreened(project.id, phase, state, page, state === 'mine' && decision ? decision : undefined)
-  const aiOn = !!useProjectAI(project.id).data?.enabled
+  const aiOn = !!useProjectAI(project.id).data?.enabled && phase === 'title_abstract'
   const sugs = useSuggestions(project.id, phase, data?.items.map((i) => i.record.id) ?? [], aiOn)
   const bot = useAIBot(project.id, aiOn).data?.user_id
   return (
@@ -767,7 +768,11 @@ export default function Screening() {
           </button>
         ))}
       </div>
-      <AIScreenCard key={`a-${phase}`} phase={phase} />
+      {phase === 'title_abstract' ? (
+        <AIScreenCard key={`a-${phase}`} phase={phase} />
+      ) : (
+        <p className="text-xs text-stone-500">{t('screening.ai_title_abstract_only')}</p>
+      )}
       <ProgressSection key={`p-${phase}`} phase={phase} />
       {phase === 'full_text' && <FullTextSection />}
       {phase === 'full_text' && <StudiesSection />}

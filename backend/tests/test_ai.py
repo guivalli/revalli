@@ -711,3 +711,15 @@ async def test_ollama_helper_admin_only(admin):
     member = await invite_and_join(admin, "membro@example.org")
     assert (await member.get("/api/ai/local/ollama")).status_code == 403
     assert (await member.post("/api/ai/local/ollama", json={"action": "stop"})).status_code == 403
+
+
+async def test_ai_screening_refuses_the_full_text_phase(admin):
+    """A IA só vê título e resumo; no texto completo ela repetiria o mesmo resultado."""
+    pid = (await admin.post("/api/projects", json={"title": "Fases"})).json()["id"]
+    await admin.put(f"/api/projects/{pid}/ai/settings", json={"enabled": True})
+    for path in ("estimate", "run"):
+        r = await admin.post(
+            f"/api/projects/{pid}/ai/{path}",
+            json={"phase": "full_text", "scope": "pending", "limit": None, "force": False},
+        )
+        assert r.status_code == 409 and r.json()["detail"] == "ai_phase_not_supported", path

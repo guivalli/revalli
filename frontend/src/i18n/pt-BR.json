@@ -158,7 +158,8 @@
     "openalex_key_needed": "O limite diário gratuito do OpenAlex sem chave acabou (ele é compartilhado por toda a sua rede e volta à meia-noite UTC). Crie uma chave gratuita em openalex.org/settings/api e cadastre na tela IA (menu superior, como administrador) ou em OPENALEX_API_KEY no deploy/.env.",
     "ollama_helper_not_configured": "O auxiliar que liga e desliga o Ollama não está instalado. Veja docs/ollama.md.",
     "openalex_key_invalid": "A chave do OpenAlex só pode ter letras, números, hífen e sublinhado.",
-    "institution_proxy_invalid": "O modelo precisa começar por http:// ou https://, não ter espaços e usar {url} ou {host}."
+    "institution_proxy_invalid": "O modelo precisa começar por http:// ou https://, não ter espaços e usar {url} ou {host}.",
+    "ai_phase_not_supported": "A triagem por IA só está disponível em título e resumo."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -364,7 +365,8 @@
     "filter_state": "Estado",
     "change": "Mudar decisão",
     "no_items": "Nenhum registro aqui.",
-    "resolved_by": "Decisão final de {{name}}"
+    "resolved_by": "Decisão final de {{name}}",
+    "ai_title_abstract_only": "A triagem por IA vale só para título e resumo: ela lê o resumo, não o PDF. No texto completo, a decisão é sua."
   },
   "protocol": {
     "title": "Protocolo da triagem",

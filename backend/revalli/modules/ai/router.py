@@ -218,6 +218,12 @@ async def _enabled_project(db, project_id, user):
     return project
 
 
+def _require_title_abstract(phase: str) -> None:
+    """A IA vê só título e resumo; rodá-la no texto completo repetiria o mesmo resultado."""
+    if phase != "title_abstract":
+        raise HTTPException(409, "ai_phase_not_supported")
+
+
 def _require_criteria(project) -> None:
     """Sem critérios a IA não tem o que aplicar: a interface leva a pessoa ao protocolo."""
     st = get_settings(project)
@@ -232,6 +238,7 @@ async def estimate_run(
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_title_abstract(body.phase)
     project = await _enabled_project(db, project_id, user)
     _require_criteria(project)
     try:
@@ -249,6 +256,7 @@ async def start_run(
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    _require_title_abstract(body.phase)
     project = await _enabled_project(db, project_id, user)
     _require_criteria(project)
     try:

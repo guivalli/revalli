@@ -158,7 +158,8 @@
     "openalex_key_needed": "The free daily OpenAlex limit without a key is used up (it is shared by your whole network and resets at midnight UTC). Create a free key at openalex.org/settings/api and enter it on the AI page (top menu, as administrator) or in OPENALEX_API_KEY in deploy/.env.",
     "ollama_helper_not_configured": "The helper that starts and stops Ollama is not installed. See docs/ollama.md.",
     "openalex_key_invalid": "The OpenAlex key can only contain letters, numbers, hyphens and underscores.",
-    "institution_proxy_invalid": "The template must start with http:// or https://, have no spaces and use {url} or {host}."
+    "institution_proxy_invalid": "The template must start with http:// or https://, have no spaces and use {url} or {host}.",
+    "ai_phase_not_supported": "AI screening is only available at title and abstract."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -364,7 +365,8 @@
     "filter_state": "State",
     "change": "Change decision",
     "no_items": "No records here.",
-    "resolved_by": "Final decision by {{name}}"
+    "resolved_by": "Final decision by {{name}}",
+    "ai_title_abstract_only": "AI screening only applies to title and abstract: it reads the abstract, not the PDF. At full text, the decision is yours."
   },
   "protocol": {
     "title": "Screening protocol",

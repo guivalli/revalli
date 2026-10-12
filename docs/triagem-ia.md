@@ -32,6 +32,10 @@ Quando roda:
 
 Cada sugestão traz a decisão (incluir, excluir, talvez), a confiança, **o motivo em uma ou duas frases**, o estado de cada critério (✓ atendido, ✗ violado, ? incerto) e até 4 etiquetas.
 
+### Só em título e resumo
+
+A triagem por IA vale **apenas na fase Título e resumo**. O modelo recebe título, ano, revista, palavras-chave e resumo; ele **não lê o PDF**. Por isso a aba **Texto completo** não oferece o botão (e a API recusa com `ai_phase_not_supported`): rodar a IA ali repetiria o resultado do resumo e daria a falsa impressão de que o artigo foi lido. No texto completo, a decisão é sua, com o PDF e o visualizador.
+
 ### Parar, continuar e refazer
 
 - **Parar:** enquanto a triagem roda, o botão **Parar** (no cartão e no aviso de andamento no topo do projeto) interrompe a IA no próximo registro. Tudo o que ela já analisou fica salvo.

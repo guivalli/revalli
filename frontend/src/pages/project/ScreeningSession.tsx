@@ -144,7 +144,8 @@ export default function ScreeningSession() {
   const queue = useQueue(project.id, phase)
   const { decide } = useScreeningActions(project.id, phase)
   const projectAI = useProjectAI(project.id).data
-  const aiOn = !!projectAI?.enabled
+  // A IA só tria título e resumo: no texto completo a sessão não oferece sugestão
+  const aiOn = !!projectAI?.enabled && phase === 'title_abstract'
   const [pref, setPref] = useState<boolean | null>(() => readPref(project.id))
   const showFirst = pref ?? projectAI?.reveal_suggestions === 'before'
 
