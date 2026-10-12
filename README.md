@@ -1,9 +1,19 @@
 # ReValli
 
+![vibecodado](https://img.shields.io/badge/c%C3%B3digo-vibecodado%20(IA)-orange) ![estado](https://img.shields.io/badge/estado-experimental-red)
+
 Plataforma open source e auto-hospedada para conduzir revisões de literatura (sistemáticas, de escopo e integrativas) em equipe, com recursos de IA que podem rodar em modelos locais ou em APIs remotas.
 
-> [!WARNING]
-> **Este projeto é vibecodado.** Todo o código está sendo escrito com auxílio intensivo de IA (assistentes de programação baseados em modelos de linguagem), com revisão humana limitada. Ele é experimental, pode conter erros e falhas de segurança, e não passou por auditoria. Use por sua conta e risco, mantenha backups e não o use como única fonte de registro de uma revisão sem conferir os resultados.
+> [!CAUTION]
+> ## ⚠️ Este projeto é VIBECODADO
+>
+> **Todo o código do ReValli foi escrito por assistentes de IA** (modelos de linguagem), com revisão humana limitada. Ele é experimental, não passou por auditoria de segurança e pode conter erros que afetam os resultados de uma revisão.
+>
+> - **Não exponha à internet** sem uma revisão de segurança própria.
+> - **Não use como única fonte de registro** de uma revisão: confira contagens, decisões e exportações.
+> - **Mantenha backups** e use por sua conta e risco.
+>
+> *English: this project is **vibe-coded**. All the code was written by AI assistants with limited human review. It is experimental, unaudited and may contain bugs or security flaws. Use at your own risk.*
 
 ## Estado atual
 
