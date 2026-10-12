@@ -33,6 +33,8 @@ docker compose up -d --build
 
 Abra o endereço configurado e crie a conta de administrador. Essa tela só aparece enquanto não existe nenhum usuário.
 
+Para trabalhar com outros avaliadores (duplo cego), convidar pessoas de fora da rede ou rodar em um Raspberry Pi, veja [avaliadores.md](avaliadores.md). Para usar IA online com faixa gratuita, veja [ia-gratuita.md](ia-gratuita.md).
+
 ## 3. Modos de acesso
 
 O modo é definido no `.env` (há exemplos comentados no `.env.example`).
