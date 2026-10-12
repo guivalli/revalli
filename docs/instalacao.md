@@ -4,11 +4,24 @@
 
 ## 1. Requisitos
 
-- Linux com Docker 24+ e o plugin `docker compose`.
+- Linux com Docker 24+ e o plugin `docker compose` (ou Podman com `podman-compose`), macOS ou Windows com o [Docker Desktop](https://www.docker.com/products/docker-desktop/) ligado.
 - 2 GB de RAM livres para o sistema (sem contar a IA local).
 - Opcional: GPU NVIDIA com o [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) para rodar modelos locais.
 
 ## 2. Primeira instalação
+
+**Jeito rápido** (gera o `.env` com uma senha nova, sobe tudo e espera a API responder):
+
+```bash
+git clone https://github.com/guivalli/revalli.git
+cd revalli/deploy
+./install.sh             # Linux e macOS; use --port 9000 para trocar a porta
+# Windows (PowerShell):  .\install.ps1   (-Port 9000 troca a porta)
+```
+
+O script não mexe em um `.env` que já existe e abre o endereço no fim. Para só gerar o arquivo, use `--no-start` (`-NoStart` no Windows).
+
+**Jeito manual:**
 
 ```bash
 git clone https://github.com/guivalli/revalli.git

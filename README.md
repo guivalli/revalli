@@ -74,7 +74,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Acesse `http://IP-DO-SERVIDOR:8080` e crie a conta de administrador. Detalhes, modos de acesso (rede local, túnel ou público), IA local e backup estão em [docs/instalacao.md](docs/instalacao.md).
+Ou, em uma linha, `./install.sh` (Linux e macOS) ou `.\install.ps1` (Windows com Docker Desktop) dentro de `deploy/`, que gera o `.env` com senha nova e sobe tudo. Acesse `http://IP-DO-SERVIDOR:8080` e crie a conta de administrador. Detalhes, modos de acesso (rede local, túnel ou público), IA local e backup estão em [docs/instalacao.md](docs/instalacao.md).
 
 ## Desenvolvimento
 
