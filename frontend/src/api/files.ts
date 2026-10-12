@@ -1,6 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { FilesSummary, Job, RecordFile, Study, StudyCandidate, StudySuggestion } from './types'
+import type {
+  FilesSummary,
+  Job,
+  PendingFile,
+  RecordFile,
+  Study,
+  StudyCandidate,
+  StudySuggestion,
+} from './types'
 
 export const fileUrl = (pid: string, fid: string) => `/api/projects/${pid}/files/${fid}/content`
 
@@ -16,6 +24,15 @@ export function useFilesSummary(pid: string) {
   return useQuery({
     queryKey: ['projects', pid, 'files', 'summary'],
     queryFn: () => api.get<FilesSummary>(`/projects/${pid}/files/summary`),
+  })
+}
+
+export const pendingCsvUrl = (pid: string) => `/api/projects/${pid}/files/pending.csv`
+
+export function usePendingFiles(pid: string) {
+  return useQuery({
+    queryKey: ['projects', pid, 'files', 'pending'],
+    queryFn: () => api.get<PendingFile[]>(`/projects/${pid}/files/pending`),
   })
 }
 

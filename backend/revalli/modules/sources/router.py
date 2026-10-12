@@ -11,6 +11,7 @@ from revalli.models import Job, Record, User
 from revalli.modules.ai.client import AIError
 from revalli.modules.ai.router import _ai_error
 from revalli.modules.ai.service import project_ai
+from revalli.modules.fulltext.finders import valid_proxy_template
 from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.models import JobStatus
 from revalli.modules.records.schemas import JobOut
@@ -44,6 +45,7 @@ async def _settings_out(db: AsyncSession) -> SourcesSettingsOut:
         openalex_key_set=bool(value),
         openalex_key_hint=keys.hint(value),
         openalex_key_source=keys.source(),
+        institution_proxy=await keys.institution_proxy(db),
     )
 
 
@@ -61,7 +63,12 @@ async def write_settings(
         raise HTTPException(422, "openalex_key_invalid")
     if value or body.clear_openalex_key:
         await keys.save(db, value)
-        await db.commit()
+    if body.institution_proxy is not None:
+        template = body.institution_proxy.strip()
+        if template and not valid_proxy_template(template):
+            raise HTTPException(422, "institution_proxy_invalid")
+        await keys.save_institution_proxy(db, template)
+    await db.commit()
     return await _settings_out(db)
 
 

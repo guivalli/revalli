@@ -30,6 +30,8 @@ Lista viva do que falta. O que cada marco já entrega está no [roteiro](docs/ro
 
 ## 4. Funcionalidades que faltam
 
+- [ ] Testar a busca de PDFs com um projeto real (Unpaywall precisa de `ENRICHMENT_CONTACT_EMAIL` no `deploy/.env`) e conferir o modelo do link da CAFe. Veja [docs/texto-completo.md](docs/texto-completo.md).
+
 - [ ] OCR de PDFs escaneados.
 - [ ] Busca direta em LILACS/BVS (depende de uma chave da API da BVS) e no Portal CAPES (não tem API pública).
 - [x] Campo na interface para a chave do OpenAlex (menu IA, cartão Chave do OpenAlex).

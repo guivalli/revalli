@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAIBot, useInstanceAI, useProjectAI, useProjectAIActions, useSuggestions } from '../../api/ai'
 import { ApiError } from '../../api/client'
-import { useFileActions, useFilesSummary } from '../../api/files'
+import { pendingCsvUrl, useFileActions, useFilesSummary, usePendingFiles } from '../../api/files'
 import { useMe } from '../../api/hooks'
 import { useActiveJobs, useCancelJob, useRecentJobs } from '../../api/records'
 import {
@@ -421,6 +422,73 @@ function lastResult(jobs: Job[] | undefined, kind: Job['kind']) {
   return job?.result as Record<string, number | string[]> | undefined
 }
 
+const PENDING_SHOWN = 200
+
+function PendingList({ pid }: { pid: string }) {
+  const { t } = useTranslation()
+  const pending = usePendingFiles(pid)
+  const rows = pending.data ?? []
+  if (rows.length === 0) return null
+  const copy = () =>
+    void navigator.clipboard?.writeText(
+      rows.map((r) => [r.doi ?? '', r.proxy_link || r.link].filter(Boolean).join('\t')).join('\n'),
+    )
+  return (
+    <details className="rounded-md border border-stone-200 p-3 dark:border-stone-800">
+      <summary className="cursor-pointer text-sm font-medium">
+        {t('pdf.pending_title', { count: rows.length })}
+      </summary>
+      <div className="mt-3 space-y-3">
+        <p className="text-xs text-stone-500">{t('pdf.pending_help')}</p>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={pendingCsvUrl(pid)}
+            download
+            className="inline-flex items-center rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-200 dark:border-stone-700 dark:hover:bg-stone-800"
+          >
+            {t('pdf.pending_csv')}
+          </a>
+          <Button variant="ghost" onClick={copy}>
+            {t('pdf.pending_copy')}
+          </Button>
+        </div>
+        <ul className="space-y-2 text-sm">
+          {rows.slice(0, PENDING_SHOWN).map((r) => (
+            <li key={r.record_id} className="space-y-0.5">
+              <p className="font-medium">
+                {r.title}
+                {r.year ? ` (${r.year})` : ''}
+              </p>
+              <p className="flex flex-wrap gap-x-3 text-xs text-stone-600 dark:text-stone-400">
+                {r.doi && <span>DOI: {r.doi}</span>}
+                {r.link && (
+                  <a href={r.link} target="_blank" rel="noreferrer noopener" className="text-brand-600 hover:underline">
+                    {t('pdf.pending_open')}
+                  </a>
+                )}
+                {r.proxy_link && (
+                  <a
+                    href={r.proxy_link}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-brand-600 hover:underline"
+                  >
+                    {t('pdf.pending_proxy')}
+                  </a>
+                )}
+                {!r.link && <span>{t('pdf.pending_nolink')}</span>}
+              </p>
+            </li>
+          ))}
+        </ul>
+        {rows.length > PENDING_SHOWN && (
+          <p className="text-xs text-stone-500">{t('pdf.pending_more', { count: rows.length - PENDING_SHOWN })}</p>
+        )}
+      </div>
+    </details>
+  )
+}
+
 function FullTextSection() {
   const { t } = useTranslation()
   const { project, canManage } = useProjectContext()
@@ -432,6 +500,13 @@ function FullTextSection() {
   const oaRes = lastResult(recent.data, 'pdf_oa')
   const unmatched = (zipRes?.unmatched as string[] | undefined) ?? []
   const count = (v: unknown) => (Array.isArray(v) ? v.length : Number(v ?? 0))
+  const bySource = Object.entries((oaRes?.by_source ?? {}) as Record<string, number>)
+  // A lista de pendentes muda quando uma busca ou um ZIP termina
+  const lastRun = (recent.data ?? []).filter((j) => j.status === 'done' && j.kind.startsWith('pdf_')).length
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ['projects', project.id, 'files'] })
+  }, [lastRun, queryClient, project.id])
 
   return (
     <Card className="space-y-4">
@@ -502,17 +577,29 @@ function FullTextSection() {
             <p className="text-xs text-stone-500">{t('pdf.oa_help')}</p>
             <ErrorText error={openAccess.error} />
             {oaRes && 'checked' in oaRes && (
-              <p className="text-sm">
-                {t('pdf.oa_result', {
-                  checked: count(oaRes.checked),
-                  found: count(oaRes.found),
-                  downloaded: count(oaRes.downloaded),
-                })}
-              </p>
+              <div className="space-y-1 text-sm">
+                <p>
+                  {t('pdf.oa_result', {
+                    checked: count(oaRes.checked),
+                    found: count(oaRes.found),
+                    downloaded: count(oaRes.downloaded),
+                  })}
+                </p>
+                {bySource.length > 0 && (
+                  <p className="text-xs text-stone-500">
+                    {t('pdf.oa_by_source')}{' '}
+                    {bySource.map(([k, n]) => `${t(`pdf.source_${k}`, { defaultValue: k })}: ${n}`).join(' · ')}
+                  </p>
+                )}
+                {Array.isArray(oaRes.skipped) && oaRes.skipped.includes('unpaywall') && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">{t('pdf.oa_unpaywall_skipped')}</p>
+                )}
+              </div>
             )}
           </div>
         </div>
       )}
+      <PendingList pid={project.id} />
     </Card>
   )
 }

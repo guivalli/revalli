@@ -1,5 +1,6 @@
 """PDFs dos registros: anexar, casar arquivos de um ZIP e buscar versões de acesso aberto."""
 
+import asyncio
 import io
 import uuid
 import zipfile
@@ -15,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from revalli.core import safefetch
 from revalli.core.config import get_settings
 from revalli.models import Project, Record
-from revalli.modules.fulltext import storage
+from revalli.modules.fulltext import finders, storage
 from revalli.modules.fulltext.models import FilePage, RecordFile
 from revalli.modules.fulltext.pdf import PDFError, PDFInfo, read_pdf
 from revalli.modules.imports.normalize import normalize_doi, normalize_title
@@ -254,6 +255,10 @@ async def find_open_access(
     client: httpx.AsyncClient | None = None,
     progress: Callable[[int, int], None] | None = None,
 ) -> dict:
+    """Procura e baixa a versão aberta dos estudos do texto completo que ainda não têm PDF.
+
+    Ordem: OpenAlex (em lote, por DOI), Unpaywall, Europe PMC e a página do artigo. O primeiro
+    PDF válido vale; o que ninguém achar aparece na lista de pendentes para baixar à mão."""
     settings = get_settings()
     if not settings.enrichment_enabled:
         return {"skipped": "disabled"}
@@ -266,9 +271,9 @@ async def find_open_access(
     records = [
         r
         for r in (await db.execute(select(Record).where(Record.id.in_(ids)))).scalars()
-        if r.id not in with_pdf and r.doi
+        if r.id not in with_pdf and (r.doi or r.pmid or r.url)
     ]
-    stats = {"checked": len(records), "found": 0, "downloaded": 0}
+    stats: dict = {"checked": len(records), "found": 0, "downloaded": 0, "by_source": {}}
     params = (
         {"mailto": settings.enrichment_contact_email} if settings.enrichment_contact_email else {}
     )
@@ -278,51 +283,116 @@ async def find_open_access(
         timeout=30,
         headers={"User-Agent": "ReValli (self-hosted literature review tool)"},
     )
+    total = 2 * len(records)
+    done = 0
+    got: set[uuid.UUID] = set()
+    found: set[uuid.UUID] = set()
+    errors: dict[str, int] = {}
+
+    async def take(rec: Record, urls: list[str], label: str) -> bool:
+        if urls:
+            found.add(rec.id)
+        for url in urls[:3]:
+            data = await _download(client, url)
+            if data is None:
+                continue
+            try:
+                await attach(
+                    db,
+                    project.id,
+                    rec,
+                    data,
+                    f"{(rec.doi or rec.id.hex).replace('/', '_')}.pdf",
+                    source="open_access",
+                    source_url=url,
+                )
+            except PDFError:
+                continue
+            stats["downloaded"] += 1
+            stats["by_source"][label] = stats["by_source"].get(label, 0) + 1
+            got.add(rec.id)
+            await db.commit()
+            return True
+        return False
+
     try:
-        by_doi = {r.doi: r for r in records}
+        # 1) OpenAlex, em lotes de 50 DOIs
+        by_doi = {r.doi: r for r in records if r.doi}
         dois = list(by_doi)
-        done = 0
         for i in range(0, len(dois), 50):
             chunk = dois[i : i + 50]
-            resp = await client.get(
-                "/works",
-                params={
-                    **params,
-                    "filter": "doi:" + "|".join(f"https://doi.org/{d}" for d in chunk),
-                    "per-page": 50,
-                    "select": "doi,best_oa_location,locations",
-                },
-            )
-            resp.raise_for_status()
-            for work in resp.json().get("results", []):
+            try:
+                resp = await client.get(
+                    "/works",
+                    params={
+                        **params,
+                        "filter": "doi:" + "|".join(f"https://doi.org/{d}" for d in chunk),
+                        "per-page": 50,
+                        "select": "doi,best_oa_location,locations",
+                    },
+                )
+                resp.raise_for_status()
+                works = resp.json().get("results", [])
+            except (httpx.HTTPError, ValueError):
+                errors["openalex"] = errors.get("openalex", 0) + 1
+                works = []
+            for work in works:
                 rec = by_doi.get(normalize_doi(work.get("doi")))
-                urls = _pdf_urls(work)
-                if rec is None or not urls:
-                    continue
-                stats["found"] += 1
-                for url in urls[:3]:
-                    data = await _download(client, url)
-                    if data is None:
-                        continue
-                    try:
-                        await attach(
-                            db,
-                            project.id,
-                            rec,
-                            data,
-                            f"{rec.doi.replace('/', '_')}.pdf",
-                            source="open_access",
-                            source_url=url,
-                        )
-                    except PDFError:
-                        continue
-                    stats["downloaded"] += 1
-                    await db.commit()
-                    break
+                if rec is not None:
+                    await take(rec, _pdf_urls(work), "openalex")
             done += len(chunk)
             if progress:
-                progress(done, len(records))
+                progress(done, total)
+
+        # 2) Os que sobraram, um a um: Unpaywall, Europe PMC e a página do artigo
+        done = len(records)
+        for rec in records:
+            if rec.id not in got:
+                await _chain(rec, take, client, stats, errors)
+            done += 1
+            if progress:
+                progress(done, total)
     finally:
         if own:
             await client.aclose()
+    stats["found"] = len(found)
+    if errors:
+        stats["errors"] = errors
     return stats
+
+
+async def _chain(rec: Record, take, client: httpx.AsyncClient, stats: dict, errors: dict) -> None:
+    landing: list[str] = []
+
+    async def attempt(label: str, call) -> bool:
+        try:
+            pdfs, pages = await call()
+        except PermissionError:
+            # Falta o e-mail de contato exigido pelo Unpaywall: avisa uma vez e segue
+            stats.setdefault("skipped", [])
+            if label not in stats["skipped"]:
+                stats["skipped"].append(label)
+            return False
+        except (httpx.HTTPError, safefetch.FetchError, ValueError, KeyError):
+            errors[label] = errors.get(label, 0) + 1
+            return False
+        landing.extend(pages)
+        return await take(rec, pdfs, label)
+
+    if rec.doi:
+        if await attempt("unpaywall", lambda: finders.unpaywall(client, rec.doi)):
+            return
+    if rec.pmid or rec.doi:
+        if await attempt("europepmc", lambda: finders.europepmc(client, rec.doi, rec.pmid)):
+            return
+    candidates = list(dict.fromkeys([rec.url, finders.doi_link(rec.doi), *landing]))
+    delay = get_settings().api_delay_seconds
+    for page in [c for c in candidates if c][:4]:
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+        async def from_page(page=page):
+            return await finders.article_page(client, page), []
+
+        if await attempt("article_page", from_page):
+            return

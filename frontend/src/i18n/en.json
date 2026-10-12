@@ -157,7 +157,8 @@
     "criteria_missing": "This project has no inclusion or exclusion criteria yet. The AI needs them to screen.",
     "openalex_key_needed": "The free daily OpenAlex limit without a key is used up (it is shared by your whole network and resets at midnight UTC). Create a free key at openalex.org/settings/api and enter it on the AI page (top menu, as administrator) or in OPENALEX_API_KEY in deploy/.env.",
     "ollama_helper_not_configured": "The helper that starts and stops Ollama is not installed. See docs/ollama.md.",
-    "openalex_key_invalid": "The OpenAlex key can only contain letters, numbers, hyphens and underscores."
+    "openalex_key_invalid": "The OpenAlex key can only contain letters, numbers, hyphens and underscores.",
+    "institution_proxy_invalid": "The template must start with http:// or https://, have no spaces and use {url} or {host}."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -569,7 +570,17 @@
     "openalex_source_none": "No key configured.",
     "openalex_save": "Save key",
     "openalex_clear": "Delete the saved key",
-    "openalex_saved": "Key saved."
+    "openalex_saved": "Key saved.",
+    "proxy_title": "Institutional access (CAFe)",
+    "proxy_hint": "For articles that are not open, the pending list also gets a link opened through your institution's proxy. You sign in with your account (CAFe) in the browser, download the PDF and upload it to ReValli.",
+    "proxy_template": "Link template",
+    "proxy_template_hint": "Use {url} (whole address), {host} (server with dots replaced by hyphens) and {path} (the rest of the address).",
+    "proxy_example_capes": "CAPES Journals Portal with CAFe: https://{host}.ezl.periodicos.capes.gov.br{path}. Check the suffix by opening an article through the portal after signing in.",
+    "proxy_example_prefix": "Prefix proxy (common EZproxy): https://ezproxy.yourinstitution.edu/login?url={url}",
+    "proxy_no_auto": "ReValli does not sign in or download for you: access is your browser session, and downloading many articles in a row can make the publisher block the whole institution.",
+    "proxy_save": "Save template",
+    "proxy_clear": "Delete template",
+    "proxy_saved": "Template saved."
   },
   "pdf": {
     "zoom_out": "Zoom out",
@@ -596,12 +607,26 @@
     "without_text": "{{count}} without searchable text",
     "from_oa": "{{count}} from open access",
     "oa_button": "Find open access PDFs",
-    "oa_help": "Searches OpenAlex for free versions of references with a DOI that have no PDF yet.",
+    "oa_help": "Looks for free versions of the references without a PDF: OpenAlex, Unpaywall, Europe PMC and the article's own page (by DOI, PMID or the record's link).",
     "zip_button": "Upload ZIP with PDFs",
     "zip_help": "Files are linked to references by DOI (in the text or the file name) or by title.",
     "zip_result": "{{matched}} PDFs linked, {{already}} already present, {{unmatched}} unmatched, {{invalid}} invalid",
     "oa_result": "{{checked}} checked, {{found}} with an open version, {{downloaded}} downloaded",
-    "unmatched": "No matching reference"
+    "unmatched": "No matching reference",
+    "oa_by_source": "Found by source:",
+    "source_openalex": "OpenAlex",
+    "source_unpaywall": "Unpaywall",
+    "source_europepmc": "Europe PMC",
+    "source_article_page": "Article page",
+    "oa_unpaywall_skipped": "Unpaywall was not used: set ENRICHMENT_CONTACT_EMAIL (a contact e-mail) in deploy/.env.",
+    "pending_title": "Without PDF: {{count}} (download by hand)",
+    "pending_help": "What the automatic search did not find. Open the link, download the PDF and upload it through the ZIP (files are matched by DOI, in the text or in the file name) or one by one in screening.",
+    "pending_csv": "Download the list (CSV)",
+    "pending_copy": "Copy DOI and link",
+    "pending_open": "Open the article",
+    "pending_proxy": "Open through the institution",
+    "pending_nolink": "no DOI or link",
+    "pending_more": "{{count}} more in the full list (CSV)."
   },
   "studies": {
     "title": "Studies with several reports",

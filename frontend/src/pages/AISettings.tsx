@@ -247,6 +247,60 @@ function OpenAlexKey() {
   )
 }
 
+function InstitutionProxy() {
+  const { t } = useTranslation()
+  const { data } = useSourcesSettings()
+  const save = useSaveSourcesSettings()
+  const [value, setValue] = useState<string | null>(null)
+  if (!data) return null
+  const current = value ?? data.institution_proxy
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    save.mutate({ institution_proxy: current.trim() }, { onSuccess: () => setValue(null) })
+  }
+  return (
+    <Card className="space-y-3">
+      <h2 className="font-semibold">{t('ai.proxy_title')}</h2>
+      <p className="text-xs text-stone-500">{t('ai.proxy_hint')}</p>
+      <form onSubmit={submit} className="space-y-2">
+        <Field label={t('ai.proxy_template')} hint={t('ai.proxy_template_hint')}>
+          <Input
+            value={current}
+            placeholder="https://{host}.ezl.periodicos.capes.gov.br{path}"
+            onChange={(e) => setValue(e.target.value)}
+          />
+        </Field>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={save.isPending || current.trim() === data.institution_proxy}>
+            {t('ai.proxy_save')}
+          </Button>
+          {data.institution_proxy && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={save.isPending}
+              onClick={() => save.mutate({ institution_proxy: '' }, { onSuccess: () => setValue(null) })}
+            >
+              {t('ai.proxy_clear')}
+            </Button>
+          )}
+        </div>
+      </form>
+      <ul className="list-disc space-y-1 pl-5 text-xs text-stone-500">
+        <li>{t('ai.proxy_example_capes')}</li>
+        <li>{t('ai.proxy_example_prefix')}</li>
+        <li>{t('ai.proxy_no_auto')}</li>
+      </ul>
+      {save.isSuccess && (
+        <p role="status" className="text-xs text-stone-500">
+          {t('ai.proxy_saved')}
+        </p>
+      )}
+      <ErrorText error={save.error} />
+    </Card>
+  )
+}
+
 function TaskForm({
   label,
   hint,
@@ -378,6 +432,7 @@ export default function AISettings() {
       </div>
       <OllamaControl />
       <OpenAlexKey />
+      <InstitutionProxy />
       <Card className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">{t('ai.providers')}</h2>

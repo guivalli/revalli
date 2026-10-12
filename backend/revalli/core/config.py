@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Lista as revistas das coleções SciELO e PePSIC (busca no OpenAlex restrita a elas)
     articlemeta_url: str = "https://articlemeta.scielo.org/api/v1"
 
+    # Unpaywall: cópias abertas por DOI. Exige ENRICHMENT_CONTACT_EMAIL (um e-mail de verdade)
+    unpaywall_url: str = "https://api.unpaywall.org/v2"
+
     # Busca direta nas bases (PubMed, OpenAlex, Europe PMC) e snowballing de citações
     search_apis_enabled: bool = True
     pubmed_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"

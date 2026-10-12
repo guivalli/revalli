@@ -681,6 +681,7 @@ async def test_openalex_key_saved_in_the_interface_is_used_and_never_returned(ad
         "openalex_key_set": False,
         "openalex_key_hint": "",
         "openalex_key_source": "none",
+        "institution_proxy": "",
     }
     assert await preview_key() is None
 
@@ -691,6 +692,7 @@ async def test_openalex_key_saved_in_the_interface_is_used_and_never_returned(ad
         "openalex_key_set": True,
         "openalex_key_hint": "…wxyz",
         "openalex_key_source": "ui",
+        "institution_proxy": "",
     }
     assert "abcd1234" not in json.dumps((await admin.get("/api/sources/settings")).json())
     assert await preview_key() == "abcd1234wxyz"

@@ -157,7 +157,8 @@
     "criteria_missing": "O projeto ainda não tem critérios de inclusão e exclusão. A IA precisa deles para triar.",
     "openalex_key_needed": "O limite diário gratuito do OpenAlex sem chave acabou (ele é compartilhado por toda a sua rede e volta à meia-noite UTC). Crie uma chave gratuita em openalex.org/settings/api e cadastre na tela IA (menu superior, como administrador) ou em OPENALEX_API_KEY no deploy/.env.",
     "ollama_helper_not_configured": "O auxiliar que liga e desliga o Ollama não está instalado. Veja docs/ollama.md.",
-    "openalex_key_invalid": "A chave do OpenAlex só pode ter letras, números, hífen e sublinhado."
+    "openalex_key_invalid": "A chave do OpenAlex só pode ter letras, números, hífen e sublinhado.",
+    "institution_proxy_invalid": "O modelo precisa começar por http:// ou https://, não ter espaços e usar {url} ou {host}."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -569,7 +570,17 @@
     "openalex_source_none": "Nenhuma chave configurada.",
     "openalex_save": "Salvar chave",
     "openalex_clear": "Apagar a chave salva",
-    "openalex_saved": "Chave salva."
+    "openalex_saved": "Chave salva.",
+    "proxy_title": "Acesso pela instituição (CAFe)",
+    "proxy_hint": "Para os artigos que não são abertos, a lista de pendentes passa a trazer também o link aberto pelo proxy da sua instituição. Você entra com a sua conta (CAFe) no navegador, baixa o PDF e envia ao ReValli.",
+    "proxy_template": "Modelo do link",
+    "proxy_template_hint": "Use {url} (endereço inteiro), {host} (servidor com pontos trocados por hífens) e {path} (o resto do endereço).",
+    "proxy_example_capes": "Portal de Periódicos CAPES com CAFe: https://{host}.ezl.periodicos.capes.gov.br{path}. Confira o sufixo abrindo um artigo pelo portal, depois do login.",
+    "proxy_example_prefix": "Proxy por prefixo (EZproxy comum): https://ezproxy.suainstituicao.br/login?url={url}",
+    "proxy_no_auto": "O ReValli não faz login nem baixa por você: o acesso é a sua sessão no navegador, e baixar muitos artigos em sequência pode levar a editora a bloquear toda a instituição.",
+    "proxy_save": "Salvar modelo",
+    "proxy_clear": "Apagar modelo",
+    "proxy_saved": "Modelo salvo."
   },
   "pdf": {
     "zoom_out": "Diminuir zoom",
@@ -596,12 +607,26 @@
     "without_text": "{{count}} sem texto pesquisável",
     "from_oa": "{{count}} de acesso aberto",
     "oa_button": "Buscar PDFs de acesso aberto",
-    "oa_help": "Procura no OpenAlex versões gratuitas das referências com DOI que ainda não têm PDF.",
+    "oa_help": "Procura versões gratuitas das referências sem PDF: OpenAlex, Unpaywall, Europe PMC e a página do próprio artigo (por DOI, PMID ou o link do registro).",
     "zip_button": "Enviar ZIP com PDFs",
     "zip_help": "Os arquivos são ligados às referências pelo DOI (no texto ou no nome do arquivo) ou pelo título.",
     "zip_result": "{{matched}} PDFs ligados, {{already}} já existiam, {{unmatched}} sem referência, {{invalid}} inválidos",
     "oa_result": "{{checked}} verificadas, {{found}} com versão aberta, {{downloaded}} baixadas",
-    "unmatched": "Sem referência correspondente"
+    "unmatched": "Sem referência correspondente",
+    "oa_by_source": "Achados por fonte:",
+    "source_openalex": "OpenAlex",
+    "source_unpaywall": "Unpaywall",
+    "source_europepmc": "Europe PMC",
+    "source_article_page": "Página do artigo",
+    "oa_unpaywall_skipped": "O Unpaywall não foi usado: falta definir ENRICHMENT_CONTACT_EMAIL (um e-mail de contato) no deploy/.env.",
+    "pending_title": "Sem PDF: {{count}} (baixar à mão)",
+    "pending_help": "O que a busca automática não achou. Abra o link, baixe o PDF e envie pelo ZIP (os arquivos são ligados pelo DOI, no texto ou no nome do arquivo) ou um a um na triagem.",
+    "pending_csv": "Baixar a lista (CSV)",
+    "pending_copy": "Copiar DOI e link",
+    "pending_open": "Abrir o artigo",
+    "pending_proxy": "Abrir pela instituição",
+    "pending_nolink": "sem DOI nem link",
+    "pending_more": "Mais {{count}} na lista completa (CSV)."
   },
   "studies": {
     "title": "Estudos com vários relatórios",

@@ -336,6 +336,19 @@ export interface RecordFile {
   has_text: boolean
   created_at: string
 }
+export interface PendingFile {
+  record_id: string
+  title: string
+  authors: string[]
+  year: number | null
+  journal: string
+  doi: string | null
+  pmid: string | null
+  url: string
+  link: string
+  proxy_link: string
+}
+
 export interface FilesSummary {
   records: number
   with_pdf: number
@@ -840,4 +853,5 @@ export interface SourcesSettings {
   openalex_key_set: boolean
   openalex_key_hint: string
   openalex_key_source: 'ui' | 'env' | 'none'
+  institution_proxy: string
 }

@@ -26,6 +26,23 @@ class FilesSummary(BaseModel):
     from_open_access: int
 
 
+class PendingOut(BaseModel):
+    """Estudo do texto completo sem PDF, com o que a pessoa precisa para baixar à mão."""
+
+    record_id: uuid.UUID
+    title: str
+    authors: list[str]
+    year: int | None
+    journal: str
+    doi: str | None
+    pmid: str | None
+    url: str
+    # https://doi.org/..., ou o endereço do registro quando não há DOI
+    link: str
+    # O mesmo link aberto pelo proxy da instituição (CAFe, EZproxy), se houver modelo salvo
+    proxy_link: str
+
+
 class StudyRecord(BaseModel):
     id: uuid.UUID
     title: str

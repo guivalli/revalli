@@ -35,9 +35,12 @@ def make_pdf(*lines: str, pages: int = 1) -> bytes:
     return data
 
 
-async def _project_ft(admin):
+async def _project_ft(admin, content: bytes | None = None):
     pid = (await admin.post("/api/projects", json={"title": "PDFs"})).json()["id"]
-    content = b"".join(_ris(t, author=f"A{i}, X", doi=d) + b"\n" for i, (t, d) in enumerate(TITLES))
+    if content is None:
+        content = b"".join(
+            _ris(t, author=f"A{i}, X", doi=d) + b"\n" for i, (t, d) in enumerate(TITLES)
+        )
     await _import(admin, pid, "x.ris", content=content)
     s = (await admin.get(f"/api/projects/{pid}/screening/settings")).json()
     s["reviewers_title_abstract"] = 1
@@ -180,6 +183,11 @@ async def test_open_access_download(admin, monkeypatch):
         # A conexão vai para o IP já conferido; o nome segue no cabeçalho Host
         if request.headers.get("host") == "repo.example.org":
             return httpx.Response(200, content=pdf)
+        # O que o OpenAlex não resolve segue para as outras fontes, que aqui não têm nada
+        if request.headers.get("host") == "www.ebi.ac.uk":
+            return httpx.Response(200, json={"resultList": {"result": []}})
+        if request.headers.get("host") == "doi.org":
+            return httpx.Response(404)
         raise AssertionError(f"unexpected request {request.url}")
 
     real = httpx.AsyncClient
@@ -191,7 +199,11 @@ async def test_open_access_download(admin, monkeypatch):
     monkeypatch.setattr(ft_service.httpx, "AsyncClient", fake_client)
     r = await admin.post(f"/api/projects/{pid}/files/open-access", json={})
     assert r.status_code == 202, r.text
-    assert r.json()["result"] == {"checked": 2, "found": 2, "downloaded": 1}, r.json()["error"]
+    result = r.json()["result"]
+    assert result["checked"] == 2 and result["found"] == 2 and result["downloaded"] == 1
+    assert result["by_source"] == {"openalex": 1}
+    # Sem e-mail de contato o Unpaywall não é usado, e o resultado avisa
+    assert result["skipped"] == ["unpaywall"]
     files = (await admin.get(f"/api/projects/{pid}/records/{ids[TITLES[0][0]]}/files")).json()
     assert files[0]["source"] == "open_access"
     assert files[0]["source_url"] == "https://repo.example.org/a.pdf"
@@ -279,3 +291,160 @@ async def test_studies_merge_and_permissions(admin):
     assert (await admin.delete(f"/api/projects/{pid}/studies/{s1['id']}")).status_code == 204
     assert (await admin.get(f"/api/projects/{pid}/studies")).json() == []
     await obs.aclose()
+
+
+async def test_open_access_chain_and_pending_list(admin, monkeypatch):
+    from revalli.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "enrichment_contact_email", "grupo@example.org")
+    pdfs = {name: make_pdf(f"Open paper {name}") for name in "abc"}
+
+    def ris(title, doi=None, url=None, pmid=None):
+        lines = ["TY  - JOUR", f"TI  - {title}", "AU  - Silva, J", "PY  - 2021"]
+        for tag, value in (("DO", doi), ("UR", url), ("AN", pmid)):
+            if value:
+                lines.append(f"{tag}  - {value}")
+        return ("\n".join(lines) + "\nER  - \n").encode()
+
+    content = b"\n".join(
+        [
+            ris("Paper A found by Unpaywall in a repository", doi="10.5555/a"),
+            ris("Paper B found by Europe PMC with a PMID", doi="10.5555/b", pmid="12345678"),
+            ris("Paper C only known by the journal page", url="https://revista.example.org/c"),
+            ris("Paper D nobody has anywhere online", doi="10.5555/d"),
+            ris("Paper E behind a blocked publisher page", doi="10.5555/e"),
+        ]
+    )
+    pid, ids = await _project_ft(admin, content)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        host = request.headers.get("host", request.url.host)
+        path = request.url.path
+        if host == "api.openalex.org":
+            return httpx.Response(200, json={"results": []})
+        if host == "api.unpaywall.org":
+            assert request.url.params["email"] == "grupo@example.org"
+            doi = path.removeprefix("/v2/")
+            if doi == "10.5555/a":
+                loc = {
+                    "url_for_pdf": "https://repo.example.org/a.pdf",
+                    "url": "https://repo.example.org/a",
+                }
+                return httpx.Response(200, json={"best_oa_location": loc, "oa_locations": [loc]})
+            if doi == "10.5555/e":
+                loc = {"url_for_pdf": None, "url_for_landing_page": "https://blocked.example.org/e"}
+                return httpx.Response(200, json={"best_oa_location": loc, "oa_locations": [loc]})
+            return httpx.Response(404, json={"error": True})
+        if host == "www.ebi.ac.uk":
+            if "12345678" in request.url.params["query"]:
+                item = {
+                    "availability": "Free",
+                    "documentStyle": "pdf",
+                    "url": "https://epmc.example.org/b.pdf",
+                }
+                paid = {
+                    "availability": "Subscription required",
+                    "documentStyle": "pdf",
+                    "url": "https://paid.example.org/b.pdf",
+                }
+                body = {
+                    "resultList": {"result": [{"fullTextUrlList": {"fullTextUrl": [paid, item]}}]}
+                }
+                return httpx.Response(200, json=body)
+            return httpx.Response(200, json={"resultList": {"result": []}})
+        if host == "repo.example.org" and path == "/a.pdf":
+            return httpx.Response(200, content=pdfs["a"])
+        if host == "epmc.example.org" and path == "/b.pdf":
+            return httpx.Response(200, content=pdfs["b"])
+        if host == "revista.example.org" and path == "/c":
+            page = '<html><head><meta name="citation_pdf_url" content="/pdf/c.pdf"></head></html>'
+            return httpx.Response(200, content=page.encode(), headers={"content-type": "text/html"})
+        if host == "revista.example.org" and path == "/pdf/c.pdf":
+            return httpx.Response(200, content=pdfs["c"])
+        if host in ("blocked.example.org", "doi.org"):
+            return httpx.Response(403 if host == "blocked.example.org" else 404)
+        raise AssertionError(f"unexpected request {request.url}")
+
+    real = httpx.AsyncClient
+
+    def fake_client(*args, **kwargs):
+        kwargs.pop("transport", None)
+        return real(*args, transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(ft_service.httpx, "AsyncClient", fake_client)
+    r = await admin.post(f"/api/projects/{pid}/files/open-access", json={})
+    assert r.status_code == 202, r.text
+    result = r.json()["result"]
+    assert result["checked"] == 5 and result["downloaded"] == 3 and result["found"] == 3
+    assert result["by_source"] == {"unpaywall": 1, "europepmc": 1, "article_page": 1}
+    assert "skipped" not in result
+
+    # Quem ninguém achou fica na lista de pendentes, com DOI e link
+    pending = (await admin.get(f"/api/projects/{pid}/files/pending")).json()
+    assert sorted(p["doi"] for p in pending) == ["10.5555/d", "10.5555/e"]
+    assert {p["link"] for p in pending} == {
+        "https://doi.org/10.5555/d",
+        "https://doi.org/10.5555/e",
+    }
+    assert all(p["proxy_link"] == "" for p in pending)
+
+    # Link pelo proxy da instituição: modelos inválidos são recusados
+    settings_url = "/api/sources/settings"
+    for bad in ("ftp://proxy/{url}", "https://proxy/", "https://proxy/{foo}", "https://p x/{url}"):
+        r = await admin.put(settings_url, json={"institution_proxy": bad})
+        assert r.status_code == 422 and r.json()["detail"] == "institution_proxy_invalid", bad
+    template = "https://{host}.ezl.periodicos.capes.gov.br{path}"
+    r = await admin.put(settings_url, json={"institution_proxy": template})
+    assert r.json()["institution_proxy"] == template
+    pending = (await admin.get(f"/api/projects/{pid}/files/pending")).json()
+    assert {p["proxy_link"] for p in pending} == {
+        "https://doi-org.ezl.periodicos.capes.gov.br/10.5555/d",
+        "https://doi-org.ezl.periodicos.capes.gov.br/10.5555/e",
+    }
+
+    # CSV para baixar a lista
+    csv_resp = await admin.get(f"/api/projects/{pid}/files/pending.csv")
+    assert csv_resp.status_code == 200 and csv_resp.text.startswith("\ufeff")
+    assert (
+        "https://doi.org/10.5555/d" in csv_resp.text
+        and "ezl.periodicos.capes.gov.br" in csv_resp.text
+    )
+    # Apagar o modelo
+    r = await admin.put(settings_url, json={"institution_proxy": ""})
+    assert r.json()["institution_proxy"] == ""
+
+
+def test_proxy_link_templates():
+    from revalli.modules.fulltext.finders import proxy_link, valid_proxy_template
+
+    target = "https://www.sciencedirect.com/science/article/pii/S0001?x=1"
+    assert (
+        proxy_link("https://{host}.ezl.periodicos.capes.gov.br{path}", target)
+        == "https://www-sciencedirect-com.ezl.periodicos.capes.gov.br/science/article/pii/S0001?x=1"
+    )
+    # Hífens do servidor viram dois, como no EZproxy
+    assert proxy_link("https://{host}.proxy.br{path}", "https://my-journal.org/a").startswith(
+        "https://my--journal-org.proxy.br/a"
+    )
+    assert (
+        proxy_link("https://proxy.inst.br/login?url={url}", "https://doi.org/10.1/x")
+        == "https://proxy.inst.br/login?url=https://doi.org/10.1/x"
+    )
+    assert proxy_link("", target) == "" and proxy_link("https://p/{url}", "") == ""
+    assert valid_proxy_template("https://p.br/login?url={url}")
+    assert not valid_proxy_template("p.br/{url}") and not valid_proxy_template("https://p.br/")
+
+
+def test_pdf_links_in_page_markup():
+    from revalli.modules.fulltext.finders import pdf_links_in_html
+
+    markup = (
+        '<meta name="Citation_PDF_URL" content="https://a.org/x.pdf">'
+        '<link rel="alternate" type="application/pdf" href="/files/y.pdf">'
+        '<meta name="citation_pdf_url" content="https://a.org/x.pdf">'
+    )
+    assert pdf_links_in_html(markup, "https://rev.org/art/1") == [
+        "https://a.org/x.pdf",
+        "https://rev.org/files/y.pdf",
+    ]
+    assert pdf_links_in_html("<html><body>sem marcas", "https://rev.org/") == []

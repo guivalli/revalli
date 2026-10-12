@@ -98,6 +98,8 @@ class SourcesSettingsIn(BaseModel):
 
     openalex_api_key: str = Field(default="", max_length=200)
     clear_openalex_key: bool = False
+    # Modelo do link pelo proxy da instituição; None mantém, vazio apaga
+    institution_proxy: str | None = Field(default=None, max_length=500)
 
 
 class SourcesSettingsOut(BaseModel):
@@ -105,6 +107,7 @@ class SourcesSettingsOut(BaseModel):
     openalex_key_hint: str
     # De onde vem a chave em uso: "ui" (salva na interface), "env" (OPENALEX_API_KEY) ou "none"
     openalex_key_source: Literal["ui", "env", "none"]
+    institution_proxy: str = ""
 
 
 class AssistChat(BaseModel):

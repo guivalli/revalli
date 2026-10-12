@@ -56,5 +56,23 @@ async def save(db: AsyncSession, value: str) -> None:
     _stored = value
 
 
+async def institution_proxy(db: AsyncSession) -> str:
+    row = await db.get(InstanceSetting, KEY)
+    return str(((row.value if row else None) or {}).get("institution_proxy", ""))
+
+
+async def save_institution_proxy(db: AsyncSession, template: str) -> None:
+    row = await db.get(InstanceSetting, KEY)
+    data = dict((row.value if row else None) or {})
+    if template:
+        data["institution_proxy"] = template
+    else:
+        data.pop("institution_proxy", None)
+    if row is None:
+        db.add(InstanceSetting(key=KEY, value=data))
+    else:
+        row.value = data
+
+
 def hint(value: str) -> str:
     return f"…{value[-4:]}" if value else ""
