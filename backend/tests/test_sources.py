@@ -651,3 +651,67 @@ async def test_exhausted_daily_budget_fails_fast_with_a_clear_code(admin):
     # Uma tentativa só: esperar 22 horas não faz sentido
     assert calls["n"] == 1
     assert r.status_code == 502 and r.json()["detail"].startswith("openalex_key_needed: ")
+
+
+async def test_openalex_key_saved_in_the_interface_is_used_and_never_returned(admin, monkeypatch):
+    from revalli.core.config import get_settings
+    from tests.conftest import invite_and_join
+
+    pid = (await admin.post("/api/projects", json={"title": "Chave"})).json()["id"]
+    seen: list[dict] = []
+
+    def spy(request: httpx.Request) -> httpx.Response:
+        if "openalex" in request.url.host:
+            seen.append(dict(request.url.params))
+        return _router(request)
+
+    clients.set_transport(httpx.MockTransport(spy))
+
+    async def preview_key():
+        seen.clear()
+        r = await admin.post(
+            f"/api/projects/{pid}/sources/preview", json={"source": "openalex", "query": "anxiety"}
+        )
+        assert r.status_code == 200, r.text
+        return seen[0].get("api_key")
+
+    # Sem chave nenhuma
+    start = (await admin.get("/api/sources/settings")).json()
+    assert start == {
+        "openalex_key_set": False,
+        "openalex_key_hint": "",
+        "openalex_key_source": "none",
+    }
+    assert await preview_key() is None
+
+    # Salva pela interface: a busca passa a usar, e a chave não volta inteira
+    r = await admin.put("/api/sources/settings", json={"openalex_api_key": " abcd1234wxyz "})
+    assert r.status_code == 200, r.text
+    assert r.json() == {
+        "openalex_key_set": True,
+        "openalex_key_hint": "…wxyz",
+        "openalex_key_source": "ui",
+    }
+    assert "abcd1234" not in json.dumps((await admin.get("/api/sources/settings")).json())
+    assert await preview_key() == "abcd1234wxyz"
+
+    # Salvar em branco mantém a chave
+    r = await admin.put("/api/sources/settings", json={})
+    assert r.json()["openalex_key_hint"] == "…wxyz"
+
+    # A chave salva vale mais que a do ambiente; sem ela, a do ambiente volta a valer
+    monkeypatch.setattr(get_settings(), "openalex_api_key", "envkey9999")
+    assert await preview_key() == "abcd1234wxyz"
+    r = await admin.put("/api/sources/settings", json={"clear_openalex_key": True})
+    assert r.json()["openalex_key_source"] == "env"
+    assert await preview_key() == "envkey9999"
+
+    # Valor com caracteres estranhos é recusado
+    r = await admin.put("/api/sources/settings", json={"openalex_api_key": "abc def&x=1"})
+    assert r.status_code == 422
+
+    # Só administradores
+    member = await invite_and_join(admin, "pessoa@example.org")
+    assert (await member.get("/api/sources/settings")).status_code == 403
+    r = await member.put("/api/sources/settings", json={"openalex_api_key": "outrachave1"})
+    assert r.status_code == 403

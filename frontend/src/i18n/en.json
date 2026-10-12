@@ -155,8 +155,9 @@
     "invalid_dimension": "Invalid dimension.",
     "criteria_empty": "Write the inclusion or exclusion criteria and save the protocol first.",
     "criteria_missing": "This project has no inclusion or exclusion criteria yet. The AI needs them to screen.",
-    "openalex_key_needed": "The free daily OpenAlex limit without a key is used up (it is shared by your whole network and resets at midnight UTC). Create a free key at openalex.org/settings/api and set OPENALEX_API_KEY in deploy/.env.",
-    "ollama_helper_not_configured": "The helper that starts and stops Ollama is not installed. See docs/ollama.md."
+    "openalex_key_needed": "The free daily OpenAlex limit without a key is used up (it is shared by your whole network and resets at midnight UTC). Create a free key at openalex.org/settings/api and enter it on the AI page (top menu, as administrator) or in OPENALEX_API_KEY in deploy/.env.",
+    "ollama_helper_not_configured": "The helper that starts and stops Ollama is not installed. See docs/ollama.md.",
+    "openalex_key_invalid": "The OpenAlex key can only contain letters, numbers, hyphens and underscores."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -558,7 +559,17 @@
     "ollama_rejected": "The helper refused the request. Check OLLAMA_HELPER_TOKEN in deploy/.env.",
     "ollama_failed": "The system rejected the command: {{error}}",
     "ollama_boot_on": "Starts with the computer",
-    "ollama_boot_off": "Does not start with the computer"
+    "ollama_boot_off": "Does not start with the computer",
+    "openalex_title": "OpenAlex key",
+    "openalex_hint": "Used for searching databases (OpenAlex, SciELO, PePSIC) and snowballing. It is free: create one at openalex.org/settings/api. Without it, the daily limit is small and shared with your whole network.",
+    "openalex_key": "Key",
+    "openalex_key_keep": "Current: {{hint}}. Leave blank to keep it.",
+    "openalex_source_ui": "Saved here in the interface.",
+    "openalex_source_env": "Comes from OPENALEX_API_KEY in deploy/.env. A key saved here takes its place.",
+    "openalex_source_none": "No key configured.",
+    "openalex_save": "Save key",
+    "openalex_clear": "Delete the saved key",
+    "openalex_saved": "Key saved."
   },
   "pdf": {
     "zoom_out": "Zoom out",

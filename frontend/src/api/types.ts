@@ -828,3 +828,9 @@ export interface OllamaState {
   enabled: boolean
   error: string | null
 }
+
+export interface SourcesSettings {
+  openalex_key_set: boolean
+  openalex_key_hint: string
+  openalex_key_source: 'ui' | 'env' | 'none'
+}

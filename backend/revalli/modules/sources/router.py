@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from revalli.core.config import get_settings
 from revalli.core.db import get_db
-from revalli.core.deps import current_user, require_lead
+from revalli.core.deps import admin_user, current_user, require_lead
 from revalli.models import Job, Record, User
 from revalli.modules.ai.client import AIError
 from revalli.modules.ai.router import _ai_error
@@ -14,7 +14,7 @@ from revalli.modules.ai.service import project_ai
 from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.models import JobStatus
 from revalli.modules.records.schemas import JobOut
-from revalli.modules.sources import service
+from revalli.modules.sources import keys, service
 from revalli.modules.sources.clients import SourceError
 from revalli.modules.sources.schemas import (
     AssistIn,
@@ -25,11 +25,43 @@ from revalli.modules.sources.schemas import (
     SearchIn,
     SnowballIn,
     SnowballInfo,
+    SourcesSettingsIn,
+    SourcesSettingsOut,
     TranslateIn,
     TranslateOut,
 )
 
 router = APIRouter(prefix="/projects/{project_id}/sources", tags=["sources"])
+# Configuração da instalação (só administradores)
+admin_router = APIRouter(prefix="/sources", tags=["sources"])
+
+
+async def _settings_out(db: AsyncSession) -> SourcesSettingsOut:
+    await keys.load(db)
+    value = keys.openalex_key()
+    return SourcesSettingsOut(
+        openalex_key_set=bool(value),
+        openalex_key_hint=keys.hint(value),
+        openalex_key_source=keys.source(),
+    )
+
+
+@admin_router.get("/settings", response_model=SourcesSettingsOut)
+async def read_settings(_: User = Depends(admin_user), db: AsyncSession = Depends(get_db)):
+    return await _settings_out(db)
+
+
+@admin_router.put("/settings", response_model=SourcesSettingsOut)
+async def write_settings(
+    body: SourcesSettingsIn, _: User = Depends(admin_user), db: AsyncSession = Depends(get_db)
+):
+    value = body.openalex_api_key.strip()
+    if value and not value.replace("-", "").replace("_", "").isalnum():
+        raise HTTPException(422, "openalex_key_invalid")
+    if value or body.clear_openalex_key:
+        await keys.save(db, value)
+        await db.commit()
+    return await _settings_out(db)
 
 
 def _source_error(exc: SourceError) -> HTTPException:
@@ -70,7 +102,7 @@ async def preview(
     await require_lead(db, project_id, user)
     _enabled()
     try:
-        result = await service.preview(body.source, body.query)
+        result = await service.preview(db, body.source, body.query)
     except SourceError as exc:
         raise _source_error(exc) from exc
     return PreviewOut(

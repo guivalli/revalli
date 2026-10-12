@@ -17,6 +17,7 @@ from revalli.core.config import get_settings
 from revalli.modules.imports.normalize import ParsedRecord, normalize_pmid
 from revalli.modules.imports.parsers import parse_pubmed_xml
 from revalli.modules.records.enrich import abstract_from_index
+from revalli.modules.sources import keys
 
 # Permite trocar o transporte nos testes (sem rede)
 _transport: httpx.AsyncBaseTransport | None = None
@@ -71,7 +72,7 @@ async def throttle(url: str, params: dict) -> None:
     if settings.api_delay_seconds <= 0 or not is_heavy(params):
         return
     host = httpx.URL(url).host
-    interval = HEAVY_INTERVAL_WITH_KEY if settings.openalex_api_key else HEAVY_INTERVAL
+    interval = HEAVY_INTERVAL_WITH_KEY if keys.openalex_key() else HEAVY_INTERVAL
     wait = _next_heavy.get(host, 0.0) - time.monotonic()
     if wait > 0:
         await asyncio.sleep(wait)
@@ -134,8 +135,8 @@ class Preview:
 def openalex_params() -> dict:
     s = get_settings()
     params = {"mailto": s.enrichment_contact_email} if s.enrichment_contact_email else {}
-    if s.openalex_api_key:
-        params["api_key"] = s.openalex_api_key
+    if key := keys.openalex_key():
+        params["api_key"] = key
     return params
 
 

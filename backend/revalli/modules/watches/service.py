@@ -16,7 +16,7 @@ from revalli.models import Record
 from revalli.modules.ai.crypto import decrypt
 from revalli.modules.imports.normalize import ParsedRecord, normalize_title
 from revalli.modules.imports.parsers import ImportFormatError, parse_file
-from revalli.modules.sources import clients
+from revalli.modules.sources import clients, keys
 from revalli.modules.sources.service import save_search
 from revalli.modules.watches.models import Watch
 
@@ -117,6 +117,7 @@ def schedule_next(watch: Watch, *, failed: bool = False) -> None:
 async def run_watch(
     db: AsyncSession, watch: Watch, progress: Callable[[int, int], None] | None = None
 ) -> dict:
+    await keys.load(db)
     try:
         if watch.kind == "api_search":
             name, total, records = await _fetch_search(watch, progress)

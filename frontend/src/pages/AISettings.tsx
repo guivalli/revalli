@@ -10,6 +10,7 @@ import {
   type ProviderPayload,
 } from '../api/ai'
 import { useMe } from '../api/hooks'
+import { useSaveSourcesSettings, useSourcesSettings } from '../api/sources'
 import type { InstanceAISettings, Provider, ProviderKind, TaskModel } from '../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../components/ui'
 
@@ -195,6 +196,57 @@ function OllamaControl() {
   )
 }
 
+function OpenAlexKey() {
+  const { t } = useTranslation()
+  const { data } = useSourcesSettings()
+  const save = useSaveSourcesSettings()
+  const [key, setKey] = useState('')
+  if (!data) return null
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    if (key.trim()) save.mutate({ openalex_api_key: key.trim() }, { onSuccess: () => setKey('') })
+  }
+  return (
+    <Card className="space-y-3">
+      <h2 className="font-semibold">{t('ai.openalex_title')}</h2>
+      <p className="text-xs text-stone-500">{t('ai.openalex_hint')}</p>
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+        <div className="min-w-64 flex-1">
+          <Field
+            label={t('ai.openalex_key')}
+            hint={data.openalex_key_hint ? t('ai.openalex_key_keep', { hint: data.openalex_key_hint }) : undefined}
+          >
+            <Input
+              type="password"
+              autoComplete="off"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Button type="submit" disabled={save.isPending || !key.trim()}>
+          {t('ai.openalex_save')}
+        </Button>
+        {data.openalex_key_source === 'ui' && (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={save.isPending}
+            onClick={() => save.mutate({ clear_openalex_key: true })}
+          >
+            {t('ai.openalex_clear')}
+          </Button>
+        )}
+      </form>
+      <p role="status" className="text-xs text-stone-500">
+        {t(`ai.openalex_source_${data.openalex_key_source}`)}
+        {save.isSuccess && ` ${t('ai.openalex_saved')}`}
+      </p>
+      <ErrorText error={save.error} />
+    </Card>
+  )
+}
+
 function TaskForm({
   label,
   hint,
@@ -325,6 +377,7 @@ export default function AISettings() {
         <p className="text-sm text-stone-500">{t('ai.intro')}</p>
       </div>
       <OllamaControl />
+      <OpenAlexKey />
       <Card className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">{t('ai.providers')}</h2>

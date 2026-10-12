@@ -17,6 +17,7 @@ from revalli.modules.projects.router import router as projects_router
 from revalli.modules.records.router import router as records_router
 from revalli.modules.reports.router import router as reports_router
 from revalli.modules.screening.router import router as screening_router
+from revalli.modules.sources.router import admin_router as sources_admin_router
 from revalli.modules.sources.router import router as sources_router
 from revalli.modules.synthesis.router import router as synthesis_router
 from revalli.modules.tokens.router import router as tokens_router
@@ -80,6 +81,7 @@ app.include_router(ai_project_router, prefix="/api")
 app.include_router(fulltext_router, prefix="/api")
 app.include_router(extraction_router, prefix="/api")
 app.include_router(sources_router, prefix="/api")
+app.include_router(sources_admin_router, prefix="/api")
 app.include_router(synthesis_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")
 app.include_router(corpus_router, prefix="/api")

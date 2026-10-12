@@ -56,7 +56,12 @@ PubMed, Europe PMC e OpenAlex são consultados sem cadastro, mas o OpenAlex (usa
 - **Estratégias grandes:** consultas com mais de 5 operadores `AND`/`OR`/`NOT` ficam limitadas a 1 por segundo (5 por segundo com chave). O ReValli espaça essas chamadas sozinho e respeita o tempo que a base pede; uma contagem no SciELO leva cerca de 12 s por isso.
 - **Frases com curinga:** o OpenAlex recusa `"efeito* adverso*"`. O ReValli reescreve para `(efeito* AND adverso*)`, um pouco mais amplo, e mostra a estratégia reescrita em **Como a base interpretou a estratégia**.
 
-**A chave é gratuita:** crie uma conta em openalex.org, copie a chave em `openalex.org/settings/api` e coloque `OPENALEX_API_KEY=...` em `deploy/.env`. Depois, suba de novo os contêineres da API e do worker.
+**A chave é gratuita:** crie uma conta em openalex.org e copie a chave em `openalex.org/settings/api`. Há dois jeitos de informar:
+
+- **Pela interface (recomendado):** menu **IA** (só administradores), cartão **Chave do OpenAlex**. Vale na hora, sem reiniciar nada. Fica cifrada no banco e não volta para a tela (só os 4 últimos caracteres).
+- **Pelo ambiente:** `OPENALEX_API_KEY=...` em `deploy/.env` e recriar os contêineres da API e do worker.
+
+Se houver as duas, vale a salva na interface. Apagá-la devolve a do ambiente.
 
 ### Conversar com a IA para montar a busca
 

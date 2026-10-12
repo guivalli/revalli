@@ -32,7 +32,7 @@ Lista viva do que falta. O que cada marco já entrega está no [roteiro](docs/ro
 
 - [ ] OCR de PDFs escaneados.
 - [ ] Busca direta em LILACS/BVS (depende de uma chave da API da BVS) e no Portal CAPES (não tem API pública).
-- [ ] Campo na interface para a chave do OpenAlex (hoje só no `deploy/.env`).
+- [x] Campo na interface para a chave do OpenAlex (menu IA, cartão Chave do OpenAlex).
 - [ ] Salvar a conversa do assistente de busca (hoje fica só na tela).
 - [ ] Parar também embeddings, extração por IA e importações (só a triagem por IA para).
 - [ ] Pendências do M3: Batch APIs, detecção de idioma e de tipo de estudo, tradução.

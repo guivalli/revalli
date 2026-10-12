@@ -1,8 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { ApiSource, AssistReply, Job, SourcePreview, Translation } from './types'
+import type { ApiSource, AssistReply, Job, SourcePreview, SourcesSettings, Translation } from './types'
 
 const base = (pid: string) => `/projects/${pid}/sources`
+
+export function useSourcesSettings(enabled = true) {
+  return useQuery({
+    queryKey: ['sources', 'settings'],
+    queryFn: () => api.get<SourcesSettings>('/sources/settings'),
+    enabled,
+  })
+}
+
+export function useSaveSourcesSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { openalex_api_key?: string; clear_openalex_key?: boolean }) =>
+      api.put<SourcesSettings>('/sources/settings', body),
+    onSuccess: (data) => qc.setQueryData(['sources', 'settings'], data),
+  })
+}
 
 export function useSnowballInfo(pid: string) {
   return useQuery({

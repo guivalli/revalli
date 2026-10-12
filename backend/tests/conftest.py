@@ -62,6 +62,9 @@ async def clean_db():
                 " corpus_chunks, corpus_chunk_embeddings, corpus_messages, api_tokens, watches CASCADE"
             )
         )
+    from revalli.modules.sources import keys
+
+    keys.reset()
     login_limiter._hits.clear()
 
 

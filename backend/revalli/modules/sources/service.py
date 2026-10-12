@@ -22,7 +22,7 @@ from revalli.modules.fulltext.studies import default_label
 from revalli.modules.imports.normalize import ParsedRecord, normalize_doi, normalize_title
 from revalli.modules.screening.models import Phase
 from revalli.modules.screening.service import State, compute_states
-from revalli.modules.sources import clients
+from revalli.modules.sources import clients, keys
 from revalli.modules.sources.clients import openalex_pages, openalex_work, short_openalex_id
 
 Progress = Callable[[int, int], None]
@@ -88,7 +88,8 @@ async def save_search(
 # --- Busca direta ----------------------------------------------------------------
 
 
-async def preview(source: str, query: str) -> clients.Preview:
+async def preview(db: AsyncSession, source: str, query: str) -> clients.Preview:
+    await keys.load(db)
     _, run_preview, _ = clients.SOURCES[source]
     async with clients.http_client() as c:
         return await run_preview(c, query)
@@ -103,6 +104,7 @@ async def run_api_search(
     limit: int,
     progress: Progress | None = None,
 ) -> dict:
+    await keys.load(db)
     name, _, fetch = clients.SOURCES[source]
     limit = min(limit, get_settings().api_search_max)
     found: list[ParsedRecord] = []
@@ -229,6 +231,7 @@ async def run_snowball(
     seed_ids: list[uuid.UUID] | None,
     progress: Progress | None = None,
 ) -> dict:
+    await keys.load(db)
     if seed_ids is None:
         seed_ids = await included_ids(db, project)
     seeds = list(

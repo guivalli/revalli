@@ -88,3 +88,17 @@ class TranslateOut(BaseModel):
     query: str
     notes: list[str]
     model: str
+
+
+class SourcesSettingsIn(BaseModel):
+    """Vazio mantém a chave salva; `clear_openalex_key` apaga."""
+
+    openalex_api_key: str = Field(default="", max_length=200)
+    clear_openalex_key: bool = False
+
+
+class SourcesSettingsOut(BaseModel):
+    openalex_key_set: bool
+    openalex_key_hint: str
+    # De onde vem a chave em uso: "ui" (salva na interface), "env" (OPENALEX_API_KEY) ou "none"
+    openalex_key_source: Literal["ui", "env", "none"]

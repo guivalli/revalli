@@ -155,8 +155,9 @@
     "invalid_dimension": "Dimensão inválida.",
     "criteria_empty": "Escreva os critérios de inclusão ou exclusão e salve o protocolo antes.",
     "criteria_missing": "O projeto ainda não tem critérios de inclusão e exclusão. A IA precisa deles para triar.",
-    "openalex_key_needed": "O limite diário gratuito do OpenAlex sem chave acabou (ele é compartilhado por toda a sua rede e volta à meia-noite UTC). Crie uma chave gratuita em openalex.org/settings/api e ponha OPENALEX_API_KEY no deploy/.env.",
-    "ollama_helper_not_configured": "O auxiliar que liga e desliga o Ollama não está instalado. Veja docs/ollama.md."
+    "openalex_key_needed": "O limite diário gratuito do OpenAlex sem chave acabou (ele é compartilhado por toda a sua rede e volta à meia-noite UTC). Crie uma chave gratuita em openalex.org/settings/api e cadastre na tela IA (menu superior, como administrador) ou em OPENALEX_API_KEY no deploy/.env.",
+    "ollama_helper_not_configured": "O auxiliar que liga e desliga o Ollama não está instalado. Veja docs/ollama.md.",
+    "openalex_key_invalid": "A chave do OpenAlex só pode ter letras, números, hífen e sublinhado."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -558,7 +559,17 @@
     "ollama_rejected": "O auxiliar recusou o pedido. Confira o OLLAMA_HELPER_TOKEN no deploy/.env.",
     "ollama_failed": "O sistema não aceitou o comando: {{error}}",
     "ollama_boot_on": "Sobe junto com o computador",
-    "ollama_boot_off": "Não sobe junto com o computador"
+    "ollama_boot_off": "Não sobe junto com o computador",
+    "openalex_title": "Chave do OpenAlex",
+    "openalex_hint": "Usada na busca em bases (OpenAlex, SciELO, PePSIC) e no snowballing. É gratuita: crie em openalex.org/settings/api. Sem ela, o limite diário é pequeno e dividido com toda a sua rede.",
+    "openalex_key": "Chave",
+    "openalex_key_keep": "Atual: {{hint}}. Deixe em branco para manter.",
+    "openalex_source_ui": "Salva aqui na interface.",
+    "openalex_source_env": "Vem de OPENALEX_API_KEY no deploy/.env. Uma chave salva aqui passa a valer no lugar dela.",
+    "openalex_source_none": "Nenhuma chave configurada.",
+    "openalex_save": "Salvar chave",
+    "openalex_clear": "Apagar a chave salva",
+    "openalex_saved": "Chave salva."
   },
   "pdf": {
     "zoom_out": "Diminuir zoom",
