@@ -266,7 +266,7 @@ function InstitutionProxy() {
         <Field label={t('ai.proxy_template')} hint={t('ai.proxy_template_hint')}>
           <Input
             value={current}
-            placeholder="https://{host}.ezl.periodicos.capes.gov.br{path}"
+            placeholder="https://{host}.ez128.periodicos.capes.gov.br{path}"
             onChange={(e) => setValue(e.target.value)}
           />
         </Field>

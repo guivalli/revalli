@@ -41,17 +41,34 @@ Muitos artigos que não são abertos estão disponíveis pela assinatura da sua 
 **Configuração** (administrador): menu **IA**, cartão **Acesso pela instituição (CAFe)**. O modelo usa:
 
 - `{url}`: o endereço inteiro do artigo;
-- `{host}`: o servidor, no estilo do EZproxy (pontos viram hífens; hífens viram dois hífens);
+- `{host}`: o servidor com os pontos trocados por hífens (é o que o Portal CAPES faz);
+- `{host_ez}`: igual, mas com os hífens do nome dobrados, como o EZproxy padrão (só use se o seu proxy fizer assim);
 - `{path}`: o resto do endereço.
 
 Exemplos:
 
 | Instituição | Modelo |
 |---|---|
-| Portal CAPES com CAFe | `https://{host}.ezl.periodicos.capes.gov.br{path}` |
+| Portal CAPES com CAFe | `https://{host}.ez128.periodicos.capes.gov.br{path}` |
 | EZproxy por prefixo | `https://ezproxy.suainstituicao.br/login?url={url}` |
 
-Confira o formato do seu caso: faça login no Portal de Periódicos CAPES pela CAFe, abra um artigo e compare o endereço com o modelo. Se o sufixo for diferente (`ezl`, `ez27`...), ajuste o modelo.
+Confira o formato do seu caso: faça login no Portal de Periódicos CAPES pela CAFe, abra um artigo e compare o endereço com o modelo. O trecho `ez128` identifica o servidor de proxy e pode ser outro número em outra instituição: use o que aparece no seu endereço.
+
+Exemplo conferido (2026-10-12), um item aberto pelo portal depois do login CAFe:
+
+```
+https://www-periodicos-capes-gov-br.ez128.periodicos.capes.gov.br/index.php/acervo/buscador.html?task=detalhes&source=digital&id=W4323920691
+```
+
+O servidor `www.periodicos.capes.gov.br` virou `www-periodicos-capes-gov-br` (pontos viram hífens), seguido de `.ez128.periodicos.capes.gov.br`. É o que o modelo `https://{host}.ez128.periodicos.capes.gov.br{path}` produz.
+
+Um segundo exemplo, de uma editora, mostra que os hífens do nome **não** são dobrados: `https://alz-journals.onlinelibrary.wiley.com/doi/10.1002/alz.13025` abre como
+
+```
+https://alz-journals-onlinelibrary-wiley-com.ez128.periodicos.capes.gov.br/doi/10.1002/alz.13025
+```
+
+Não foi conferido: o link que parte de `https://doi.org/<DOI>` (vira `doi-org.ez128...`). Teste com um artigo da lista de pendentes e, se o proxy recusar, me avise.
 
 **O que o ReValli não faz, de propósito:**
 

@@ -393,13 +393,13 @@ async def test_open_access_chain_and_pending_list(admin, monkeypatch):
     for bad in ("ftp://proxy/{url}", "https://proxy/", "https://proxy/{foo}", "https://p x/{url}"):
         r = await admin.put(settings_url, json={"institution_proxy": bad})
         assert r.status_code == 422 and r.json()["detail"] == "institution_proxy_invalid", bad
-    template = "https://{host}.ezl.periodicos.capes.gov.br{path}"
+    template = "https://{host}.ez128.periodicos.capes.gov.br{path}"
     r = await admin.put(settings_url, json={"institution_proxy": template})
     assert r.json()["institution_proxy"] == template
     pending = (await admin.get(f"/api/projects/{pid}/files/pending")).json()
     assert {p["proxy_link"] for p in pending} == {
-        "https://doi-org.ezl.periodicos.capes.gov.br/10.5555/d",
-        "https://doi-org.ezl.periodicos.capes.gov.br/10.5555/e",
+        "https://doi-org.ez128.periodicos.capes.gov.br/10.5555/d",
+        "https://doi-org.ez128.periodicos.capes.gov.br/10.5555/e",
     }
 
     # CSV para baixar a lista
@@ -407,7 +407,7 @@ async def test_open_access_chain_and_pending_list(admin, monkeypatch):
     assert csv_resp.status_code == 200 and csv_resp.text.startswith("\ufeff")
     assert (
         "https://doi.org/10.5555/d" in csv_resp.text
-        and "ezl.periodicos.capes.gov.br" in csv_resp.text
+        and "ez128.periodicos.capes.gov.br" in csv_resp.text
     )
     # Apagar o modelo
     r = await admin.put(settings_url, json={"institution_proxy": ""})
@@ -417,21 +417,39 @@ async def test_open_access_chain_and_pending_list(admin, monkeypatch):
 def test_proxy_link_templates():
     from revalli.modules.fulltext.finders import proxy_link, valid_proxy_template
 
-    target = "https://www.sciencedirect.com/science/article/pii/S0001?x=1"
+    capes = "https://{host}.ez128.periodicos.capes.gov.br{path}"
+    # Endereços reais abertos pelo Portal CAPES depois do login CAFe
     assert (
-        proxy_link("https://{host}.ezl.periodicos.capes.gov.br{path}", target)
-        == "https://www-sciencedirect-com.ezl.periodicos.capes.gov.br/science/article/pii/S0001?x=1"
+        proxy_link(capes, "https://alz-journals.onlinelibrary.wiley.com/doi/10.1002/alz.13025")
+        == "https://alz-journals-onlinelibrary-wiley-com.ez128.periodicos.capes.gov.br"
+        "/doi/10.1002/alz.13025"
     )
-    # Hífens do servidor viram dois, como no EZproxy
-    assert proxy_link("https://{host}.proxy.br{path}", "https://my-journal.org/a").startswith(
+    assert (
+        proxy_link(
+            capes,
+            "https://www.periodicos.capes.gov.br/index.php/acervo/buscador.html?task=detalhes&id=W1",
+        )
+        == "https://www-periodicos-capes-gov-br.ez128.periodicos.capes.gov.br"
+        "/index.php/acervo/buscador.html?task=detalhes&id=W1"
+    )
+    assert (
+        proxy_link(capes, "https://doi.org/10.1002/alz.13025")
+        == "https://doi-org.ez128.periodicos.capes.gov.br/10.1002/alz.13025"
+    )
+    # {host_ez} dobra os hífens do nome, como o EZproxy padrão
+    assert proxy_link("https://{host_ez}.proxy.br{path}", "https://my-journal.org/a") == (
         "https://my--journal-org.proxy.br/a"
+    )
+    assert proxy_link("https://{host}.proxy.br{path}", "https://my-journal.org/a") == (
+        "https://my-journal-org.proxy.br/a"
     )
     assert (
         proxy_link("https://proxy.inst.br/login?url={url}", "https://doi.org/10.1/x")
         == "https://proxy.inst.br/login?url=https://doi.org/10.1/x"
     )
-    assert proxy_link("", target) == "" and proxy_link("https://p/{url}", "") == ""
+    assert proxy_link("", "https://a.org/") == "" and proxy_link("https://p/{url}", "") == ""
     assert valid_proxy_template("https://p.br/login?url={url}")
+    assert valid_proxy_template("https://{host_ez}.p.br{path}")
     assert not valid_proxy_template("p.br/{url}") and not valid_proxy_template("https://p.br/")
 
 
