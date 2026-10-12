@@ -34,6 +34,17 @@ export function useProviders(enabled = true) {
   })
 }
 
+/** Modelos que o provedor oferece (mesma chamada do botão Testar), para escolher em lista. */
+export function useProviderModels(providerId: string | null) {
+  return useQuery({
+    queryKey: ['ai', 'models', providerId],
+    queryFn: () => api.post<string[]>(`/ai/providers/${providerId}/test`, {}),
+    enabled: !!providerId,
+    retry: false,
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useInstanceAI() {
   return useQuery({ queryKey: ['ai', 'settings'], queryFn: () => api.get<InstanceAISettings>('/ai/settings') })
 }
@@ -71,7 +82,11 @@ export function useProviderActions() {
       mutationFn: (id: string) => api.delete<void>(`/ai/providers/${id}`),
       onSuccess: refresh,
     }),
-    test: useMutation({ mutationFn: (id: string) => api.post<string[]>(`/ai/providers/${id}/test`, {}) }),
+    test: useMutation({
+      mutationFn: (id: string) => api.post<string[]>(`/ai/providers/${id}/test`, {}),
+      // O resultado do teste alimenta a lista de modelos das tarefas
+      onSuccess: (models, id) => qc.setQueryData(['ai', 'models', id], models),
+    }),
     saveSettings: useMutation({
       mutationFn: (s: InstanceAISettings) => api.put<InstanceAISettings>('/ai/settings', s),
       onSuccess: refresh,

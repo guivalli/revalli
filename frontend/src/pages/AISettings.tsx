@@ -6,6 +6,7 @@ import {
   useOllama,
   useOllamaAction,
   useProviderActions,
+  useProviderModels,
   useProviders,
   type ProviderPayload,
 } from '../api/ai'
@@ -301,6 +302,42 @@ function InstitutionProxy() {
   )
 }
 
+const OTHER_MODEL = '__other__'
+
+/** Lista os modelos do provedor; sem lista (erro ou vazia) ou com "Outro", vira campo de texto. */
+function ModelPicker({
+  providerId,
+  value,
+  onChange,
+}: {
+  providerId: string | null
+  value: string
+  onChange: (v: string) => void
+}) {
+  const { t } = useTranslation()
+  const models = useProviderModels(providerId)
+  const [manual, setManual] = useState(false)
+  const list = models.data ?? []
+  if (manual || list.length === 0) {
+    return <Input value={value} onChange={(e) => onChange(e.target.value)} />
+  }
+  const options = value && !list.includes(value) ? [value, ...list] : list
+  return (
+    <Select
+      value={value}
+      onChange={(e) => (e.target.value === OTHER_MODEL ? setManual(true) : onChange(e.target.value))}
+    >
+      {!value && <option value="">{t('ai.model_choose')}</option>}
+      {options.map((m) => (
+        <option key={m} value={m}>
+          {m}
+        </option>
+      ))}
+      <option value={OTHER_MODEL}>{t('ai.model_other')}</option>
+    </Select>
+  )
+}
+
 function TaskForm({
   label,
   hint,
@@ -335,7 +372,11 @@ function TaskForm({
           </Select>
         </Field>
         <Field label={t('ai.model')} hint={t('ai.model_hint')}>
-          <Input value={value.model} onChange={(e) => onChange({ ...value, model: e.target.value })} />
+          <ModelPicker
+            providerId={value.provider_id}
+            value={value.model}
+            onChange={(model) => onChange({ ...value, model })}
+          />
         </Field>
         {value.provider_id && !local && (
           <>
