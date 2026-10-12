@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router-dom'
+import { pillBar, pillItem } from './pills'
 
 export function SynthesisNav({ pid }: { pid: string }) {
   const { t } = useTranslation()
@@ -10,15 +11,13 @@ export function SynthesisNav({ pid }: { pid: string }) {
     { to: `/projetos/${pid}/sintese/lacunas`, label: t('synthesis.gaps') },
   ]
   return (
-    <nav className="inline-flex rounded-md border border-stone-300 p-0.5 text-sm dark:border-stone-700">
+    <nav className={pillBar}>
       {items.map((i) => (
         <NavLink
           key={i.to}
           to={i.to}
           end={i.end}
-          className={({ isActive }) =>
-            `rounded px-3 py-1 ${isActive ? 'bg-brand-600 text-white' : 'hover:bg-stone-100 dark:hover:bg-stone-800'}`
-          }
+          className={({ isActive }) => pillItem(isActive)}
         >
           {i.label}
         </NavLink>

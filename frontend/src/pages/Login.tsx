@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { User } from '../api/types'
-import { Footer, LanguageSelect } from '../components/Layout'
+import { Footer, LanguageSelect, ThemeSwitch } from '../components/Layout'
 import { Brand, Button, Card, CenteredPage, ErrorText, Field, Input } from '../components/ui'
 
 export default function Login() {
@@ -77,7 +77,8 @@ export default function Login() {
           </div>
         )}
       </Card>
-      <div className="flex justify-center">
+      <div className="flex items-center justify-center gap-3">
+        <ThemeSwitch />
         <LanguageSelect />
       </div>
       <Footer />

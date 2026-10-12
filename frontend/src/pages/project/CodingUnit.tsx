@@ -85,7 +85,7 @@ function ExcerptItem({
         {e.page && (
           <button
             type="button"
-            className="text-brand-600 hover:underline"
+            className="text-brand-600 dark:text-brand-300 hover:underline"
             onClick={() => onShow({ page: e.page!, text: e.text, fileId: e.file_id })}
           >
             {t('coding.show_in_pdf')}
@@ -93,7 +93,7 @@ function ExcerptItem({
         )}
         {canEdit && (
           <>
-            <button type="button" className="text-brand-600 hover:underline" onClick={() => setEditing(!editing)}>
+            <button type="button" className="text-brand-600 dark:text-brand-300 hover:underline" onClick={() => setEditing(!editing)}>
               {t('coding.edit_codes')}
             </button>
             <button
@@ -183,7 +183,7 @@ export default function CodingUnit() {
 
   return (
     <div className="space-y-4">
-      <Link to=".." relative="path" className="text-sm text-brand-600 hover:underline">
+      <Link to=".." relative="path" className="text-sm text-brand-600 dark:text-brand-300 hover:underline">
         ← {t('coding.back')}
       </Link>
       <div>

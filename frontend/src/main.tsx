@@ -5,6 +5,9 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './i18n'
 import './index.css'
+import { initTheme } from './lib/theme'
+
+initTheme()
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },

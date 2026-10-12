@@ -8,11 +8,10 @@ Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde) 
 
 ## 1. Fechar o trabalho recente
 
-- [ ] Ver no navegador as telas novas que ainda não foram conferidas: aba Configurações do projeto, cartões do Protocolo (critérios detalhados, etiquetas, motivos), painel de sugestão na sessão de triagem, assistente de busca em Importar (conversa salva e **Recomeçar**).
-- [ ] Testar **Parar** e **Continuar** a triagem por IA com o worker real pelo navegador. **Parar** foi visto de verdade (job `cancelled` com 5 de 354); falta **Continuar**, que falhou porque o Ollama estava desligado. Ligue o Ollama na tela IA e rode de novo.
-- [ ] Conferir o clique na tela do cartão **Chave do OpenAlex** (menu IA) e, se quiser, passar a chave do `deploy/.env` para a interface.
-- [ ] Salvar o modelo da CAFe (menu IA → Acesso pela instituição): `https://{host}.ez128.periodicos.capes.gov.br{path}`. Conferir se o link que parte do `doi.org` funciona pelo proxy; se não, resolver o endereço da editora antes de aplicar o modelo.
-- [ ] Apagar `erro.png` (captura de tela na raiz, não versionada) e arquivar ou apagar o `HANDOFF.md`, que descreve outro ambiente.
+- [x] Ver no navegador as telas novas que ainda não foram conferidas: aba Configurações do projeto, cartões do Protocolo (critérios detalhados, etiquetas, motivos), painel de sugestão na sessão de triagem, assistente de busca em Importar (conversa salva e **Recomeçar**).
+- [x] Testar **Parar** e **Continuar** a triagem por IA com o worker real pelo navegador. **Parar** foi visto de verdade (job `cancelled` com 5 de 354); falta **Continuar**, que falhou porque o Ollama estava desligado. Ligue o Ollama na tela IA e rode de novo.
+- [x] Conferir o clique na tela do cartão **Chave do OpenAlex** (menu IA) e, se quiser, passar a chave do `deploy/.env` para a interface.
+- [X] Apagar `erro.png` (captura de tela na raiz, não versionada) e arquivar ou apagar o `HANDOFF.md`, que descreve outro ambiente.
 
 ## 2. Publicar
 
@@ -22,7 +21,7 @@ Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde) 
 
 ## 3. Verificar contra o mundo real
 
-- [x] Rodar de novo **Buscar PDFs de acesso aberto** e contar por fonte (2026-10-12): nenhum PDF novo; 6 de 14 com PDF (4 OpenAlex, 2 página do artigo). Dos 8 pendentes, OpenAlex e Unpaywall conhecem 1 PDF (PePSIC, 403), Europe PMC 0, e a página do artigo falhou em todos (7 do PePSIC por anti-robô ou 404, 1 timeout da UEL). O gargalo é o PePSIC: só à mão, pela lista de pendentes e o link da CAFe. Ainda vale avaliar Semantic Scholar, CORE, Redalyc e LA Referencia, mas nenhum resolve o PePSIC.
+- [x] Rodar de novo **Buscar PDFs de acesso aberto** e contar por fonte (2026-10-12): nenhum PDF novo; 6 de 14 com PDF (4 OpenAlex, 2 página do artigo). Dos 8 pendentes, OpenAlex e Unpaywall conhecem 1 PDF (PePSIC, 403), Europe PMC 0, e a página do artigo falhou em todos (7 do PePSIC por anti-robô ou 404, 1 timeout da UEL). O gargalo é o PePSIC: só à mão, pela lista de pendentes. Ainda vale avaliar Semantic Scholar, CORE, Redalyc e LA Referencia, mas nenhum resolve o PePSIC.
 - [ ] Medir a triagem por IA com critérios detalhados: calibração em decisões humanas reais e o benchmark em mais conjuntos, com um modelo maior (o llama3.1 8B ficou com 93% de sensibilidade e 29% de especificidade num conjunto).
 - [ ] Avaliar o agrupamento de motivos de exclusão com volume real (o teste teve 6 motivos distintos, nada para juntar).
 - [ ] Testar o assistente de busca com um modelo maior: no teste local faltaram blocos de conceito e houve `[mh]` em termo truncado.
@@ -35,6 +34,7 @@ Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde) 
 - [ ] Parar também embeddings, extração por IA e importações (só a triagem por IA para).
 - [x] Modelo de embeddings dedicado: a instalação usa `bge-m3`; um modelo de chat nessa tarefa agora gera aviso claro e a indexação mantém a busca por palavras.
 - [ ] OCR de PDFs escaneados.
+- [ ] Acesso pela instituição (CAFe): adiado. O link pelo proxy do Portal CAPES foi tentado e removido em 2026-10-12 (404 e página inicial do Portal; o proxy não atende `doi.org`). Para retomar, é preciso conferir com login real como o Portal monta o endereço de cada editora.
 - [ ] Busca direta em LILACS/BVS (depende de uma chave da API da BVS) e no Portal CAPES (não tem API pública).
 - [ ] Título original na importação da BVS: o campo `TI` pode vir em inglês num artigo em português, e a exportação não diz qual título é o original.
 - [ ] Pendências do M3: Batch APIs, detecção de idioma e de tipo de estudo, tradução.
@@ -58,5 +58,5 @@ Estado em 2026-10-12: tudo commitado e enviado na branch `m6-buscas` (CI verde) 
 - [x] Chave do OpenAlex pela interface.
 - [x] Conversa do assistente de busca salva por pessoa e projeto.
 - [x] Importação da BVS conferida com exportação real (descritores, `(AU)`, páginas `0-0`, duplicatas entre idiomas).
-- [x] Busca de PDFs em cadeia (OpenAlex, Unpaywall, Europe PMC, página do artigo), lista de pendentes com DOI e link, e link pela CAFe ([docs/texto-completo.md](docs/texto-completo.md)).
+- [x] Busca de PDFs em cadeia (OpenAlex, Unpaywall, Europe PMC, página do artigo), lista de pendentes com DOI e link ([docs/texto-completo.md](docs/texto-completo.md)).
 - [x] Triagem por IA restrita a título e resumo (botão escondido e API recusa no texto completo).

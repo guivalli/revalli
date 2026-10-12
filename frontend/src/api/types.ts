@@ -20,6 +20,8 @@ export interface Project {
   created_at: string
   my_role: Role | null
   member_count: number
+  record_count: number
+  owner_name: string
 }
 
 export interface Member {
@@ -346,7 +348,6 @@ export interface PendingFile {
   pmid: string | null
   url: string
   link: string
-  proxy_link: string
 }
 
 export interface FilesSummary {
@@ -853,5 +854,4 @@ export interface SourcesSettings {
   openalex_key_set: boolean
   openalex_key_hint: string
   openalex_key_source: 'ui' | 'env' | 'none'
-  institution_proxy: string
 }

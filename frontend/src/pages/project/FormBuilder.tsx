@@ -67,7 +67,7 @@ function ColumnsEditor({ cols, onChange }: { cols: ColumnDef[]; onChange: (c: Co
       ))}
       <button
         type="button"
-        className="text-sm text-brand-600 hover:underline"
+        className="text-sm text-brand-600 dark:text-brand-300 hover:underline"
         onClick={() => onChange([...cols, { id: slugify('coluna', new Set(cols.map((c) => c.id)), 'col'), label: '', type: 'text' }])}
       >
         {t('builder.add_column')}
@@ -253,7 +253,7 @@ function Builder({ initial }: { initial?: ExtractionFormT }) {
     <div className="space-y-6">
       <Link
         to={`/projetos/${project.id}/extracao${initial ? `?form=${initial.id}` : ''}`}
-        className="text-sm text-brand-600 hover:underline"
+        className="text-sm text-brand-600 dark:text-brand-300 hover:underline"
       >
         ← {t('extraction.back')}
       </Link>

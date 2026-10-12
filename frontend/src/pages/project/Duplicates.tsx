@@ -74,7 +74,7 @@ function GroupCard({
               {canManage && (
                 <div className="flex flex-wrap gap-1 pt-1">
                   {isPrimary ? (
-                    <span className="px-3 py-2 text-sm font-medium text-brand-700">{t('dups.kept')}</span>
+                    <span className="px-3 py-2 text-sm font-medium text-brand-700 dark:text-brand-300">{t('dups.kept')}</span>
                   ) : (
                     <Button
                       disabled={busy}

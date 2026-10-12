@@ -107,7 +107,7 @@ function Message({
                   </span>
                   <button
                     type="button"
-                    className="text-brand-600 hover:underline"
+                    className="text-brand-600 dark:text-brand-300 hover:underline"
                     onClick={() => onOpen(s)}
                   >
                     {t('corpus.open_pdf')}

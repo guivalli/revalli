@@ -34,7 +34,7 @@ export function FullTextPanel({
     list.find((f) => f.id === (focus?.fileId ?? chosen)) ?? list.find((f) => f.is_main) ?? list[0]
 
   const uploader = canUpload && (
-    <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-brand-600 hover:underline">
+    <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-brand-600 dark:text-brand-300 hover:underline">
       <input
         type="file"
         accept="application/pdf,.pdf"

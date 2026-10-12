@@ -192,7 +192,7 @@ function Editor({ initial, onSaved }: { initial: MetaAnalysisT | null; onSaved: 
             </Button>
           </div>
           <details>
-            <summary className="cursor-pointer text-sm text-brand-600">{t('meta.paste')}</summary>
+            <summary className="cursor-pointer text-sm text-brand-600 dark:text-brand-300">{t('meta.paste')}</summary>
             <div className="mt-2 space-y-2">
               <p className="text-xs text-stone-500">
                 {t('meta.paste_hint', { cols: [t('meta.study'), ...cols.map((c) => t(`meta.col_${c}`)), t('meta.subgroup')].join(' · ') })}
@@ -248,7 +248,7 @@ function Results({ analysis }: { analysis: MetaAnalysisT }) {
         <Button variant="ghost" onClick={() => void savePng(forest.current, `${name}-forest`)}>
           PNG
         </Button>
-        <a className="px-3 text-sm text-brand-600 hover:underline" href={metaExportUrl(project.id, analysis.id)}>
+        <a className="px-3 text-sm text-brand-600 dark:text-brand-300 hover:underline" href={metaExportUrl(project.id, analysis.id)}>
           CSV
         </a>
       </div>
@@ -336,7 +336,7 @@ export default function Meta() {
             role="tab"
             aria-selected={adding}
             onClick={() => setParams({ novo: '1' })}
-            className={`rounded-md px-3 py-1.5 text-sm ${adding || list.length === 0 ? 'bg-brand-600 text-white' : 'text-brand-600 hover:underline'}`}
+            className={`rounded-md px-3 py-1.5 text-sm ${adding || list.length === 0 ? 'bg-brand-600 text-white' : 'text-brand-600 dark:text-brand-300 hover:underline'}`}
           >
             {t('meta.new')}
           </button>

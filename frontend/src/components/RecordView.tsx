@@ -15,7 +15,7 @@ export function RecordLinks({ r }: { r: Pick<RecordItem, 'doi' | 'pmid'> }) {
     <span className="space-x-3 text-xs">
       {r.doi && (
         <a
-          className="text-brand-600 hover:underline"
+          className="text-brand-600 dark:text-brand-300 hover:underline"
           href={`https://doi.org/${r.doi}`}
           target="_blank"
           rel="noreferrer noopener"
@@ -25,7 +25,7 @@ export function RecordLinks({ r }: { r: Pick<RecordItem, 'doi' | 'pmid'> }) {
       )}
       {r.pmid && (
         <a
-          className="text-brand-600 hover:underline"
+          className="text-brand-600 dark:text-brand-300 hover:underline"
           href={`https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/`}
           target="_blank"
           rel="noreferrer noopener"

@@ -295,7 +295,7 @@ export default function ScreeningSession() {
   const hlInc = s?.highlight_include ?? []
   const hlExc = s?.highlight_exclude ?? []
   const back = (
-    <Link to={`../triagem?fase=${phase}`} className="text-sm text-brand-600 hover:underline">
+    <Link to={`../triagem?fase=${phase}`} className="text-sm text-brand-600 dark:text-brand-300 hover:underline">
       ← {t('screening.back')}
     </Link>
   )

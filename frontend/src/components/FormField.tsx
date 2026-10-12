@@ -74,7 +74,7 @@ function TableInput({
       {!fixed && !disabled && (
         <button
           type="button"
-          className="mt-1 text-sm text-brand-600 hover:underline"
+          className="mt-1 text-sm text-brand-600 dark:text-brand-300 hover:underline"
           onClick={() => onChange([...rows, {}])}
         >
           {t('extraction.add_row')}

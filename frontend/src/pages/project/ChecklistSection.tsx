@@ -208,7 +208,7 @@ export function ChecklistSection() {
       {data.data && (
         <p className="flex flex-wrap items-center gap-4 text-sm">
           <span>{t('checklist.progress', { done: resolved, total: entries.size })}</span>
-          <a className="text-brand-600 hover:underline" href={checklistExportUrl(project.id, kind)}>
+          <a className="text-brand-600 dark:text-brand-300 hover:underline" href={checklistExportUrl(project.id, kind)}>
             {t('checklist.export')}
           </a>
         </p>

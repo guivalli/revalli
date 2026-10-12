@@ -169,10 +169,10 @@ function FormPanel({ form }: { form: ExtractionFormT }) {
         {runAI.isSuccess && <p className="text-sm text-stone-500">{t('extraction.ai_started')}</p>}
         {canResolve && (
           <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            <a className="text-brand-600 hover:underline" href={exportUrl(project.id, form.id, 'wide')}>
+            <a className="text-brand-600 dark:text-brand-300 hover:underline" href={exportUrl(project.id, form.id, 'wide')}>
               {t('extraction.export_wide')}
             </a>
-            <a className="text-brand-600 hover:underline" href={exportUrl(project.id, form.id, 'long')}>
+            <a className="text-brand-600 dark:text-brand-300 hover:underline" href={exportUrl(project.id, form.id, 'long')}>
               {t('extraction.export_long')}
             </a>
           </p>
@@ -208,7 +208,7 @@ function FormPanel({ form }: { form: ExtractionFormT }) {
                 <span className="w-28 text-xs text-stone-500">
                   {u.mine ? t(`extraction.mine_${u.mine}`) : t('extraction.mine_none')}
                 </span>
-                <Link to={`${form.id}/${u.record_id}`} className="font-medium text-brand-600 hover:underline">
+                <Link to={`${form.id}/${u.record_id}`} className="font-medium text-brand-600 dark:text-brand-300 hover:underline">
                   {u.mine === 'done' || u.state === 'resolved' ? t('extraction.open') : t('extraction.extract')}
                 </Link>
               </li>
@@ -259,7 +259,7 @@ export default function Extraction() {
               aria-selected={adding}
               role="tab"
               onClick={() => setParams({ novo: '1' })}
-              className={`rounded-md px-3 py-1.5 text-sm ${adding ? 'bg-brand-600 text-white' : 'text-brand-600 hover:underline'}`}
+              className={`rounded-md px-3 py-1.5 text-sm ${adding ? 'bg-brand-600 text-white' : 'text-brand-600 dark:text-brand-300 hover:underline'}`}
             >
               {t('extraction.new_form')}
             </button>

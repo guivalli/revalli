@@ -269,7 +269,7 @@ export function PdfViewer({
         </button>
         {doc && <span className="text-stone-500">{t('pdf.pages', { count: doc.numPages })}</span>}
         {total > 0 && <span className="text-stone-500">{t('pdf.hits', { count: total })}</span>}
-        <a href={url} target="_blank" rel="noreferrer" className="ml-auto text-brand-600 hover:underline">
+        <a href={url} target="_blank" rel="noreferrer" className="ml-auto text-brand-600 dark:text-brand-300 hover:underline">
           {t('pdf.open')}
         </a>
       </div>

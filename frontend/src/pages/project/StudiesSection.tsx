@@ -132,7 +132,7 @@ export function StudiesSection() {
                       canEdit && (
                         <button
                           type="button"
-                          className="shrink-0 text-xs text-brand-600 hover:underline"
+                          className="shrink-0 text-xs text-brand-600 dark:text-brand-300 hover:underline"
                           onClick={() => update.mutate({ sid: s.id, primary_record_id: r.id })}
                         >
                           {t('studies.make_primary')}

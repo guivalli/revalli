@@ -56,7 +56,7 @@ export default function AcceptInvite() {
             <Link
               to="/login"
               state={{ from: `/convite/${token}` }}
-              className="text-brand-600 underline"
+              className="text-brand-600 dark:text-brand-300 underline"
             >
               {t('login.submit')}
             </Link>

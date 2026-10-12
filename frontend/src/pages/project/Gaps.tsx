@@ -120,7 +120,7 @@ function Matrix({ map, pid }: { map: GapMap; pid: string }) {
               const s = map.studies[id]
               return (
                 <li key={id}>
-                  <Link className="text-brand-600 hover:underline" to={`/projetos/${pid}/sintese/${id}`}>
+                  <Link className="text-brand-600 dark:text-brand-300 hover:underline" to={`/projetos/${pid}/sintese/${id}`}>
                     {s.label}
                   </Link>
                   <span className="text-stone-500">
@@ -182,7 +182,7 @@ export default function Gaps() {
               {t('gaps.studies', { count: map.data.total_studies })}
             </p>
             <a
-              className="text-sm text-brand-600 hover:underline"
+              className="text-sm text-brand-600 dark:text-brand-300 hover:underline"
               href={gapExportUrl(project.id, rows, cols)}
             >
               {t('gaps.export')}

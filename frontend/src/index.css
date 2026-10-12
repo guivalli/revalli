@@ -1,15 +1,43 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #eef6f4;
-  --color-brand-100: #d5ebe5;
-  --color-brand-500: #2f8a76;
-  --color-brand-600: #24705f;
-  --color-brand-700: #1d5a4d;
+  /* Azul do logo como cor principal; o verde-limão do logo fica para destaques */
+  --color-brand-50: #eef3fc;
+  --color-brand-100: #dbe6f9;
+  --color-brand-200: #b9cef3;
+  --color-brand-300: #8eb0ea;
+  --color-brand-400: #5f8bdd;
+  --color-brand-500: #3a6ccc;
+  --color-brand-600: #2a52a8;
+  --color-brand-700: #223f85;
+  --color-brand-800: #19305f;
+  --color-brand-900: #10224a;
+  --color-accent-400: #b6dc51;
+  --color-accent-500: #9cc93a;
+
+  /* Neutros frios (tom do azul-marinho do logo) no lugar do cinza quente */
+  --color-stone-50: #f8fafc;
+  --color-stone-100: #f1f5f9;
+  --color-stone-200: #e2e8f0;
+  --color-stone-300: #cbd5e1;
+  --color-stone-400: #94a3b8;
+  --color-stone-500: #64748b;
+  --color-stone-600: #475569;
+  --color-stone-700: #334155;
+  --color-stone-800: #1e293b;
+  --color-stone-900: #121b2f;
+  --color-stone-950: #0a1120;
 }
 
+/* O tema escuro vem da classe `dark` na raiz (ver lib/theme.ts), não só do sistema */
+@custom-variant dark (&:where(.dark, .dark *));
+
 html {
-  color-scheme: light dark;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {

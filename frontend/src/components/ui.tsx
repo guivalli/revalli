@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, ComponentProps, ReactNode, SelectHTMLAttributes } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
+import { Logo } from './Logo'
 
 const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(' ')
 
@@ -59,6 +60,34 @@ export function Card({ children, className }: { children: ReactNode; className?:
   )
 }
 
+/** Cartão com cabeçalho: título à esquerda e ações à direita, separados do conteúdo. */
+export function Section({
+  title,
+  actions,
+  children,
+  className,
+}: {
+  title: ReactNode
+  actions?: ReactNode
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section
+      className={cx(
+        'overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900',
+        className,
+      )}
+    >
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 px-5 py-3 dark:border-stone-800">
+        <h2 className="font-semibold">{title}</h2>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  )
+}
+
 export function ErrorText({ error }: { error: unknown }) {
   const { t } = useTranslation()
   if (!error) return null
@@ -84,10 +113,8 @@ export function CenteredPage({ children }: { children: ReactNode }) {
 export function Brand() {
   const { t } = useTranslation()
   return (
-    <div className="text-center">
-      <h1 className="text-3xl font-semibold tracking-tight text-brand-700 dark:text-brand-100">
-        {t('app.name')}
-      </h1>
+    <div className="flex flex-col items-center gap-2 text-center">
+      <Logo variant="stacked" height={132} />
       <p className="text-sm text-stone-500">{t('app.tagline')}</p>
     </div>
   )

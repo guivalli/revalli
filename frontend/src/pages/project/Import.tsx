@@ -125,7 +125,7 @@ export default function Import() {
               required
               type="file"
               accept=".ris,.txt,.nbib,.xml,.bib,.csv,.tsv,.json"
-              className="file:mr-3 file:rounded file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-brand-700"
+              className="file:mr-3 file:rounded file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-brand-700 dark:file:bg-brand-900 dark:file:text-brand-100"
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">

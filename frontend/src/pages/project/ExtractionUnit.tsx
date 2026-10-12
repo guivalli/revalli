@@ -23,7 +23,7 @@ function QuoteLine({ q, onShow }: { q: QuoteT; onShow: (f: Focus) => void }) {
       {q.page && (
         <button
           type="button"
-          className="ml-2 text-brand-600 hover:underline"
+          className="ml-2 text-brand-600 dark:text-brand-300 hover:underline"
           onClick={() => onShow({ page: q.page!, text: q.text, fileId: q.file_id })}
         >
           {t('extraction.show_in_pdf')}
@@ -71,7 +71,7 @@ function FieldBlock({
           <span className="font-medium text-violet-800 dark:text-violet-300">{t('extraction.ai_says')}</span>{' '}
           {format(f, aiValue)}
           {!disabled && (
-            <button type="button" className="ml-2 text-brand-600 hover:underline" onClick={onUseAI}>
+            <button type="button" className="ml-2 text-brand-600 dark:text-brand-300 hover:underline" onClick={onUseAI}>
               {t('extraction.use')}
             </button>
           )}
@@ -205,7 +205,7 @@ function Compare({ detail }: { detail: UnitDetailT }) {
                       {detail.can_resolve && !row.agree && row.values[e.id] != null && (
                         <button
                           type="button"
-                          className="ml-2 text-xs text-brand-600 hover:underline"
+                          className="ml-2 text-xs text-brand-600 dark:text-brand-300 hover:underline"
                           onClick={() => setCons({ ...current, [f.id]: row.values[e.id] })}
                         >
                           {t('extraction.use')}
@@ -267,7 +267,7 @@ export default function ExtractionUnit() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link to={back} className="text-sm text-brand-600 hover:underline">
+        <Link to={back} className="text-sm text-brand-600 dark:text-brand-300 hover:underline">
           ← {t('extraction.back')}
         </Link>
         <span className="text-sm text-stone-500">

@@ -111,15 +111,15 @@ function CodeRow({
           <span className="text-xs text-stone-500">{t('coding.excerpts_count', { count: code.excerpts })}</span>
           {canEdit && (
             <span className="flex gap-1 opacity-70 group-hover:opacity-100">
-              <button type="button" className="text-xs text-brand-600 hover:underline" onClick={() => setMode('child')}>
+              <button type="button" className="text-xs text-brand-600 dark:text-brand-300 hover:underline" onClick={() => setMode('child')}>
                 + {t('coding.subcode')}
               </button>
-              <button type="button" className="text-xs text-brand-600 hover:underline" onClick={() => setMode('rename')}>
+              <button type="button" className="text-xs text-brand-600 dark:text-brand-300 hover:underline" onClick={() => setMode('rename')}>
                 {t('coding.rename')}
               </button>
               {canManage && (
                 <>
-                  <button type="button" className="text-xs text-brand-600 hover:underline" onClick={() => setMode('merge')}>
+                  <button type="button" className="text-xs text-brand-600 dark:text-brand-300 hover:underline" onClick={() => setMode('merge')}>
                     {t('coding.merge')}
                   </button>
                   <button
@@ -194,7 +194,7 @@ function CodeExcerpts({ code, recordId, onClose }: { code: Code; recordId?: stri
           <li key={e.id} className="border-l-4 pl-3 text-sm" style={{ borderColor: code.color || '#a8a29e' }}>
             <q className="italic">{e.text}</q>
             <p className="text-xs text-stone-500">
-              <Link to={e.record_id} className="font-medium text-brand-600 hover:underline">
+              <Link to={e.record_id} className="font-medium text-brand-600 dark:text-brand-300 hover:underline">
                 {e.study}
               </Link>
               {e.page && ` · ${t('coding.page')} ${e.page}`} · {t('coding.by', { name: e.user_name })}
@@ -290,7 +290,7 @@ export default function Coding() {
           <h1 className="text-lg font-semibold">{t('coding.title')}</h1>
           <p className="text-sm text-stone-500">{t('coding.hint')}</p>
         </div>
-        <a className="text-sm text-brand-600 hover:underline" href={codingExportUrl(project.id)}>
+        <a className="text-sm text-brand-600 dark:text-brand-300 hover:underline" href={codingExportUrl(project.id)}>
           {t('coding.export')}
         </a>
       </div>
@@ -325,7 +325,7 @@ export default function Coding() {
                 </div>
                 {!u.has_pdf && <span className="text-xs text-stone-500">{t('coding.no_pdf')}</span>}
                 <span className="text-xs text-stone-500">{t('coding.excerpts_count', { count: u.excerpts })}</span>
-                <Link to={u.record_id} className="font-medium text-brand-600 hover:underline">
+                <Link to={u.record_id} className="font-medium text-brand-600 dark:text-brand-300 hover:underline">
                   {t('coding.code_study')}
                 </Link>
               </li>
