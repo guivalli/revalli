@@ -214,7 +214,8 @@
     "ai_reasons": "Agrupando motivos de exclusão com IA",
     "stop": "Parar",
     "cancelling": "{{label}}: parando…",
-    "cancelled": "A tarefa “{{label}}” foi interrompida."
+    "cancelled": "A tarefa “{{label}}” foi interrompida.",
+    "open_corpus": "Abrir o Corpus para indexar de novo"
   },
   "import": {
     "title": "Importar arquivo de busca",
@@ -1216,7 +1217,10 @@
     "close_pdf": "Fechar PDF",
     "remove": "Apagar",
     "model": "Modelo: {{model}}",
-    "numbers": "Números da resposta que não aparecem nos trechos citados: {{list}}. Confira no PDF antes de usar."
+    "numbers": "Números da resposta que não aparecem nos trechos citados: {{list}}. Confira no PDF antes de usar.",
+    "embeddings_unsupported": "O modelo de embeddings “{{model}}” não gera embeddings (parece ser um modelo de chat). Os trechos foram indexados e a busca segue só por palavras. Escolha um modelo de embeddings, como bge-m3, na tela IA e indexe de novo.",
+    "embeddings_failed": "Os embeddings não foram calculados ({{error}}). Os trechos foram indexados e a busca segue só por palavras.",
+    "open_ai_settings": "Abrir configurações de IA"
   },
   "account": {
     "tokens_title": "Chaves de API",

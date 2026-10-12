@@ -180,12 +180,22 @@ async def index_project(
 ) -> dict:
     files = await chunk_files(db, project, progress)
     res = await embeddings_model(db, project_ai(project).local_only)
-    embedded = await embed_chunks(db, project, res, progress) if res else 0
-    return {
+    embedded, problem = 0, None
+    if res:
+        # Os trechos já estão gravados: sem embeddings a busca segue só por texto, e o
+        # problema (modelo errado, provedor fora do ar) volta no resultado para a tela avisar
+        try:
+            embedded = await embed_chunks(db, project, res, progress)
+        except client.AIError as exc:
+            problem = str(exc)
+    out = {
         "files": files,
         "embedded": embedded,
         "embeddings": res.choice.model if res else None,
     }
+    if problem:
+        out["embeddings_error"] = problem
+    return out
 
 
 async def status(db: AsyncSession, project: Project) -> dict:

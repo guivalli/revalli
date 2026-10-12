@@ -85,10 +85,11 @@ export function useJob(pid: string, id: string | null) {
   })
 }
 
-export function useRecentJobs(pid: string) {
+export function useRecentJobs(pid: string, poll = false) {
   return useQuery({
     queryKey: ['projects', pid, 'jobs', 'recent'],
     queryFn: () => api.get<Job[]>(`${base(pid)}/jobs`),
+    refetchInterval: poll ? 3000 : false,
   })
 }
 

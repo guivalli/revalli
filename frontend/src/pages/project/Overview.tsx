@@ -111,7 +111,12 @@ export default function Overview() {
           <ErrorText error={enrich.error ?? dedup.error} />
           {failed.map((j) => (
             <p key={j.id} role="alert" className="text-sm text-red-700 dark:text-red-400">
-              {t('jobs.failed', { label: t(`jobs.${j.kind}`), error: j.error })}
+              {t('jobs.failed', { label: t(`jobs.${j.kind}`), error: j.error })}{' '}
+              {j.kind === 'corpus_index' && (
+                <Link to="conversa" className="underline">
+                  {t('jobs.open_corpus')}
+                </Link>
+              )}
             </p>
           ))}
         </Card>

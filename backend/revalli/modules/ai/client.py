@@ -87,7 +87,13 @@ async def chat(ep: Endpoint, messages: list[dict], *, json_mode: bool = True) ->
 
 
 async def embed(ep: Endpoint, texts: list[str]) -> tuple[list[list[float]], int]:
-    data = await _post(ep, "/embeddings", {"model": ep.model, "input": texts})
+    try:
+        data = await _post(ep, "/embeddings", {"model": ep.model, "input": texts})
+    except AIError as exc:
+        # Modelos de chat (ex.: qwen2.5 no Ollama) recusam embeddings com 501
+        if str(exc).startswith("http 501") or "support embeddings" in str(exc):
+            raise AIError("embeddings_unsupported") from exc
+        raise
     try:
         items = sorted(data["data"], key=lambda d: d.get("index", 0))
         vectors = [d["embedding"] for d in items]

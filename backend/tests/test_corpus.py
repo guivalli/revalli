@@ -319,6 +319,28 @@ async def test_hybrid_retrieval_with_embeddings(admin):
     assert usage["calls"] >= 3  # embeddings dos trechos, da pergunta e a conversa
 
 
+async def test_index_keeps_text_when_embeddings_model_is_unsupported(admin):
+    pid, (a, _, _) = await _project_included(admin)
+    await _setup_ai(admin, pid, embeddings=True)
+    await _upload(admin, pid, a, make_pdf("Aerobic", "We randomised 120 adults with anxiety."))
+    base = f"/api/projects/{pid}/corpus"
+
+    def refuse(request: httpx.Request) -> httpx.Response:
+        msg = "This server does not support embeddings. Start it with `--embeddings`"
+        return httpx.Response(501, json={"error": {"message": msg}})
+
+    client.set_transport(httpx.MockTransport(refuse))
+    try:
+        job = (await admin.post(f"{base}/index", json={})).json()
+    finally:
+        client.set_transport(None)
+    assert job["status"] == "done"
+    assert job["result"]["embeddings_error"] == "embeddings_unsupported"
+    assert job["result"]["embeddings"] == "fake-embed" and job["result"]["embedded"] == 0
+    st = (await admin.get(f"{base}/status")).json()
+    assert st["chunks"] > 0 and st["embedded"] == 0 and st["pending_files"] == 0
+
+
 async def test_removing_a_file_removes_its_chunks(admin):
     pid, (a, _, _) = await _project_included(admin)
     await _setup_ai(admin, pid)

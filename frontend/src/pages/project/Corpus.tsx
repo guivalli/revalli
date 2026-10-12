@@ -7,6 +7,8 @@ import {
   useCorpusMessages,
   useCorpusStatus,
 } from '../../api/corpus'
+import { useMe } from '../../api/hooks'
+import { useRecentJobs } from '../../api/records'
 import type { CorpusMessage, CorpusSource } from '../../api/types'
 import { FullTextPanel } from '../../components/FullTextPanel'
 import { Button, Card, ErrorText, Field, Select } from '../../components/ui'
@@ -141,6 +143,8 @@ export default function Corpus() {
   const [waiting, setWaiting] = useState(false)
   const status = useCorpusStatus(project.id, waiting)
   const messages = useCorpusMessages(project.id)
+  const { data: me } = useMe()
+  const recent = useRecentJobs(project.id, waiting)
   const { index, ask, remove } = useCorpusActions(project.id)
   const [question, setQuestion] = useState('')
   const [scope, setScope] = useState<'included' | 'all'>('included')
@@ -150,6 +154,12 @@ export default function Corpus() {
   const s = status.data
   const busy = index.isPending || (waiting && (!s || indexIncomplete(s)))
   const history = messages.data ?? []
+  // Os trechos são indexados mesmo quando os embeddings falham; a tela avisa o motivo
+  const lastIndex = (recent.data ?? []).find((j) => j.kind === 'corpus_index')
+  const embedProblem =
+    lastIndex?.status === 'done' && typeof lastIndex.result.embeddings_error === 'string'
+      ? lastIndex.result.embeddings_error
+      : null
   const ready = !!s && s.enabled && s.chunks > 0 && !!s.chat_model
 
   const submit = () =>
@@ -198,6 +208,18 @@ export default function Corpus() {
         )}
         {s && s.chunks === 0 && s.pending_files === 0 && (
           <p className="text-sm text-stone-500">{t('corpus.empty')}</p>
+        )}
+        {embedProblem && (
+          <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">
+            {embedProblem === 'embeddings_unsupported'
+              ? t('corpus.embeddings_unsupported', { model: String(lastIndex?.result.embeddings ?? '') })
+              : t('corpus.embeddings_failed', { error: embedProblem })}{' '}
+            {me?.is_admin && (
+              <Link to="/ia" className="underline">
+                {t('corpus.open_ai_settings')}
+              </Link>
+            )}
+          </p>
         )}
         {canManage && s && s.enabled && (
           <div>

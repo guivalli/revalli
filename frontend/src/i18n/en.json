@@ -214,7 +214,8 @@
     "ai_reasons": "Grouping exclusion reasons with AI",
     "stop": "Stop",
     "cancelling": "{{label}}: stopping…",
-    "cancelled": "The “{{label}}” task was stopped."
+    "cancelled": "The “{{label}}” task was stopped.",
+    "open_corpus": "Open Corpus to index again"
   },
   "import": {
     "title": "Import a search file",
@@ -1216,7 +1217,10 @@
     "close_pdf": "Close PDF",
     "remove": "Delete",
     "model": "Model: {{model}}",
-    "numbers": "Numbers in the answer that do not appear in the cited passages: {{list}}. Check the PDF before using them."
+    "numbers": "Numbers in the answer that do not appear in the cited passages: {{list}}. Check the PDF before using them.",
+    "embeddings_unsupported": "The embeddings model “{{model}}” cannot produce embeddings (it looks like a chat model). The passages were indexed and search falls back to keywords. Pick an embeddings model such as bge-m3 on the AI page and index again.",
+    "embeddings_failed": "Embeddings were not computed ({{error}}). The passages were indexed and search falls back to keywords.",
+    "open_ai_settings": "Open AI settings"
   },
   "account": {
     "tokens_title": "API keys",
