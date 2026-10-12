@@ -23,6 +23,8 @@ const quietLink = `${linkButton} border border-stone-300 text-stone-700 hover:bg
 function jobError(t: TFunction, error: string): string {
   if (/^AIError: connection\b/.test(error)) return t('jobs.error_ai_unreachable')
   if (/^AIError: embeddings_unsupported\b/.test(error)) return t('jobs.error_embeddings_unsupported')
+  if (/^AIError: rate_limited\b/.test(error)) return t('jobs.error_rate_limited')
+  if (/^AIError: quota_exhausted\b/.test(error)) return t('jobs.error_quota_exhausted')
   return error
 }
 

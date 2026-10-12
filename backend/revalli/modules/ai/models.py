@@ -22,13 +22,15 @@ class AIProvider(IdMixin, TimestampMixin, Base):
     __tablename__ = "ai_providers"
 
     name: Mapped[str] = mapped_column(String(100))
-    # Preset usado na interface (ollama, openai, anthropic, google, openrouter, custom)
+    # Preset usado na interface (ollama, openai, anthropic, google, groq, mistral, openrouter, custom)
     kind: Mapped[str] = mapped_column(String(30), default="custom")
     base_url: Mapped[str] = mapped_column(String(500))
     api_key_enc: Mapped[str] = mapped_column(Text, default="")
     api_key_hint: Mapped[str] = mapped_column(String(10), default="")
     # Local = roda no próprio servidor; projetos "só local" só usam estes
     is_local: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Pedidos por minuto que a conta do provedor aceita (faixas gratuitas têm teto); None = sem limite
+    rpm_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class InstanceSetting(Base):

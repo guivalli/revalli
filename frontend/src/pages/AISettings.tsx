@@ -15,23 +15,41 @@ import { useSaveSourcesSettings, useSourcesSettings } from '../api/sources'
 import type { InstanceAISettings, Provider, ProviderKind, TaskModel } from '../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../components/ui'
 
-const PRESETS: Record<ProviderKind, { url: string; local: boolean; key: boolean }> = {
+// `rpm` é o teto sugerido de pedidos por minuto para a faixa gratuita; `free` mostra o aviso
+const PRESETS: Record<
+  ProviderKind,
+  { url: string; local: boolean; key: boolean; rpm?: number; free?: boolean }
+> = {
   ollama: { url: 'http://ollama:11434/v1', local: true, key: false },
   openai: { url: 'https://api.openai.com/v1', local: false, key: true },
   anthropic: { url: 'https://api.anthropic.com/v1', local: false, key: true },
-  google: { url: 'https://generativelanguage.googleapis.com/v1beta/openai', local: false, key: true },
-  openrouter: { url: 'https://openrouter.ai/api/v1', local: false, key: true },
+  google: {
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    local: false,
+    key: true,
+    rpm: 12,
+    free: true,
+  },
+  groq: { url: 'https://api.groq.com/openai/v1', local: false, key: true, rpm: 25, free: true },
+  mistral: { url: 'https://api.mistral.ai/v1', local: false, key: true, rpm: 50, free: true },
+  openrouter: { url: 'https://openrouter.ai/api/v1', local: false, key: true, rpm: 15, free: true },
   custom: { url: '', local: false, key: true },
 }
 
-const empty: ProviderPayload = { name: '', kind: 'ollama', base_url: PRESETS.ollama.url, is_local: true }
+const empty: ProviderPayload = { name: '', kind: 'ollama', base_url: PRESETS.ollama.url, is_local: true, rpm_limit: null }
 
 function ProviderForm({ initial, onDone }: { initial?: Provider; onDone: () => void }) {
   const { t } = useTranslation()
   const { create, update } = useProviderActions()
   const [p, setP] = useState<ProviderPayload>(
     initial
-      ? { name: initial.name, kind: initial.kind, base_url: initial.base_url, is_local: initial.is_local }
+      ? {
+          name: initial.name,
+          kind: initial.kind,
+          base_url: initial.base_url,
+          is_local: initial.is_local,
+          rpm_limit: initial.rpm_limit,
+        }
       : empty,
   )
   const [key, setKey] = useState('')
@@ -51,7 +69,13 @@ function ProviderForm({ initial, onDone }: { initial?: Provider; onDone: () => v
             value={p.kind}
             onChange={(e) => {
               const kind = e.target.value as ProviderKind
-              setP({ ...p, kind, base_url: PRESETS[kind].url, is_local: PRESETS[kind].local })
+              setP({
+                ...p,
+                kind,
+                base_url: PRESETS[kind].url,
+                is_local: PRESETS[kind].local,
+                rpm_limit: PRESETS[kind].rpm ?? null,
+              })
             }}
           >
             {(Object.keys(PRESETS) as ProviderKind[]).map((k) => (
@@ -79,6 +103,24 @@ function ProviderForm({ initial, onDone }: { initial?: Provider; onDone: () => v
           <Input type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} />
         </Field>
       </div>
+      {!p.is_local && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('ai.rpm_limit')} hint={t('ai.rpm_limit_hint')}>
+            <Input
+              type="number"
+              min={1}
+              max={1000}
+              value={p.rpm_limit ?? ''}
+              onChange={(e) => setP({ ...p, rpm_limit: e.target.value ? Number(e.target.value) : null })}
+            />
+          </Field>
+        </div>
+      )}
+      {PRESETS[p.kind].free && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-900/20 dark:text-amber-100">
+          {t('ai.free_note')}
+        </p>
+      )}
       <label className="flex items-start gap-3">
         <input
           type="checkbox"

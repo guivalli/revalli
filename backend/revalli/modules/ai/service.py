@@ -82,7 +82,10 @@ async def resolve(db: AsyncSession, task: str, local_only: bool) -> Resolved:
     if local_only and not provider.is_local:
         raise AIError("local_only")
     ep = Endpoint(
-        base_url=provider.base_url, api_key=decrypt(provider.api_key_enc), model=choice.model
+        base_url=provider.base_url,
+        api_key=decrypt(provider.api_key_enc),
+        model=choice.model,
+        rpm=provider.rpm_limit,
     )
     return Resolved(ep, provider, choice)
 
@@ -382,7 +385,14 @@ async def run_screening(
                 stats["last_error"] = str(exc)[:300]
                 consecutive_failures += 1
                 await db.commit()  # guarda o registro de uso mesmo quando a resposta falha
-                if consecutive_failures >= 3 and str(exc).startswith(("connection", "http")):
+                if str(exc) == "quota_exhausted":
+                    # Acabou a cota do dia na faixa gratuita: insistir só gasta pedidos.
+                    # O que já foi feito fica em cache e "continuar" retoma amanhã.
+                    stats["stopped"] = "quota"
+                    break
+                if consecutive_failures >= 3 and str(exc).startswith(
+                    ("connection", "http", "rate_limited")
+                ):
                     raise
                 continue
             used = await spent(db, project.id) if res.choice.price_input else used

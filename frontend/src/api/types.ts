@@ -239,7 +239,15 @@ export interface Prisma {
   included: number
   included_reports: number
 }
-export type ProviderKind = 'ollama' | 'openai' | 'anthropic' | 'google' | 'openrouter' | 'custom'
+export type ProviderKind =
+  | 'ollama'
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'groq'
+  | 'mistral'
+  | 'openrouter'
+  | 'custom'
 export interface Provider {
   id: string
   name: string
@@ -247,6 +255,7 @@ export interface Provider {
   base_url: string
   api_key_hint: string
   is_local: boolean
+  rpm_limit: number | null
 }
 export interface TaskModel {
   provider_id: string | null

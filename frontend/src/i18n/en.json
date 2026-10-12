@@ -179,7 +179,10 @@
     "openalex_key_needed": "The free daily OpenAlex limit without a key is used up (it is shared by your whole network and resets at midnight UTC). Create a free key at openalex.org/settings/api and enter it on the AI page (top menu, as administrator) or in OPENALEX_API_KEY in deploy/.env.",
     "ollama_helper_not_configured": "The helper that starts and stops Ollama is not installed. See docs/ollama.md.",
     "openalex_key_invalid": "The OpenAlex key can only contain letters, numbers, hyphens and underscores.",
-    "ai_phase_not_supported": "AI screening is only available at title and abstract."
+    "ai_phase_not_supported": "AI screening is only available at title and abstract.",
+    "ai_rate_limited": "The AI provider refused for too many requests. Try again shortly or lower the per-minute limit on the AI page.",
+    "ai_quota_exhausted": "The AI provider's daily quota ran out. Try tomorrow or use another provider.",
+    "ai_embeddings_unsupported": "The configured embeddings model cannot produce embeddings. Pick an embeddings model on the AI page."
   },
   "footer": {
     "vibecoded": "Experimental project built with heavy AI assistance."
@@ -256,7 +259,9 @@
     "cancelled": "The “{{label}}” task was stopped.",
     "open_corpus": "Open the “{{tab}}” tab to index again",
     "error_ai_unreachable": "the AI provider did not answer. If it is the local Ollama, turn it on in the AI page and try again.",
-    "error_embeddings_unsupported": "the embeddings model cannot produce embeddings. Pick an embeddings model (for example, bge-m3) on the AI page."
+    "error_embeddings_unsupported": "the embeddings model cannot produce embeddings. Pick an embeddings model (for example, bge-m3) on the AI page.",
+    "error_rate_limited": "the AI provider refused for too many requests per minute. Lower the provider's per-minute limit on the AI page or try again in a few minutes.",
+    "error_quota_exhausted": "the AI provider's daily quota ran out. What was done is saved; continue tomorrow or switch providers."
   },
   "import": {
     "title": "Import a search file",
@@ -500,7 +505,9 @@
       "anthropic": "Anthropic",
       "google": "Google",
       "openrouter": "OpenRouter",
-      "custom": "Other (OpenAI-compatible)"
+      "custom": "Other (OpenAI-compatible)",
+      "groq": "Groq (free tier)",
+      "mistral": "Mistral (free tier)"
     },
     "models_title": "Models per task",
     "provider": "Provider",
@@ -616,7 +623,10 @@
     "openalex_source_none": "No key configured.",
     "openalex_save": "Save key",
     "openalex_clear": "Delete the saved key",
-    "openalex_saved": "Key saved."
+    "openalex_saved": "Key saved.",
+    "rpm_limit": "Requests per minute limit",
+    "rpm_limit_hint": "Optional. Free tiers have a cap; ReValli spaces the requests to stay under it. Leave empty if there is no limit.",
+    "free_note": "This service has a free tier with usage limits (requests per minute and per day). On the free plan, the provider may use what you send to improve its own models: use it only with already published titles and abstracts, never with unpublished or confidential material. Projects marked “local only” do not use this provider."
   },
   "pdf": {
     "zoom_out": "Zoom out",
@@ -1354,7 +1364,9 @@
     "stopped": "Screening stopped: {{done}} of {{total}} records analysed. What was done is saved.",
     "continue": "Continue where it stopped",
     "redo": "Redo everything",
-    "redo_hint": "Continue only analyses the missing records. Redo analyses all of them again and replaces the saved answers (it has a cost with a remote model)."
+    "redo_hint": "Continue only analyses the missing records. Redo analyses all of them again and replaces the saved answers (it has a cost with a remote model).",
+    "stopped_quota": "Screening stopped: the AI provider's daily quota ran out ({{done}} of {{total}} analysed). What was done is saved; use Continue tomorrow or switch providers.",
+    "stopped_budget": "Screening stopped by the project's spending cap ({{done}} of {{total}} analysed). What was done is saved."
   },
   "protocol_ai": {
     "not_configured": "AI is not configured on this installation yet (provider and screening model).",

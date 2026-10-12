@@ -627,7 +627,11 @@ function AIScreenCard({ phase }: { phase: Phase }) {
   const last = (recent.data ?? []).find(
     (j) => j.kind === 'ai_screen' && (j.result as { phase?: string }).phase === phase,
   )
-  const stopped = !running && last?.status === 'cancelled' ? last : undefined
+  const stopReason =
+    last?.status === 'cancelled' ? 'user' : (last?.result as { stopped?: string } | undefined)?.stopped
+  const stopped = !running && last && (stopReason === 'user' || stopReason === 'quota' || stopReason === 'budget')
+    ? last
+    : undefined
   const begin = (redo: boolean) => {
     setStarted(false)
     setForce(redo)
@@ -691,10 +695,17 @@ function AIScreenCard({ phase }: { phase: Phase }) {
           {stopped && !estimate.isPending && !run.isPending && (
             <div className="space-y-2 rounded-md border border-stone-300 p-3 text-sm dark:border-stone-700">
               <p>
-                {t('ai_screen.stopped', {
-                  done: (stopped.result as { done?: number }).done ?? 0,
-                  total: (stopped.result as { total?: number }).total ?? 0,
-                })}
+                {t(
+                  stopReason === 'quota'
+                    ? 'ai_screen.stopped_quota'
+                    : stopReason === 'budget'
+                      ? 'ai_screen.stopped_budget'
+                      : 'ai_screen.stopped',
+                  {
+                    done: (stopped.result as { done?: number }).done ?? 0,
+                    total: (stopped.result as { total?: number }).total ?? 0,
+                  },
+                )}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" className="border border-stone-300 dark:border-stone-700" onClick={() => begin(false)}>

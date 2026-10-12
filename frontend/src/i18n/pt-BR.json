@@ -179,7 +179,10 @@
     "openalex_key_needed": "O limite diário gratuito do OpenAlex sem chave acabou (ele é compartilhado por toda a sua rede e volta à meia-noite UTC). Crie uma chave gratuita em openalex.org/settings/api e cadastre na tela IA (menu superior, como administrador) ou em OPENALEX_API_KEY no deploy/.env.",
     "ollama_helper_not_configured": "O auxiliar que liga e desliga o Ollama não está instalado. Veja docs/ollama.md.",
     "openalex_key_invalid": "A chave do OpenAlex só pode ter letras, números, hífen e sublinhado.",
-    "ai_phase_not_supported": "A triagem por IA só está disponível em título e resumo."
+    "ai_phase_not_supported": "A triagem por IA só está disponível em título e resumo.",
+    "ai_rate_limited": "O provedor de IA recusou por excesso de pedidos. Tente de novo em instantes ou reduza o limite por minuto na tela IA.",
+    "ai_quota_exhausted": "A cota do dia do provedor de IA acabou. Tente amanhã ou use outro provedor.",
+    "ai_embeddings_unsupported": "O modelo de embeddings configurado não gera embeddings. Escolha um modelo de embeddings na tela IA."
   },
   "footer": {
     "vibecoded": "Projeto experimental desenvolvido com auxílio intensivo de IA."
@@ -256,7 +259,9 @@
     "cancelled": "A tarefa “{{label}}” foi interrompida.",
     "open_corpus": "Abrir a aba “{{tab}}” para indexar de novo",
     "error_ai_unreachable": "o provedor de IA não respondeu. Se for o Ollama do computador, ligue-o na tela IA e tente de novo.",
-    "error_embeddings_unsupported": "o modelo de embeddings não gera embeddings. Escolha um modelo de embeddings (por exemplo, bge-m3) na tela IA."
+    "error_embeddings_unsupported": "o modelo de embeddings não gera embeddings. Escolha um modelo de embeddings (por exemplo, bge-m3) na tela IA.",
+    "error_rate_limited": "o provedor de IA recusou por excesso de pedidos por minuto. Reduza o limite por minuto do provedor na tela IA ou tente de novo em alguns minutos.",
+    "error_quota_exhausted": "a cota do dia do provedor de IA acabou. O que já foi feito ficou salvo; continue amanhã ou troque de provedor."
   },
   "import": {
     "title": "Importar arquivo de busca",
@@ -500,7 +505,9 @@
       "anthropic": "Anthropic",
       "google": "Google",
       "openrouter": "OpenRouter",
-      "custom": "Outro (compatível com OpenAI)"
+      "custom": "Outro (compatível com OpenAI)",
+      "groq": "Groq (faixa gratuita)",
+      "mistral": "Mistral (faixa gratuita)"
     },
     "models_title": "Modelos por tarefa",
     "provider": "Provedor",
@@ -616,7 +623,10 @@
     "openalex_source_none": "Nenhuma chave configurada.",
     "openalex_save": "Salvar chave",
     "openalex_clear": "Apagar a chave salva",
-    "openalex_saved": "Chave salva."
+    "openalex_saved": "Chave salva.",
+    "rpm_limit": "Limite de pedidos por minuto",
+    "rpm_limit_hint": "Opcional. Faixas gratuitas têm teto; o ReValli espaça os pedidos para não passar dele. Deixe vazio se não houver limite.",
+    "free_note": "Este serviço tem faixa gratuita com limites de uso (pedidos por minuto e por dia). No plano gratuito, o provedor pode usar o que você envia para melhorar os próprios modelos: use só com títulos e resumos já publicados, nunca com material inédito ou sigiloso. Projetos marcados como “só local” não usam este provedor."
   },
   "pdf": {
     "zoom_out": "Diminuir zoom",
@@ -1354,7 +1364,9 @@
     "stopped": "Triagem interrompida: {{done}} de {{total}} registros analisados. O que foi feito ficou salvo.",
     "continue": "Continuar de onde parou",
     "redo": "Refazer tudo",
-    "redo_hint": "Continuar analisa só os registros que faltam. Refazer analisa todos de novo e substitui as respostas guardadas (com modelo remoto, tem custo)."
+    "redo_hint": "Continuar analisa só os registros que faltam. Refazer analisa todos de novo e substitui as respostas guardadas (com modelo remoto, tem custo).",
+    "stopped_quota": "Triagem parada: a cota do dia do provedor de IA acabou ({{done}} de {{total}} analisados). O que foi feito ficou salvo; use Continuar amanhã ou troque de provedor.",
+    "stopped_budget": "Triagem parada pelo limite de gasto do projeto ({{done}} de {{total}} analisados). O que foi feito ficou salvo."
   },
   "protocol_ai": {
     "not_configured": "A IA ainda não foi configurada nesta instalação (provedor e modelo de triagem).",

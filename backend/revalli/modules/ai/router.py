@@ -54,6 +54,8 @@ def _ai_error(exc: AIError) -> HTTPException:
     code = str(exc)
     if code in ("not_configured", "local_only"):
         return HTTPException(409, f"ai_{code}")
+    if code in ("rate_limited", "quota_exhausted", "embeddings_unsupported"):
+        return HTTPException(502, f"ai_{code}")
     return HTTPException(502, "ai_provider_error")
 
 
@@ -67,6 +69,7 @@ async def list_providers(_: User = Depends(admin_user), db: AsyncSession = Depen
 
 def _apply(p: AIProvider, body: ProviderIn) -> None:
     p.name, p.kind, p.base_url, p.is_local = body.name, body.kind, body.base_url, body.is_local
+    p.rpm_limit = body.rpm_limit
     if body.clear_api_key:
         p.api_key_enc, p.api_key_hint = "", ""
     elif body.api_key:

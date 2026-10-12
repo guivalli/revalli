@@ -24,6 +24,7 @@ export interface ProviderPayload {
   api_key?: string
   clear_api_key?: boolean
   is_local: boolean
+  rpm_limit?: number | null
 }
 
 export function useProviders(enabled = true) {

@@ -11,12 +11,16 @@ PROVIDER_KINDS = ("ollama", "openai", "anthropic", "google", "openrouter", "cust
 
 class ProviderIn(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    kind: Literal["ollama", "openai", "anthropic", "google", "openrouter", "custom"] = "custom"
+    kind: Literal[
+        "ollama", "openai", "anthropic", "google", "groq", "mistral", "openrouter", "custom"
+    ] = "custom"
     base_url: str = Field(min_length=1, max_length=500, pattern=r"^https?://")
     # Vazio mantém a chave atual; use clear_api_key para apagar
     api_key: str = Field(default="", max_length=500)
     clear_api_key: bool = False
     is_local: bool = False
+    # Teto de pedidos por minuto (faixas gratuitas); vazio = sem limite
+    rpm_limit: int | None = Field(default=None, ge=1, le=1000)
 
 
 class ProviderOut(BaseModel):
@@ -28,6 +32,7 @@ class ProviderOut(BaseModel):
     base_url: str
     api_key_hint: str
     is_local: bool
+    rpm_limit: int | None = None
 
 
 class TaskModel(BaseModel):
