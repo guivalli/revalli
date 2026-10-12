@@ -28,6 +28,9 @@ class ProjectOut(BaseModel):
     created_at: datetime
     my_role: Role | None = None
     member_count: int = 0
+    # Referências importadas (antes de remover duplicatas) e quem criou o projeto
+    record_count: int = 0
+    owner_name: str = ""
 
 
 class MemberOut(BaseModel):

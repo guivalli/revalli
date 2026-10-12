@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from revalli.core.db import get_db
 from revalli.core.deps import current_user, get_membership, require_lead
-from revalli.models import Project, ProjectMember, User
+from revalli.models import Project, ProjectMember, Record, User
 from revalli.modules.fulltext import storage
 from revalli.modules.projects.models import Role
 from revalli.modules.projects.schemas import (
@@ -22,11 +22,44 @@ from revalli.modules.projects.schemas import (
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-def _out(project: Project, role: Role | None, count: int) -> ProjectOut:
+def _out(
+    project: Project,
+    role: Role | None,
+    count: int,
+    records: int = 0,
+    owner: str = "",
+) -> ProjectOut:
     out = ProjectOut.model_validate(project)
     out.my_role = role
     out.member_count = count
+    out.record_count = records
+    out.owner_name = owner
     return out
+
+
+async def _extras(db: AsyncSession, ids: list[uuid.UUID]) -> dict[uuid.UUID, tuple[int, str]]:
+    """Número de referências e nome de quem criou, por projeto."""
+    if not ids:
+        return {}
+    records = dict(
+        (
+            await db.execute(
+                select(Record.project_id, func.count())
+                .where(Record.project_id.in_(ids))
+                .group_by(Record.project_id)
+            )
+        ).all()
+    )
+    owners = dict(
+        (
+            await db.execute(
+                select(Project.id, User.full_name)
+                .join(User, User.id == Project.created_by_id)
+                .where(Project.id.in_(ids))
+            )
+        ).all()
+    )
+    return {i: (records.get(i, 0), owners.get(i, "")) for i in ids}
 
 
 async def _member_count(db: AsyncSession, project_id: uuid.UUID) -> int:
@@ -62,7 +95,8 @@ async def list_projects(user: User = Depends(current_user), db: AsyncSession = D
     if only is not None:
         q = q.where(Project.id == only)
     rows = (await db.execute(q)).all()
-    return [_out(p, Role(r) if r else None, n) for p, r, n in rows]
+    extras = await _extras(db, [p.id for p, _, _ in rows])
+    return [_out(p, Role(r) if r else None, n, *extras[p.id]) for p, r, n in rows]
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
@@ -79,7 +113,7 @@ async def create_project(
     await db.flush()
     db.add(ProjectMember(project_id=project.id, user_id=user.id, role=Role.lead))
     await db.commit()
-    return _out(project, Role.lead, 1)
+    return _out(project, Role.lead, 1, 0, user.full_name)
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
@@ -87,7 +121,8 @@ async def get_project(
     project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
 ):
     project, role = await get_membership(db, project_id, user)
-    return _out(project, role, await _member_count(db, project_id))
+    extra = (await _extras(db, [project_id]))[project_id]
+    return _out(project, role, await _member_count(db, project_id), *extra)
 
 
 @router.patch("/{project_id}", response_model=ProjectOut)
@@ -102,7 +137,8 @@ async def update_project(
         setattr(project, field, value.strip() if field == "title" else value)
     await db.commit()
     _, role = await get_membership(db, project_id, user)
-    return _out(project, role, await _member_count(db, project_id))
+    extra = (await _extras(db, [project_id]))[project_id]
+    return _out(project, role, await _member_count(db, project_id), *extra)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

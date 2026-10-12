@@ -14,6 +14,9 @@ async def test_create_and_list(admin):
     assert p["review_type"] == "scoping"
     projects = (await admin.get("/api/projects")).json()
     assert [x["id"] for x in projects] == [p["id"]]
+    # A lista traz o número de referências e quem criou o projeto
+    assert projects[0]["record_count"] == 0 and projects[0]["owner_name"]
+    assert (await admin.get(f"/api/projects/{p['id']}")).json()["owner_name"] == p["owner_name"]
 
 
 async def test_project_invite_adds_member_with_role(admin):
