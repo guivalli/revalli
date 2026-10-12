@@ -626,7 +626,9 @@
     "pending_open": "Open the article",
     "pending_proxy": "Open through the institution",
     "pending_nolink": "no DOI or link",
-    "pending_more": "{{count}} more in the full list (CSV)."
+    "pending_more": "{{count}} more in the full list (CSV).",
+    "empty_phase": "No reference has reached full text yet. They move to this phase when the number of reviewers required by the protocol has included them at title and abstract; if the project has fewer people than required, none arrive. Until then there are no PDFs to look for and no pending list.",
+    "empty_phase_link": "Open the Protocol"
   },
   "studies": {
     "title": "Studies with several reports",

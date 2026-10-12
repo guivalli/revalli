@@ -524,6 +524,14 @@ function FullTextSection() {
           </p>
         )}
       </div>
+      {s && s.records === 0 && (
+        <p role="status" className="rounded-md bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
+          {t('pdf.empty_phase')}{' '}
+          <Link to={`/projetos/${project.id}/protocolo`} className="font-medium underline">
+            {t('pdf.empty_phase_link')}
+          </Link>
+        </p>
+      )}
       {/* ZIP e busca de acesso aberto mexem em muitos registros de uma vez: só líderes */}
       {canManage && (
         <div className="grid gap-4 sm:grid-cols-2">

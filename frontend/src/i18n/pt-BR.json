@@ -626,7 +626,9 @@
     "pending_open": "Abrir o artigo",
     "pending_proxy": "Abrir pela instituição",
     "pending_nolink": "sem DOI nem link",
-    "pending_more": "Mais {{count}} na lista completa (CSV)."
+    "pending_more": "Mais {{count}} na lista completa (CSV).",
+    "empty_phase": "Nenhuma referência chegou ao texto completo ainda. Elas passam para esta fase quando o número de revisores exigido no protocolo as incluiu em título e resumo; se o projeto tem menos pessoas do que o exigido, nenhuma chega. Enquanto isso, não há PDFs para buscar nem lista de pendentes.",
+    "empty_phase_link": "Abrir o Protocolo"
   },
   "studies": {
     "title": "Estudos com vários relatórios",
