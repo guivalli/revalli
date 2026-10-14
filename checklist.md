@@ -4,7 +4,7 @@
 
 Lista viva do que falta. O que cada marco já entrega está no [roteiro](docs/roteiro.md). Os passos que dependem de uma pessoa (servidor, contas, prints) estão em [checklist-humano.md](checklist-humano.md). Marque com `x` ao concluir.
 
-Estado em 2026-10-12: tudo na `main` (`0bd077d`), com os PRs `#1` a `#6` mesclados; a stack local roda em `http://localhost:1515` e, pelo túnel, em `https://revalli.serverdosbroderz.uk`; 215 testes do backend passam; migrações até a `0018`.
+Estado em 2026-10-13: tudo na `main` (`6882844`), com os PRs `#1` a `#6` mesclados, as branches `m1` a `m6` apagadas e a tag `v0.1.0` publicada; a stack local roda em `http://localhost:1515` e, pelo túnel, em `https://revalli.serverdosbroderz.uk`; 215 testes do backend passam; migrações até a `0018`.
 
 ## 1. Beta com avaliadores (duplo cego)
 
@@ -13,27 +13,27 @@ Os itens que dependem de pessoas estão no [checklist-humano.md](checklist-human
 - [ ] **Tela de triagem com a mesma cara do resto**: barra grande Incluir, Talvez e Excluir, lista numerada à esquerda e painel de palavras-chave. É a tela que os avaliadores mais usam.
 - [ ] Opção de **mascarar autores, revista e ano** durante a triagem, se o protocolo exigir cegamento total (hoje o cegamento é só entre as decisões dos revisores).
 - [ ] Tela de **Extração** em formato de tabela, com o botão de anexar PDF em cada linha.
-- [ ] Conferir no navegador, em tema claro e escuro, as telas que ainda não foram vistas depois da interface nova: Triagem, Duplicatas, Extração, Síntese, Relatório, Protocolo, IA do projeto e Conversa.
+- [x] Conferir no navegador, em tema claro e escuro, as telas que ainda não foram vistas depois da interface nova: Triagem, Duplicatas, Extração, Síntese, Relatório, Protocolo, IA do projeto e Conversa.
 - [ ] Recuperação de senha por link já existe; falta só a pessoa líder (não administradora) poder gerar o link para quem é do projeto dela, se o beta pedir.
 
 ## 2. Publicar e higiene
 
 - [x] Mesclar os PRs `#1` a `#6` (a `main` está em `0bd077d`).
-- [ ] Apagar no GitHub as branches empilhadas `m1-importacao` a `m6-buscas`, que já cumpriram o papel.
-- [ ] Revogar o token do GitHub colado numa sessão anterior.
-- [ ] Trocar a chave do OpenAlex se não quiser mantê-la no histórico de conversa.
-- [ ] Criar uma tag `v0.1.0` para publicar as imagens (`amd64` e `arm64`) no GitHub; é o que o Raspberry Pi vai baixar.
+- [x] Apagar no GitHub as branches empilhadas `m1-importacao` a `m6-buscas`, que já cumpriram o papel.
+- [x] Revogar o token do GitHub colado numa sessão anterior.
+- [x] Trocar a chave do OpenAlex se não quiser mantê-la no histórico de conversa.
+- [x] Criar uma tag `v0.1.0` para publicar as imagens (`amd64` e `arm64`) no GitHub; é o que o Raspberry Pi vai baixar.
 
 ## 3. Verificar contra o mundo real
 
-- [ ] **Triagem por IA com a faixa gratuita**: rodar 10 registros com Gemini Flash-Lite e com Groq e anotar ritmo, erros e concordância com a decisão humana (a calibração está na aba IA do projeto).
+- [x] **Triagem por IA com a faixa gratuita**: rodar 10 registros com Gemini Flash-Lite e com Groq e anotar ritmo, erros e concordância com a decisão humana (a calibração está na aba IA do projeto).
 - [ ] Medir a triagem por IA com critérios detalhados: calibração em decisões humanas reais e o benchmark em mais conjuntos, com um modelo maior (o llama3.1 8B ficou com 93% de sensibilidade e 29% de especificidade num conjunto).
 - [ ] Avaliar o agrupamento de motivos de exclusão com volume real (o teste teve 6 motivos distintos, nada para juntar).
 - [ ] Testar o assistente de busca com um modelo maior: no teste local faltaram blocos de conceito e houve `[mh]` em termo truncado.
 - [ ] Importar exportações reais de SciELO, PePSIC e Portal CAPES (RIS e CSV) e conferir o parser. LILACS/BVS em RIS já foi conferido (22 registros); veja [docs/buscas.md](docs/buscas.md).
 - [ ] Buscar PDFs de acesso aberto em um projeto maior: no projeto de teste, 6 de 14 baixaram e os 8 pendentes eram quase todos do PePSIC (bloqueio anti-robô, só à mão).
 - [ ] Testar um provedor de login único além do Keycloak.
-- [ ] Convites e redefinição de senha pelo endereço público (túnel) de ponta a ponta.
+- [x] Convites e redefinição de senha pelo endereço público (túnel) de ponta a ponta.
 
 ## 4. Funcionalidades que faltam
 
@@ -50,9 +50,9 @@ Os itens que dependem de pessoas estão no [checklist-humano.md](checklist-human
 ## 5. Antes de abrir para mais gente
 
 - [ ] Revisão de segurança dedicada.
-- [ ] Restringir a rede: o Ollama escuta em `*:11434` sem autenticação, e o auxiliar do Ollama em `0.0.0.0:11435` (só ligar/desligar, com token). Limitar ao IP do servidor (veja o checklist humano).
-- [ ] Cloudflare Access na frente do endereço público, com a lista de e-mails dos avaliadores.
-- [ ] `COOKIE_SECURE=true` quando só o endereço público (`https://`) for usado.
+- [x] Restringir a rede: o Ollama escuta em `*:11434` sem autenticação, e o auxiliar do Ollama em `0.0.0.0:11435` (só ligar/desligar, com token). Limitar ao IP do servidor (veja o checklist humano).
+- [x] Cloudflare Access na frente do endereço público, com a lista de e-mails dos avaliadores.
+- [x] `COOKIE_SECURE=true` quando só o endereço público (`https://`) for usado.
 - [ ] Snowballing e buscas grandes em escala, com os limites reais das bases.
 - [ ] Conferir o parser de PDFs de editoras (a maioria bloqueia o download automático).
 
