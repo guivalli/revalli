@@ -14,7 +14,7 @@ from revalli.modules.ai.service import project_ai
 from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.models import JobStatus
 from revalli.modules.records.schemas import JobOut
-from revalli.modules.sources import keys, service
+from revalli.modules.sources import fields, keys, service
 from revalli.modules.sources.clients import SourceError
 from revalli.modules.sources.schemas import (
     AssistChat,
@@ -26,6 +26,7 @@ from revalli.modules.sources.schemas import (
     SearchIn,
     SnowballIn,
     SnowballInfo,
+    SourceFields,
     SourcesSettingsIn,
     SourcesSettingsOut,
     TranslateIn,
@@ -92,6 +93,26 @@ async def _no_running(db: AsyncSession, project_id: uuid.UUID, kind: str) -> Non
         raise HTTPException(409, "already_running")
 
 
+def _rows(body: QueryIn) -> list[fields.Row] | None:
+    if body.rows is None:
+        return None
+    return [fields.Row(term=r.term, field=r.field, op=r.op) for r in body.rows]
+
+
+@router.get("/fields", response_model=dict[str, SourceFields])
+async def source_fields(
+    project_id: uuid.UUID, user: User = Depends(current_user), db=Depends(get_db)
+):
+    """Os campos que cada base aceita no construtor de busca."""
+    await require_lead(db, project_id, user)
+    return {
+        name: SourceFields(
+            fields=fields.available_fields(name), or_across_fields=fields.mixes_fields_with_or(name)
+        )
+        for name in fields.BY_SOURCE
+    }
+
+
 @router.post("/preview", response_model=PreviewOut)
 async def preview(
     project_id: uuid.UUID,
@@ -103,7 +124,7 @@ async def preview(
     await require_lead(db, project_id, user)
     _enabled()
     try:
-        result = await service.preview(db, body.source, body.query)
+        result = await service.preview(db, body.source, body.query, _rows(body))
     except SourceError as exc:
         raise _source_error(exc) from exc
     return PreviewOut(
@@ -111,6 +132,8 @@ async def preview(
         max=get_settings().api_search_max,
         translation=result.translation,
         warnings=result.warnings,
+        corrections=result.corrections,
+        strategy=result.strategy,
         sample=[
             SampleRecord(
                 title=r.title,
@@ -138,6 +161,7 @@ async def search(
     params = {
         "source": body.source,
         "query": body.query,
+        "rows": [r.model_dump() for r in body.rows or [] if r.term.strip()],
         "limit": min(body.limit, get_settings().api_search_max),
         "user_id": str(user.id),
     }

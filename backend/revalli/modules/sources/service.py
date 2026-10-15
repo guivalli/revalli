@@ -24,6 +24,7 @@ from revalli.modules.screening.models import Phase
 from revalli.modules.screening.service import State, compute_states
 from revalli.modules.sources import clients, keys
 from revalli.modules.sources.clients import openalex_pages, openalex_work, short_openalex_id
+from revalli.modules.sources.fields import Row, compile_strategy
 
 Progress = Callable[[int, int], None]
 BATCH = 50
@@ -88,11 +89,19 @@ async def save_search(
 # --- Busca direta ----------------------------------------------------------------
 
 
-async def preview(db: AsyncSession, source: str, query: str) -> clients.Preview:
+async def preview(
+    db: AsyncSession, source: str, query: str, rows: list[Row] | None = None
+) -> clients.Preview:
     await keys.load(db)
+    strategy = compile_strategy(source, query, rows)
     _, run_preview, _ = clients.SOURCES[source]
     async with clients.http_client() as c:
-        return await run_preview(c, query)
+        result = await run_preview(c, strategy)
+    result.corrections = strategy.corrections
+    result.strategy = strategy.native
+    # A tradução do PubMed (como ele leu a busca) vale mais que a nossa
+    result.translation = result.translation or strategy.shown
+    return result
 
 
 async def run_api_search(
@@ -103,14 +112,16 @@ async def run_api_search(
     query: str,
     limit: int,
     progress: Progress | None = None,
+    rows: list[Row] | None = None,
 ) -> dict:
     await keys.load(db)
+    strategy = compile_strategy(source, query, rows)
     name, _, fetch = clients.SOURCES[source]
     limit = min(limit, get_settings().api_search_max)
     found: list[ParsedRecord] = []
     total = 0
     async with clients.http_client() as c:
-        async for total, batch in fetch(c, query, limit):
+        async for total, batch in fetch(c, strategy, limit):
             found.extend(r for r in batch if not r.is_empty)
             if progress:
                 progress(len(found), min(total, limit))
@@ -120,7 +131,7 @@ async def run_api_search(
         project_id,
         user_id,
         source=name,
-        query=query,
+        query=strategy.native,
         method="database",
         records=found,
         reported_count=total,
@@ -131,6 +142,7 @@ async def run_api_search(
         "found": total,
         "imported": len(found),
         "truncated": total > len(found),
+        "corrections": strategy.corrections,
     }
 
 
@@ -322,10 +334,10 @@ async def run_snowball(
 TARGETS = {
     "pubmed": "PubMed (MeSH terms with [mh], [tiab] field tags)",
     "openalex": (
-        "OpenAlex full-text search (plain words, quoted phrases, AND/OR/NOT in uppercase, "
-        "parentheses; no field tags, no truncation)"
+        "OpenAlex, searched in title and abstract (plain words, quoted phrases, AND/OR/NOT in "
+        "uppercase, parentheses; no field tags such as ti: or ab:, no truncation)"
     ),
-    "europepmc": "Europe PMC (TITLE:, ABSTRACT:, KW:, MESH: fields; AND/OR/NOT)",
+    "europepmc": "Europe PMC (TITLE:, ABSTRACT:, TITLE_ABS:, KW:, AUTH: fields; AND/OR/NOT)",
     "scopus": "Scopus (TITLE-ABS-KEY(), W/n proximity, * truncation)",
     "wos": "Web of Science Core Collection (TS=(), NEAR/n proximity, * truncation)",
     "embase": "Embase via Embase.com (Emtree terms with /exp, :ti,ab,kw fields, NEAR/n)",

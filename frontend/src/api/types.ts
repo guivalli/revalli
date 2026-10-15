@@ -513,11 +513,42 @@ export interface SourceCount {
 
 export type ApiSource = 'pubmed' | 'openalex' | 'europepmc' | 'scielo' | 'pepsic'
 
+export const SEARCH_FIELDS = [
+  'title_abstract',
+  'title',
+  'abstract',
+  'fulltext',
+  'author',
+  'keyword',
+  'mesh',
+  'journal',
+  'affiliation',
+  'year',
+  'language',
+  'type',
+] as const
+export type SearchField = (typeof SEARCH_FIELDS)[number]
+export type SearchOperator = 'AND' | 'OR' | 'NOT'
+/** Uma linha do construtor de busca (como na busca avançada das bases). */
+export interface SearchRow {
+  op: SearchOperator
+  field: SearchField
+  term: string
+}
+export interface SourceFields {
+  fields: SearchField[]
+  or_across_fields: boolean
+}
+
 export interface SourcePreview {
   count: number
   max: number
   translation: string
   warnings: string[]
+  // Correções feitas na estratégia: `código` ou `código: detalhe`
+  corrections: string[]
+  // A estratégia como foi enviada à base
+  strategy: string
   sample: {
     title: string
     authors: string[]

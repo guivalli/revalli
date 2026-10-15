@@ -2,21 +2,31 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { useInstanceAI } from '../api/ai'
 import { api } from '../api/client'
-import { REVIEW_TYPES, ROLES, type InvitationCreated, type Project, type ReviewType, type Role, type ScreeningSettings } from '../api/types'
+import {
+  REVIEW_TYPES,
+  ROLES,
+  type InvitationCreated,
+  type Project,
+  type ProjectAISettings,
+  type ReviewType,
+  type Role,
+  type ScreeningSettings,
+} from '../api/types'
 import { Button, ErrorText, Field, Input, Select } from './ui'
 
-type Step = 1 | 2 | 3 | 'done'
+type Step = 1 | 2 | 3 | 4 | 'done'
 type Invite = { email: string; role: Role }
 
 const MAX_INVITES = 8
 
 function Stepper({ step }: { step: Step }) {
   const { t } = useTranslation()
-  const current = step === 'done' ? 4 : step
-  const labels = [t('wizard.step_info'), t('wizard.step_references'), t('wizard.step_team')]
+  const current = step === 'done' ? 5 : step
+  const labels = [t('wizard.step_info'), t('wizard.step_references'), t('wizard.step_team'), t('wizard.step_ai')]
   return (
-    <ol className="grid grid-cols-3 border-b border-stone-200 dark:border-stone-800">
+    <ol className="grid grid-cols-4 border-b border-stone-200 dark:border-stone-800">
       {labels.map((label, i) => {
         const n = i + 1
         const active = current === n
@@ -53,21 +63,31 @@ function Choice({
   onChange,
   title,
   hint,
+  disabled = false,
 }: {
   checked: boolean
   onChange: () => void
   title: string
   hint: string
+  disabled?: boolean
 }) {
   return (
     <label
-      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition ${
+      className={`flex items-start gap-3 rounded-lg border p-4 transition ${
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+      } ${
         checked
           ? 'border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-900/20'
           : 'border-stone-200 hover:border-stone-400 dark:border-stone-700'
       }`}
     >
-      <input type="radio" className="mt-1 accent-brand-600" checked={checked} onChange={onChange} />
+      <input
+        type="radio"
+        className="mt-1 accent-brand-600"
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+      />
       <span>
         <span className="block text-sm font-medium">{title}</span>
         <span className="block text-xs text-stone-500">{hint}</span>
@@ -76,7 +96,7 @@ function Choice({
   )
 }
 
-/** Assistente de nova revisão: informações, referências e equipe. Ao terminar, mostra os
+/** Assistente de nova revisão: informações, referências, equipe e IA. Ao terminar, mostra os
  * convites criados e abre a revisão onde o próximo passo é mais útil. */
 export function NewReviewDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation()
@@ -87,6 +107,9 @@ export function NewReviewDialog({ onClose }: { onClose: () => void }) {
   const [references, setReferences] = useState<'import' | 'later'>('import')
   const [team, setTeam] = useState<'alone' | 'invite'>('alone')
   const [invites, setInvites] = useState<Invite[]>([{ email: '', role: 'reviewer' }])
+  const [ai, setAi] = useState<'on' | 'off'>('off')
+  const instance = useInstanceAI()
+  const aiAvailable = !!instance.data?.screening.provider_id && !!instance.data?.screening.model
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
   const [created, setCreated] = useState<{ project: Project; links: InvitationCreated[] } | null>(null)
@@ -126,6 +149,10 @@ export function NewReviewDialog({ onClose }: { onClose: () => void }) {
           )
         }
       }
+      if (ai === 'on' && aiAvailable) {
+        const current = await api.get<ProjectAISettings>(`/projects/${project.id}/ai/settings`)
+        await api.put(`/projects/${project.id}/ai/settings`, { ...current, enabled: true })
+      }
       void qc.invalidateQueries({ queryKey: ['projects'] })
       setCreated({ project, links })
       setStep('done')
@@ -140,7 +167,8 @@ export function NewReviewDialog({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     if (step === 1) setStep(2)
     else if (step === 2) setStep(3)
-    else if (step === 3) void finish()
+    else if (step === 3) setStep(4)
+    else if (step === 4) void finish()
   }
 
   const open = () => {
@@ -287,13 +315,40 @@ export function NewReviewDialog({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
+            {step === 4 && (
+              <div className="space-y-3">
+                <p className="text-sm text-stone-500">{t('wizard.ai_intro')}</p>
+                {!aiAvailable && (
+                  <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                    {t('wizard.ai_unavailable')}
+                  </p>
+                )}
+                <Choice
+                  checked={ai === 'on' && aiAvailable}
+                  disabled={!aiAvailable}
+                  onChange={() => setAi('on')}
+                  title={t('wizard.ai_on')}
+                  hint={t('wizard.ai_on_hint')}
+                />
+                <Choice
+                  checked={ai === 'off' || !aiAvailable}
+                  onChange={() => setAi('off')}
+                  title={t('wizard.ai_off')}
+                  hint={t('wizard.ai_off_hint')}
+                />
+                <p className="rounded-md bg-stone-100 p-3 text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+                  {t('wizard.ai_where')}
+                </p>
+              </div>
+            )}
+
             <ErrorText error={error} />
             <div className="flex justify-between gap-2 border-t border-stone-200 pt-4 dark:border-stone-800">
               <Button type="button" variant="ghost" onClick={step === 1 ? onClose : () => setStep((step - 1) as Step)}>
                 {step === 1 ? t('projects.cancel') : t('wizard.back')}
               </Button>
               <Button type="submit" disabled={busy || (step === 1 && !form.title.trim())}>
-                {step === 3 ? t('wizard.create') : t('wizard.next')}
+                {step === 4 ? t('wizard.create') : t('wizard.next')}
               </Button>
             </div>
           </form>
@@ -302,6 +357,9 @@ export function NewReviewDialog({ onClose }: { onClose: () => void }) {
         {step === 'done' && created && (
           <div className="space-y-5 px-6 py-6">
             <p className="text-sm">{t('wizard.done', { title: created.project.title })}</p>
+            <p className="text-sm text-stone-500">
+              {ai === 'on' && aiAvailable ? t('wizard.done_ai_on') : t('wizard.done_ai_off')}
+            </p>
             {created.links.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium">{t('wizard.invite_links')}</p>

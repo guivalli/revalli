@@ -19,7 +19,8 @@ async def _import(client, pid, name, source="PubMed", content=None, **extra):
     return await client.post(
         f"/api/projects/{pid}/imports",
         files={"file": (name, data)},
-        data={"source": source, **extra},
+        # Os testes reimportam na mesma base; o padrão é responder "é a mesma base"
+        data={"source": source, "same_source": "true", **extra},
         headers=UPLOAD_HEADERS,
     )
 
@@ -354,3 +355,61 @@ async def test_import_bvs_export_and_dedup(admin):
     page = (await admin.get(f"/api/projects/{pid}/records", params={"q": "universidade"})).json()
     assert page["total"] >= 1
     assert all("\x92" not in rec["abstract"] for rec in page["items"])
+
+
+async def test_similar_source_name_asks_before_merging(admin):
+    pid = await _project(admin)
+    first = await admin.post(
+        f"/api/projects/{pid}/imports",
+        files={"file": ("a.ris", (FIX / "sample.ris").read_bytes())},
+        data={"source": "BVS/Lilacs"},
+        headers=UPLOAD_HEADERS,
+    )
+    assert first.status_code == 201, first.text
+
+    def again(source, **extra):
+        return admin.post(
+            f"/api/projects/{pid}/imports",
+            files={"file": ("b.ris", _ris("Another trial of running"))},
+            data={"source": source, **extra},
+            headers=UPLOAD_HEADERS,
+        )
+
+    # Igual, ou parecido (caixa, acento, pontuação, um nome dentro do outro): pergunta antes
+    for name in ("BVS/Lilacs", "bvs lilacs", "BVS - LILACS", "LILACS"):
+        r = await again(name)
+        assert r.status_code == 409 and r.json()["detail"] == "source_similar: BVS/Lilacs", name
+    # Nenhuma busca foi criada pelas tentativas
+    assert len((await admin.get(f"/api/projects/{pid}/searches")).json()) == 1
+
+    # Outra base de verdade passa sem perguntar
+    assert (await again("SciELO")).status_code == 201
+
+    # "É a mesma": junta, com a grafia que já existe
+    r = await again("bvs lilacs", same_source="true")
+    assert r.status_code == 201 and r.json()["search"]["source"] == "BVS/Lilacs"
+
+    # "É outra": não pode ficar com o mesmo nome, mas um nome parecido, diferente, é aceito
+    r = await again("BVS/Lilacs", same_source="false")
+    assert r.status_code == 422 and r.json()["detail"] == "source_must_differ: BVS/Lilacs"
+    r = await again("LILACS (exportação do site)", same_source="false")
+    assert r.status_code == 201
+    assert r.json()["search"]["source"] == "LILACS (exportação do site)"
+
+    # No PRISMA cada nome é uma linha
+    sources = {
+        s["source"]: s["imported_count"]
+        for s in (await admin.get(f"/api/projects/{pid}/searches")).json()
+    }
+    assert set(sources) == {"BVS/Lilacs", "SciELO", "LILACS (exportação do site)"}
+
+
+def test_source_name_similarity():
+    from revalli.modules.records.source_names import similar_source
+
+    names = ["PubMed", "Web of Science", "SciELO"]
+    assert similar_source("pubmed", names) == "PubMed"
+    assert similar_source("Web of Science Core Collection", names) == "Web of Science"
+    assert similar_source("Scopus", names) is None
+    assert similar_source("Embase", names) is None
+    assert similar_source("PubMed Central", names) == "PubMed"

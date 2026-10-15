@@ -1,12 +1,35 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
+import { useProjectAI } from '../../api/ai'
 import { useMe, useProject } from '../../api/hooks'
 import { useActiveJobs, useCancelJob, useSummary } from '../../api/records'
 import { pillBar, pillItem } from '../../components/pills'
 import { CriteriaDrawer } from '../../components/CriteriaDrawer'
 import type { ProjectContext } from './context'
 import { projectTabs } from './tabs'
+
+/** Indicador de IA no cabeçalho: mostra se está ligada e leva para a aba IA, que fica no menu. */
+function AIChip({ pid }: { pid: string }) {
+  const { t } = useTranslation()
+  const ai = useProjectAI(pid)
+  if (!ai.data) return null
+  const on = ai.data.enabled
+  return (
+    <Link
+      to="ia"
+      title={t('ai.chip_title')}
+      className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm ${
+        on
+          ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-100'
+          : 'border-stone-300 text-stone-700 hover:bg-stone-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800'
+      }`}
+    >
+      <span aria-hidden className={`size-2 rounded-full ${on ? 'bg-brand-500' : 'bg-stone-400'}`} />
+      {t(on ? 'ai.chip_on' : 'ai.chip_off')}
+    </Link>
+  )
+}
 
 function JobBanner({ pid, canStop }: { pid: string; canStop: boolean }) {
   const { t } = useTranslation()
@@ -99,6 +122,7 @@ export default function ProjectLayout() {
           >
             {t('criteria_drawer.open')}
           </button>
+          <AIChip pid={id} />
           {p.my_role && (
             <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs text-brand-700 dark:bg-brand-700/30 dark:text-brand-100">
               {t(`role.${p.my_role}`)}

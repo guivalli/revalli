@@ -1,7 +1,9 @@
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from revalli.modules.sources.fields import FIELDS
 
 SourceName = Literal["pubmed", "openalex", "europepmc", "scielo", "pepsic"]
 Target = Literal[
@@ -21,9 +23,25 @@ Target = Literal[
 ]
 
 
+class RowIn(BaseModel):
+    """Uma linha do construtor de busca: operador com a linha anterior, termo e campo."""
+
+    op: Literal["AND", "OR", "NOT"] = "AND"
+    field: Literal[FIELDS] = "title_abstract"  # type: ignore[valid-type]
+    term: str = Field(default="", max_length=5_000)
+
+
 class QueryIn(BaseModel):
     source: SourceName
-    query: str = Field(min_length=1, max_length=20_000)
+    # Texto livre ou linhas do construtor; as linhas valem mais
+    query: str = Field(default="", max_length=20_000)
+    rows: list[RowIn] | None = Field(default=None, max_length=30)
+
+    @model_validator(mode="after")
+    def _needs_terms(self):
+        if not self.query.strip() and not any(r.term.strip() for r in self.rows or []):
+            raise ValueError("query_empty")
+        return self
 
 
 class SearchIn(QueryIn):
@@ -45,6 +63,10 @@ class PreviewOut(BaseModel):
     sample: list[SampleRecord]
     translation: str = ""
     warnings: list[str] = Field(default_factory=list)
+    # Correções feitas na estratégia para a base entendê-la
+    corrections: list[str] = Field(default_factory=list)
+    # A estratégia como foi enviada à base (a que fica salva na busca importada)
+    strategy: str = ""
 
 
 class SnowballIn(BaseModel):
@@ -109,3 +131,9 @@ class SourcesSettingsOut(BaseModel):
 
 class AssistChat(BaseModel):
     messages: list[AssistMessage]
+
+
+class SourceFields(BaseModel):
+    fields: list[str]
+    # Falso quando a base só combina campos diferentes com E (OpenAlex, SciELO, PePSIC)
+    or_across_fields: bool
