@@ -511,7 +511,32 @@ export interface SourceCount {
   records: number
 }
 
-export type ApiSource = 'pubmed' | 'openalex' | 'europepmc' | 'scielo' | 'pepsic'
+export type ApiSource =
+  | 'pubmed'
+  | 'openalex'
+  | 'europepmc'
+  | 'scielo'
+  | 'pepsic'
+  | 'preprints'
+  | 'eric'
+  | 'clinicaltrials'
+  | 'arxiv'
+  | 'doaj'
+  | 'openaire'
+  | 'semanticscholar'
+
+/** Uma base do catálogo; `direct` quando tem busca direta pela API. */
+export interface DatabaseInfo {
+  id: string
+  direct: boolean
+}
+export interface ProjectDatabases {
+  enabled: string[]
+  /** Falso enquanto ninguém escolheu: vale o conjunto original. */
+  saved: boolean
+  catalog: DatabaseInfo[]
+  packs: Record<string, string[]>
+}
 
 export const SEARCH_FIELDS = [
   'title_abstract',
@@ -526,6 +551,8 @@ export const SEARCH_FIELDS = [
   'year',
   'language',
   'type',
+  'condition',
+  'intervention',
 ] as const
 export type SearchField = (typeof SEARCH_FIELDS)[number]
 export type SearchOperator = 'AND' | 'OR' | 'NOT'

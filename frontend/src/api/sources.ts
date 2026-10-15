@@ -5,6 +5,7 @@ import type {
   AssistReply,
   AssistTurn,
   Job,
+  ProjectDatabases,
   SearchRow,
   SourceFields,
   SourcePreview,
@@ -26,6 +27,21 @@ export function useSourceFields(pid: string) {
     queryKey: ['projects', pid, 'sources', 'fields'],
     queryFn: () => api.get<Record<ApiSource, SourceFields>>(`${base(pid)}/fields`),
     staleTime: Infinity,
+  })
+}
+
+export function useDatabases(pid: string) {
+  return useQuery({
+    queryKey: ['projects', pid, 'sources', 'databases'],
+    queryFn: () => api.get<ProjectDatabases>(`${base(pid)}/databases`),
+  })
+}
+
+export function useSaveDatabases(pid: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (enabled: string[]) => api.put<ProjectDatabases>(`${base(pid)}/databases`, { enabled }),
+    onSuccess: (data) => qc.setQueryData(['projects', pid, 'sources', 'databases'], data),
   })
 }
 

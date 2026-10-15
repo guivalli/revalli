@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     search_apis_enabled: bool = True
     pubmed_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     europepmc_url: str = "https://www.ebi.ac.uk/europepmc/webservices/rest"
+    # ERIC (educação), registro ClinicalTrials.gov e arXiv: APIs abertas, sem chave
+    eric_url: str = "https://api.ies.ed.gov/eric"
+    clinicaltrials_url: str = "https://clinicaltrials.gov/api/v2"
+    arxiv_url: str = "https://export.arxiv.org/api"
+    doaj_url: str = "https://doaj.org/api"
+    openaire_url: str = "https://api.openaire.eu/graph/v1"
+    semantic_scholar_url: str = "https://api.semanticscholar.org/graph/v1"
+    # Gratuita; sem ela o Semantic Scholar responde 429 quase sempre
+    semantic_scholar_api_key: str = ""
     # Opcional: aumenta o limite do PubMed de 3 para 10 requisições por segundo
     ncbi_api_key: str = ""
     # Máximo de registros trazidos por uma busca ou por um snowballing

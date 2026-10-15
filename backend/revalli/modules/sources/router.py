@@ -14,12 +14,15 @@ from revalli.modules.ai.service import project_ai
 from revalli.modules.records.jobs import create_job, dispatch
 from revalli.modules.records.models import JobStatus
 from revalli.modules.records.schemas import JobOut
-from revalli.modules.sources import fields, keys, service
+from revalli.modules.sources import catalog, fields, keys, service
 from revalli.modules.sources.clients import SourceError
 from revalli.modules.sources.schemas import (
     AssistChat,
     AssistIn,
     AssistOut,
+    DatabaseInfo,
+    DatabasesIn,
+    DatabasesOut,
     PreviewOut,
     QueryIn,
     SampleRecord,
@@ -71,6 +74,8 @@ def _source_error(exc: SourceError) -> HTTPException:
     # O OpenAlex sem chave tem um orçamento diário gratuito por rede; a chave é grátis
     if "daily budget" in msg or "Insufficient budget" in msg:
         return HTTPException(502, f"openalex_key_needed: {msg[:600]}")
+    if msg.startswith("semantic_scholar_key_needed"):
+        return HTTPException(502, f"semantic_scholar_key_needed: {msg[:600]}")
     return HTTPException(502, f"source_unavailable: {msg[:600]}")
 
 
@@ -97,6 +102,38 @@ def _rows(body: QueryIn) -> list[fields.Row] | None:
     if body.rows is None:
         return None
     return [fields.Row(term=r.term, field=r.field, op=r.op) for r in body.rows]
+
+
+def _databases_out(project) -> DatabasesOut:
+    return DatabasesOut(
+        enabled=catalog.enabled(project.settings),
+        saved=bool(((project.settings or {}).get("databases") or {}).get("enabled")),
+        catalog=[DatabaseInfo(id=d.id, direct=d.direct) for d in catalog.DATABASES],
+        packs={k: list(v) for k, v in catalog.PACKS.items()},
+    )
+
+
+@router.get("/databases", response_model=DatabasesOut)
+async def read_databases(
+    project_id: uuid.UUID, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    """As bases escolhidas do projeto, o catálogo e os pacotes por área."""
+    return _databases_out(await require_lead(db, project_id, user))
+
+
+@router.put("/databases", response_model=DatabasesOut)
+async def write_databases(
+    project_id: uuid.UUID,
+    body: DatabasesIn,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await require_lead(db, project_id, user)
+    chosen = [d for d in catalog.IDS if d in body.enabled]
+    # Troca o objeto inteiro: o JSONB só grava quando a referência muda
+    project.settings = {**(project.settings or {}), "databases": {"enabled": chosen}}
+    await db.commit()
+    return _databases_out(project)
 
 
 @router.get("/fields", response_model=dict[str, SourceFields])

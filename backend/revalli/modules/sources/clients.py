@@ -1,17 +1,22 @@
 """Clientes das APIs públicas de busca: PubMed (E-utilities), OpenAlex e Europe PMC, além de
-SciELO e PePSIC, que são buscas no OpenAlex restritas às revistas dessas coleções.
+SciELO e PePSIC, que são buscas no OpenAlex restritas às revistas dessas coleções, dos preprints
+(Europe PMC restrito à fonte PPR), do ERIC, do ClinicalTrials.gov, do arXiv, do DOAJ, do OpenAIRE
+e do Semantic Scholar.
 
 Cada fonte sabe contar os resultados de uma busca (com uma amostra, para a pessoa conferir a
 string antes de importar) e trazer os registros em lotes, já no formato do importador.
 """
 
 import asyncio
+import html
 import re
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+from urllib.parse import quote
 
 import httpx
+from defusedxml import ElementTree
 
 from revalli.core.config import get_settings
 from revalli.modules.imports.normalize import ParsedRecord, normalize_pmid
@@ -99,14 +104,16 @@ async def backoff(attempt: int, resp: httpx.Response | None) -> None:
     await asyncio.sleep(min(max(retry_after_seconds(resp), 1.0) * attempt, 20.0))
 
 
-async def get(client: httpx.AsyncClient, url: str, params: dict) -> httpx.Response:
+async def get(
+    client: httpx.AsyncClient, url: str, params: dict, headers: dict | None = None
+) -> httpx.Response:
     """GET com nova tentativa quando a base pede calma (429) ou falha por instantes (5xx)."""
     last = ""
     for attempt in range(MAX_ATTEMPTS):
         await throttle(url, params)
         resp = None
         try:
-            resp = await client.get(url, params=params)
+            resp = await client.get(url, params=params, headers=headers)
         except httpx.HTTPError as exc:
             last = f"connection: {type(exc).__name__}"
         else:
@@ -369,6 +376,399 @@ async def europepmc_fetch(
         await pause()
 
 
+# --- ERIC (educação) -----------------------------------------------------------------
+
+ERIC_PAGE = 200
+
+
+def eric_record(doc: dict) -> ParsedRecord:
+    ident = str(doc.get("id") or "")
+    return ParsedRecord(
+        title=html.unescape(doc.get("title") or ""),
+        abstract=html.unescape(doc.get("description") or ""),
+        authors=list(doc.get("author") or []),
+        year=doc.get("publicationdateyear"),
+        journal=doc.get("source") or "",
+        doi=doc.get("doi"),
+        url=f"https://eric.ed.gov/?id={ident}" if ident else "",
+        keywords=list(doc.get("subject") or []),
+        language="; ".join(doc.get("language") or []),
+        publication_type="; ".join(doc.get("publicationtype") or []),
+        raw={"eric": ident},
+    ).clean()
+
+
+async def eric_page(client: httpx.AsyncClient, query: str, start: int, rows: int) -> dict:
+    url = get_settings().eric_url.rstrip("/") + "/"
+    resp = await get(client, url, {"search": query, "format": "json", "start": start, "rows": rows})
+    return resp.json().get("response") or {}
+
+
+async def eric_preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
+    data = await eric_page(client, strategy.native, 0, 5)
+    return Preview(int(data.get("numFound") or 0), [eric_record(d) for d in data.get("docs") or []])
+
+
+async def eric_fetch(
+    client: httpx.AsyncClient, strategy: Compiled, limit: int
+) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
+    seen = 0
+    while seen < limit:
+        data = await eric_page(client, strategy.native, seen, min(ERIC_PAGE, limit - seen))
+        docs = data.get("docs") or []
+        if not docs:
+            return
+        seen += len(docs)
+        yield int(data.get("numFound") or 0), [eric_record(d) for d in docs]
+        await pause()
+
+
+# --- ClinicalTrials.gov (registro de ensaios) ----------------------------------------
+
+CT_FIELDS = (
+    "NCTId|BriefTitle|OfficialTitle|BriefSummary|Condition|Keyword|StartDate|"
+    "StudyFirstPostDate|LeadSponsorName|StudyType|OverallStatus"
+)
+CT_PAGE = 500
+
+
+def clinicaltrials_record(study: dict) -> ParsedRecord:
+    p = study.get("protocolSection") or {}
+    ident = p.get("identificationModule") or {}
+    cond = p.get("conditionsModule") or {}
+    status = p.get("statusModule") or {}
+    nct = ident.get("nctId") or ""
+    start = (status.get("startDateStruct") or {}).get("date") or (
+        (status.get("studyFirstPostDateStruct") or {}).get("date") or ""
+    )
+    sponsor = ((p.get("sponsorCollaboratorsModule") or {}).get("leadSponsor") or {}).get("name")
+    return ParsedRecord(
+        title=ident.get("briefTitle") or ident.get("officialTitle") or "",
+        abstract=(p.get("descriptionModule") or {}).get("briefSummary") or "",
+        authors=[sponsor] if sponsor else [],
+        year=int(start[:4]) if start[:4].isdigit() else None,
+        journal="ClinicalTrials.gov",
+        url=f"https://clinicaltrials.gov/study/{nct}" if nct else "",
+        keywords=[*(cond.get("conditions") or []), *(cond.get("keywords") or [])],
+        publication_type=f"Trial registry ({(p.get('designModule') or {}).get('studyType', '')})".replace(
+            " ()", ""
+        ),
+        raw={"nct": nct},
+    ).clean()
+
+
+async def clinicaltrials_page(
+    client: httpx.AsyncClient, query: str, size: int, token: str | None
+) -> dict:
+    url = get_settings().clinicaltrials_url.rstrip("/") + "/studies"
+    params = {"query.term": query, "pageSize": size, "countTotal": "true", "fields": CT_FIELDS}
+    if token:
+        params["pageToken"] = token
+    return (await get(client, url, params)).json()
+
+
+async def clinicaltrials_preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
+    data = await clinicaltrials_page(client, strategy.native, 5, None)
+    return Preview(
+        int(data.get("totalCount") or 0),
+        [clinicaltrials_record(s) for s in data.get("studies") or []],
+    )
+
+
+async def clinicaltrials_fetch(
+    client: httpx.AsyncClient, strategy: Compiled, limit: int
+) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
+    token, seen = None, 0
+    while seen < limit:
+        data = await clinicaltrials_page(client, strategy.native, min(CT_PAGE, limit - seen), token)
+        studies = data.get("studies") or []
+        if not studies:
+            return
+        seen += len(studies)
+        yield int(data.get("totalCount") or 0), [clinicaltrials_record(s) for s in studies]
+        token = data.get("nextPageToken")
+        if not token:
+            return
+        await pause()
+
+
+# --- arXiv ----------------------------------------------------------------------------
+
+ARXIV_PAGE = 200
+# O arXiv pede, no máximo, uma requisição a cada 3 segundos
+ARXIV_INTERVAL = 3.0
+_ATOM = "{http://www.w3.org/2005/Atom}"
+_OPENSEARCH = "{http://a9.com/-/spec/opensearch/1.1/}"
+_ARXIV = "{http://arxiv.org/schemas/atom}"
+
+
+def _text(node, tag: str) -> str:
+    found = node.find(tag)
+    return " ".join((found.text or "").split()) if found is not None else ""
+
+
+def arxiv_entry(entry) -> ParsedRecord:
+    link = ""
+    for ln in entry.findall(f"{_ATOM}link"):
+        if ln.get("rel") == "alternate":
+            link = ln.get("href") or ""
+    published = _text(entry, f"{_ATOM}published")
+    return ParsedRecord(
+        title=_text(entry, f"{_ATOM}title"),
+        abstract=_text(entry, f"{_ATOM}summary"),
+        authors=[_text(a, f"{_ATOM}name") for a in entry.findall(f"{_ATOM}author")],
+        year=int(published[:4]) if published[:4].isdigit() else None,
+        journal=_text(entry, f"{_ARXIV}journal_ref") or "arXiv",
+        doi=_text(entry, f"{_ARXIV}doi") or None,
+        url=link,
+        keywords=[c.get("term") or "" for c in entry.findall(f"{_ATOM}category")],
+        publication_type="Preprint",
+        raw={"arxiv": _text(entry, f"{_ATOM}id").rsplit("/abs/", 1)[-1]},
+    ).clean()
+
+
+async def arxiv_page(
+    client: httpx.AsyncClient, query: str, start: int, size: int
+) -> tuple[int, list[ParsedRecord]]:
+    url = get_settings().arxiv_url.rstrip("/") + "/query"
+    resp = await get(client, url, {"search_query": query, "start": start, "max_results": size})
+    try:
+        root = ElementTree.fromstring(resp.content)
+    except Exception as exc:  # defusedxml levanta vários tipos
+        raise SourceError("arxiv_invalid_answer") from exc
+    total = int(_text(root, f"{_OPENSEARCH}totalResults") or 0)
+    records = []
+    for entry in root.findall(f"{_ATOM}entry"):
+        if "/api/errors" in _text(entry, f"{_ATOM}id"):
+            raise SourceError(_text(entry, f"{_ATOM}summary")[:300] or "arxiv_error")
+        records.append(arxiv_entry(entry))
+    return total, records
+
+
+async def arxiv_wait() -> None:
+    if get_settings().api_delay_seconds > 0:
+        await asyncio.sleep(ARXIV_INTERVAL)
+
+
+async def arxiv_preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
+    total, records = await arxiv_page(client, strategy.native, 0, 5)
+    return Preview(total, records)
+
+
+async def arxiv_fetch(
+    client: httpx.AsyncClient, strategy: Compiled, limit: int
+) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
+    seen = 0
+    while seen < limit:
+        total, records = await arxiv_page(
+            client, strategy.native, seen, min(ARXIV_PAGE, limit - seen)
+        )
+        if not records:
+            return
+        seen += len(records)
+        yield total, records
+        if seen >= total:
+            return
+        await arxiv_wait()
+
+
+# --- DOAJ (revistas de acesso aberto) -------------------------------------------------
+
+DOAJ_PAGE = 100
+
+
+def doaj_record(item: dict) -> ParsedRecord:
+    b = item.get("bibjson") or {}
+    journal = b.get("journal") or {}
+    ids = {i.get("type"): i.get("id") for i in b.get("identifier") or [] if isinstance(i, dict)}
+    first, last = str(b.get("start_page") or ""), str(b.get("end_page") or "")
+    link = next((ln.get("url") for ln in b.get("link") or [] if ln.get("type") == "fulltext"), "")
+    year = str(b.get("year") or "")
+    return ParsedRecord(
+        title=b.get("title") or "",
+        abstract=b.get("abstract") or "",
+        authors=[a.get("name", "") for a in b.get("author") or []],
+        year=int(year) if year.isdigit() else None,
+        journal=journal.get("title") or "",
+        volume=str(journal.get("volume") or ""),
+        issue=str(journal.get("number") or ""),
+        pages=f"{first}-{last}" if first and last and first != last else first,
+        doi=ids.get("doi"),
+        url=link or "",
+        keywords=list(b.get("keywords") or []),
+        language="; ".join(journal.get("language") or []),
+        raw={"doaj": item.get("id") or ""},
+    ).clean()
+
+
+async def doaj_page(client: httpx.AsyncClient, query: str, page: int, size: int) -> dict:
+    # A consulta vai no caminho da URL; o DOAJ recusa curingas, que já saíram da estratégia
+    url = f"{get_settings().doaj_url.rstrip('/')}/search/articles/{quote(query, safe='')}"
+    return (await get(client, url, {"page": page, "pageSize": size})).json()
+
+
+async def doaj_preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
+    data = await doaj_page(client, strategy.native, 1, 5)
+    return Preview(int(data.get("total") or 0), [doaj_record(i) for i in data.get("results") or []])
+
+
+async def doaj_fetch(
+    client: httpx.AsyncClient, strategy: Compiled, limit: int
+) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
+    page, seen = 1, 0
+    while seen < limit:
+        data = await doaj_page(client, strategy.native, page, min(DOAJ_PAGE, limit - seen))
+        items = data.get("results") or []
+        if not items:
+            return
+        seen += len(items)
+        yield int(data.get("total") or 0), [doaj_record(i) for i in items]
+        page += 1
+        await pause()
+
+
+# --- OpenAIRE (repositórios, literatura cinza, teses) -----------------------------------
+
+OPENAIRE_PAGE = 100
+
+
+def openaire_params(strategy: Compiled) -> dict:
+    """Cada filtro da estratégia é `parâmetro=valor`; só publicações."""
+    params = {"type": "publication"}
+    for item in strategy.filters:
+        key, _, value = item.partition("=")
+        params[key] = value
+    return params
+
+
+def openaire_record(item: dict) -> ParsedRecord:
+    pids = {p.get("scheme"): p.get("value") for p in item.get("pids") or [] if isinstance(p, dict)}
+    container = item.get("container") or {}
+    date = str(item.get("publicationDate") or "")
+    descriptions = item.get("descriptions") or []
+    subjects = [(s.get("subject") or {}).get("value", "") for s in item.get("subjects") or [] if s]
+    first, last = str(container.get("sp") or ""), str(container.get("ep") or "")
+    return ParsedRecord(
+        title=item.get("mainTitle") or "",
+        abstract=descriptions[0] if descriptions else "",
+        authors=[a.get("fullName", "") for a in item.get("authors") or []],
+        year=int(date[:4]) if date[:4].isdigit() else None,
+        journal=container.get("name") or "",
+        volume=str(container.get("vol") or ""),
+        issue=str(container.get("iss") or ""),
+        pages=f"{first}-{last}" if first and last and first != last else first,
+        doi=pids.get("doi"),
+        pmid=pids.get("pmid"),
+        keywords=[k for k in subjects if k],
+        language=((item.get("language") or {}).get("label") or ""),
+        publication_type=item.get("type") or "",
+        raw={"openaire": item.get("id") or ""},
+    ).clean()
+
+
+async def openaire_page(
+    client: httpx.AsyncClient, strategy: Compiled, size: int, cursor: str
+) -> dict:
+    url = get_settings().openaire_url.rstrip("/") + "/researchProducts"
+    params = {**openaire_params(strategy), "pageSize": size, "cursor": cursor}
+    return (await get(client, url, params)).json()
+
+
+async def openaire_preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
+    data = await openaire_page(client, strategy, 5, "*")
+    return Preview(
+        int((data.get("header") or {}).get("numFound") or 0),
+        [openaire_record(i) for i in data.get("results") or []],
+    )
+
+
+async def openaire_fetch(
+    client: httpx.AsyncClient, strategy: Compiled, limit: int
+) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
+    cursor, seen = "*", 0
+    while cursor and seen < limit:
+        data = await openaire_page(client, strategy, min(OPENAIRE_PAGE, limit - seen), cursor)
+        items = data.get("results") or []
+        if not items:
+            return
+        seen += len(items)
+        header = data.get("header") or {}
+        yield int(header.get("numFound") or 0), [openaire_record(i) for i in items]
+        cursor = header.get("nextCursor") or ""
+        await pause()
+
+
+# --- Semantic Scholar -------------------------------------------------------------------
+
+S2_FIELDS = "title,abstract,year,authors,venue,externalIds,url,publicationTypes,fieldsOfStudy"
+S2_PREVIEW_FIELDS = "title,year,authors,venue,externalIds"
+
+
+def semanticscholar_record(paper: dict) -> ParsedRecord:
+    ext = paper.get("externalIds") or {}
+    return ParsedRecord(
+        title=paper.get("title") or "",
+        abstract=paper.get("abstract") or "",
+        authors=[a.get("name", "") for a in paper.get("authors") or []],
+        year=paper.get("year"),
+        journal=paper.get("venue") or "",
+        doi=ext.get("DOI"),
+        pmid=str(ext["PubMed"]) if ext.get("PubMed") else None,
+        url=paper.get("url") or "",
+        keywords=list(paper.get("fieldsOfStudy") or []),
+        publication_type="; ".join(paper.get("publicationTypes") or []),
+        raw={"semanticscholar": paper.get("paperId") or ""},
+    ).clean()
+
+
+def semanticscholar_params(strategy: Compiled, fields: str) -> dict:
+    params = {"fields": fields}
+    for item in strategy.filters:
+        key, _, value = item.partition("=")
+        params[key] = value
+    return params
+
+
+async def semanticscholar_page(
+    client: httpx.AsyncClient, strategy: Compiled, fields: str, token: str | None
+) -> dict:
+    s = get_settings()
+    url = s.semantic_scholar_url.rstrip("/") + "/paper/search/bulk"
+    params = semanticscholar_params(strategy, fields)
+    if token:
+        params["token"] = token
+    headers = {"x-api-key": s.semantic_scholar_api_key} if s.semantic_scholar_api_key else None
+    try:
+        return (await get(client, url, params, headers)).json()
+    except SourceError as exc:
+        if "http 429" in str(exc) and not s.semantic_scholar_api_key:
+            raise SourceError(f"semantic_scholar_key_needed: {exc}") from exc
+        raise
+
+
+async def semanticscholar_preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
+    data = await semanticscholar_page(client, strategy, S2_PREVIEW_FIELDS, None)
+    papers = data.get("data") or []
+    return Preview(int(data.get("total") or 0), [semanticscholar_record(p) for p in papers[:5]])
+
+
+async def semanticscholar_fetch(
+    client: httpx.AsyncClient, strategy: Compiled, limit: int
+) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
+    token, seen = None, 0
+    while seen < limit:
+        data = await semanticscholar_page(client, strategy, S2_FIELDS, token)
+        papers = (data.get("data") or [])[: limit - seen]
+        if not papers:
+            return
+        seen += len(papers)
+        yield int(data.get("total") or 0), [semanticscholar_record(p) for p in papers]
+        token = data.get("token")
+        if not token:
+            return
+        await pause()
+
+
 # --- SciELO e PePSIC (OpenAlex restrito às revistas da coleção) ---------------------
 
 # O OpenAlex aceita até 50 valores por filtro; a coleção SciELO Brasil tem cerca de 430 revistas
@@ -477,6 +877,17 @@ SOURCES = {
     "pubmed": _text_source("PubMed", pubmed_preview, pubmed_fetch),
     "openalex": ("OpenAlex", openalex_preview, openalex_fetch),
     "europepmc": _text_source("Europe PMC", europepmc_preview, europepmc_fetch),
+    "preprints": _text_source("Preprints (Europe PMC)", europepmc_preview, europepmc_fetch),
+    "eric": ("ERIC", eric_preview, eric_fetch),
+    "clinicaltrials": ("ClinicalTrials.gov", clinicaltrials_preview, clinicaltrials_fetch),
+    "arxiv": ("arXiv", arxiv_preview, arxiv_fetch),
+    "doaj": ("DOAJ", doaj_preview, doaj_fetch),
+    "openaire": ("OpenAIRE", openaire_preview, openaire_fetch),
+    "semanticscholar": (
+        "Semantic Scholar",
+        semanticscholar_preview,
+        semanticscholar_fetch,
+    ),
     "scielo": _collection_source("SciELO (via OpenAlex)", "scl"),
     "pepsic": _collection_source("PePSIC (via OpenAlex)", "psi"),
 }

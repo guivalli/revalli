@@ -21,6 +21,13 @@ x-backend-env: &backend-env
   ARTICLEMETA_URL: ${ARTICLEMETA_URL:-https://articlemeta.scielo.org/api/v1}
   PUBMED_URL: ${PUBMED_URL:-https://eutils.ncbi.nlm.nih.gov/entrez/eutils}
   EUROPEPMC_URL: ${EUROPEPMC_URL:-https://www.ebi.ac.uk/europepmc/webservices/rest}
+  ERIC_URL: ${ERIC_URL:-https://api.ies.ed.gov/eric}
+  CLINICALTRIALS_URL: ${CLINICALTRIALS_URL:-https://clinicaltrials.gov/api/v2}
+  ARXIV_URL: ${ARXIV_URL:-https://export.arxiv.org/api}
+  DOAJ_URL: ${DOAJ_URL:-https://doaj.org/api}
+  OPENAIRE_URL: ${OPENAIRE_URL:-https://api.openaire.eu/graph/v1}
+  SEMANTIC_SCHOLAR_URL: ${SEMANTIC_SCHOLAR_URL:-https://api.semanticscholar.org/graph/v1}
+  SEMANTIC_SCHOLAR_API_KEY: ${SEMANTIC_SCHOLAR_API_KEY:-}
   UNPAYWALL_URL: ${UNPAYWALL_URL:-https://api.unpaywall.org/v2}
   MAX_IMPORT_MB: ${MAX_IMPORT_MB:-50}
   MAX_PDF_MB: ${MAX_PDF_MB:-100}

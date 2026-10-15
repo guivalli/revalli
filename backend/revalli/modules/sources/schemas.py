@@ -3,24 +3,25 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from revalli.modules.sources.catalog import IDS
 from revalli.modules.sources.fields import FIELDS
 
-SourceName = Literal["pubmed", "openalex", "europepmc", "scielo", "pepsic"]
-Target = Literal[
+SourceName = Literal[
     "pubmed",
     "openalex",
     "europepmc",
-    "scopus",
-    "wos",
-    "embase",
-    "cinahl",
-    "psycinfo",
-    "cochrane",
-    "bvs",
     "scielo",
-    "capes",
     "pepsic",
+    "preprints",
+    "eric",
+    "clinicaltrials",
+    "arxiv",
+    "doaj",
+    "openaire",
+    "semanticscholar",
 ]
+# Toda base do catálogo pode ser alvo da tradução, com ou sem busca direta
+Target = Literal[IDS]  # type: ignore[valid-type]
 
 
 class RowIn(BaseModel):
@@ -95,7 +96,7 @@ class AssistMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str = Field(min_length=1, max_length=8000)
     # Só nas respostas da IA: o que ela propôs e com qual modelo
-    strategies: list[Strategy] = Field(default_factory=list, max_length=15)
+    strategies: list[Strategy] = Field(default_factory=list, max_length=30)
     model: str = Field(default="", max_length=200)
 
 
@@ -137,3 +138,20 @@ class SourceFields(BaseModel):
     fields: list[str]
     # Falso quando a base só combina campos diferentes com E (OpenAlex, SciELO, PePSIC)
     or_across_fields: bool
+
+
+class DatabaseInfo(BaseModel):
+    id: str
+    direct: bool
+
+
+class DatabasesIn(BaseModel):
+    enabled: list[Literal[IDS]] = Field(min_length=1, max_length=len(IDS))  # type: ignore[valid-type]
+
+
+class DatabasesOut(BaseModel):
+    enabled: list[str]
+    # Falso enquanto ninguém escolheu: vale o conjunto original
+    saved: bool
+    catalog: list[DatabaseInfo]
+    packs: dict[str, list[str]]

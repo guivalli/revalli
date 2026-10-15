@@ -6,6 +6,7 @@ import { useRecordActions, useSearches } from '../../api/records'
 import type { Search } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
+import { DatabasesCard } from './Databases'
 import { ApiSearchCard, SnowballCard } from './SourceSearch'
 import { WatchesCard } from './Watches'
 
@@ -22,6 +23,16 @@ const SOURCES = [
   'CINAHL',
   'PsycINFO',
   'Cochrane Library',
+  'ERIC',
+  'SPORTDiscus',
+  'PEDro',
+  'EconLit',
+  'IEEE Xplore',
+  'ACM Digital Library',
+  'ClinicalTrials.gov',
+  'DOAJ',
+  'OpenAIRE',
+  'Semantic Scholar',
 ]
 const FORMATS = ['ris', 'medline', 'pubmed_xml', 'bibtex', 'wos', 'csv', 'csl']
 
@@ -302,6 +313,7 @@ export default function Import() {
         </form>
       </Card>
 
+      <DatabasesCard />
       <ApiSearchCard />
       <SnowballCard />
       <WatchesCard />

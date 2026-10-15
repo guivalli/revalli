@@ -1,29 +1,28 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRecentJobs } from '../../api/records'
-import { useAssistChat, useSnowballInfo, useSourceActions, useSourceFields } from '../../api/sources'
+import {
+  useAssistChat,
+  useDatabases,
+  useSnowballInfo,
+  useSourceActions,
+  useSourceFields,
+} from '../../api/sources'
 import type { ApiSource, AssistTurn, Job, SearchRow } from '../../api/types'
 import { SearchBuilder } from '../../components/SearchBuilder'
 import { emptyRow } from '../../components/searchRows'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
 
-const API_SOURCES: ApiSource[] = ['pubmed', 'openalex', 'europepmc', 'scielo', 'pepsic']
-const TARGETS = [
-  'pubmed',
-  'openalex',
-  'europepmc',
-  'scopus',
-  'wos',
-  'embase',
-  'cinahl',
-  'psycinfo',
-  'cochrane',
-  'bvs',
-  'scielo',
-  'capes',
-  'pepsic',
-] as const
+/** As bases do projeto (escolhidas no cartão Bases do projeto) e as que têm busca direta. */
+function useProjectBases() {
+  const { project } = useProjectContext()
+  const databases = useDatabases(project.id)
+  const enabled = databases.data?.enabled ?? []
+  const directIds = new Set((databases.data?.catalog ?? []).filter((d) => d.direct).map((d) => d.id))
+  const direct = enabled.filter((id) => directIds.has(id)) as ApiSource[]
+  return { enabled, direct, isDirect: (id: string) => direct.includes(id as ApiSource) }
+}
 
 const textarea =
   'w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-sm dark:border-stone-700 dark:bg-stone-900'
@@ -123,7 +122,13 @@ function Translate({ query, onUse }: { query: string; onUse: (source: ApiSource,
   const { t } = useTranslation()
   const { project } = useProjectContext()
   const { translate } = useSourceActions(project.id)
-  const [target, setTarget] = useState<(typeof TARGETS)[number]>('scopus')
+  const bases = useProjectBases()
+  // Por padrão, a primeira base escolhida que só entra por arquivo (é a que precisa de tradução)
+  const targets = bases.enabled
+  const [chosen, setChosen] = useState('')
+  const target = targets.includes(chosen)
+    ? chosen
+    : (targets.find((x) => !bases.isDirect(x)) ?? targets[0] ?? '')
   const result = translate.data
   return (
     <details className="rounded-md border border-stone-200 p-3 dark:border-stone-800">
@@ -132,8 +137,8 @@ function Translate({ query, onUse }: { query: string; onUse: (source: ApiSource,
         <p className="text-sm text-stone-500">{t('sources.translate_hint')}</p>
         <div className="flex flex-wrap items-end gap-2">
           <Field label={t('sources.target')}>
-            <Select value={target} onChange={(e) => setTarget(e.target.value as typeof target)}>
-              {TARGETS.map((x) => (
+            <Select value={target} onChange={(e) => setChosen(e.target.value)}>
+              {targets.map((x) => (
                 <option key={x} value={x}>
                   {t(`sources.db_${x}`)}
                 </option>
@@ -143,7 +148,7 @@ function Translate({ query, onUse }: { query: string; onUse: (source: ApiSource,
           <Button
             variant="ghost"
             className="border border-stone-300 dark:border-stone-700"
-            disabled={!query.trim() || translate.isPending}
+            disabled={!query.trim() || !target || translate.isPending}
             onClick={() => translate.mutate({ query, target })}
           >
             {translate.isPending ? t('sources.translating') : t('sources.translate')}
@@ -167,7 +172,7 @@ function Translate({ query, onUse }: { query: string; onUse: (source: ApiSource,
               <Button variant="ghost" onClick={() => void navigator.clipboard?.writeText(result.query)}>
                 {t('sources.copy')}
               </Button>
-              {(API_SOURCES as string[]).includes(translate.variables?.target ?? '') && (
+              {bases.isDirect(translate.variables?.target ?? '') && (
                 <Button
                   variant="ghost"
                   onClick={() => onUse(translate.variables!.target as ApiSource, result.query)}
@@ -187,6 +192,7 @@ function SearchAssistant({ onUse }: { onUse: (source: ApiSource, q: string) => v
   const { t } = useTranslation()
   const { project } = useProjectContext()
   const { assist, resetAssist } = useSourceActions(project.id)
+  const bases = useProjectBases()
   const chat = useAssistChat(project.id)
   const saved: AssistTurn[] = chat.data?.messages ?? []
   const [text, setText] = useState('')
@@ -257,7 +263,7 @@ function SearchAssistant({ onUse }: { onUse: (source: ApiSource, q: string) => v
                     <Button variant="ghost" onClick={() => void navigator.clipboard?.writeText(st.query)}>
                       {t('sources.copy')}
                     </Button>
-                    {(API_SOURCES as string[]).includes(st.base) && (
+                    {bases.isDirect(st.base) && (
                       <Button variant="ghost" onClick={() => onUse(st.base as ApiSource, st.query)}>
                         {t('sources.use_here')}
                       </Button>
@@ -306,7 +312,13 @@ export function ApiSearchCard() {
   const { project } = useProjectContext()
   const { preview, search } = useSourceActions(project.id)
   const fieldInfo = useSourceFields(project.id)
-  const [source, setSource] = useState<ApiSource>('pubmed')
+  const bases = useProjectBases()
+  const [picked, setPicked] = useState<ApiSource>('pubmed')
+  // Se a base marcada saiu da seleção do projeto, vale a primeira que sobrou
+  const source: ApiSource = bases.direct.includes(picked) ? picked : (bases.direct[0] ?? picked)
+  const setSource = setPicked
+  // Só bases que entram por arquivo: sobra o assistente e a tradução da estratégia
+  const noDirect = bases.enabled.length > 0 && bases.direct.length === 0
   const [mode, setMode] = useState<'builder' | 'text'>('builder')
   const [rows, setRows] = useState<SearchRow[]>([emptyRow()])
   const [query, setQuery] = useState('')
@@ -342,52 +354,11 @@ export function ApiSearchCard() {
           changeQuery(q)
         }}
       />
-      <div className="grid gap-4 sm:grid-cols-[14rem_1fr]">
-        <Field label={t('sources.source')}>
-          <Select
-            value={source}
-            onChange={(e) => {
-              setSource(e.target.value as ApiSource)
-              preview.reset()
-              search.reset()
-            }}
-          >
-            {API_SOURCES.map((s) => (
-              <option key={s} value={s}>
-                {t(`sources.db_${s}`)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <p className="self-end pb-2 text-xs text-stone-500">
-          {t(mode === 'builder' ? 'sources.builder_hint' : `sources.syntax_${source}`)}
-        </p>
-      </div>
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-medium">{t('import.query')}</span>
-          <div role="tablist" className="inline-flex rounded-md border border-stone-300 p-0.5 dark:border-stone-700">
-            {(['builder', 'text'] as const).map((m) => (
-              <button
-                key={m}
-                role="tab"
-                type="button"
-                aria-selected={m === mode}
-                onClick={() => {
-                  setMode(m)
-                  preview.reset()
-                  search.reset()
-                }}
-                className={`rounded px-3 py-1 text-sm ${m === mode ? 'bg-brand-600 text-white' : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'}`}
-              >
-                {t(`sources.mode_${m}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-        {mode === 'builder' ? (
-          <SearchBuilder rows={rows} onChange={changeRows} info={fieldInfo.data?.[source]} />
-        ) : (
+      {noDirect && (
+        <div className="space-y-2">
+          <p className="rounded-md border border-amber-300 p-3 text-sm dark:border-amber-700">
+            {t('sources.no_direct_chosen')}
+          </p>
           <textarea
             rows={4}
             aria-label={t('import.query')}
@@ -395,86 +366,145 @@ export function ApiSearchCard() {
             value={query}
             onChange={(e) => changeQuery(e.target.value)}
           />
-        )}
-      </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <Button
-          variant="ghost"
-          className="border border-stone-300 dark:border-stone-700"
-          disabled={!hasTerms || preview.isPending}
-          onClick={() => preview.mutate(payload)}
-        >
-          {preview.isPending ? t('sources.counting') : t('sources.count')}
-        </Button>
-        <Field label={t('sources.limit')}>
-          <Input
-            type="number"
-            min={1}
-            max={p?.max}
-            className="w-32"
-            value={limit}
-            onChange={(e) => setLimit(Math.max(1, Number(e.target.value) || 1))}
-          />
-        </Field>
-        <Button
-          disabled={!hasTerms || search.isPending || search.isSuccess}
-          onClick={() => search.mutate({ ...payload, limit })}
-        >
-          {t('sources.import')}
-        </Button>
-      </div>
-      <ErrorText error={preview.error ?? search.error} />
-      {search.isSuccess && (
-        <p role="status" className="text-sm text-brand-700 dark:text-brand-100">
-          {t('sources.started')}
-        </p>
-      )}
-      {!p && <LastSearch />}
-      {p && (
-        <div className="space-y-2 rounded-md bg-stone-50 p-3 text-sm dark:bg-stone-900">
-          <p className="font-medium">{t('sources.found', { count: p.count, n: fmt(p.count) })}</p>
-          {p.count > Math.min(limit, p.max) && (
-            <p className="text-amber-700 dark:text-amber-300">
-              {t('sources.over_limit', { limit: fmt(Math.min(limit, p.max)) })}
-            </p>
-          )}
-          <Corrections items={p.corrections} />
-          {p.warnings.length > 0 && (
-            <div className="text-amber-700 dark:text-amber-300">
-              <p>{t('sources.ignored')}</p>
-              <ul className="list-disc pl-5">
-                {p.warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {p.translation && (
-            <details>
-              <summary className="cursor-pointer text-stone-500">{t('sources.translation')}</summary>
-              <p className="mt-1 break-words font-mono text-xs">{p.translation}</p>
-            </details>
-          )}
-          {p.sample.length > 0 && (
-            <>
-              <p className="text-stone-500">{t('sources.sample')}</p>
-              <ol className="list-decimal space-y-1 pl-5">
-                {p.sample.map((r, i) => (
-                  <li key={i}>
-                    <span className="font-medium">{r.title || t('records.no_title')}</span>
-                    <span className="text-stone-500">
-                      {' '}
-                      · {[r.authors[0], r.year, r.journal].filter(Boolean).join(' · ')}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </>
-          )}
         </div>
       )}
+      {!noDirect && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-[14rem_1fr]">
+            <Field label={t('sources.source')}>
+              <Select
+                value={source}
+                onChange={(e) => {
+                  setSource(e.target.value as ApiSource)
+                  preview.reset()
+                  search.reset()
+                }}
+              >
+                {bases.direct.map((s) => (
+                  <option key={s} value={s}>
+                    {t(`sources.db_${s}`)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <p className="self-end pb-2 text-xs text-stone-500">
+              {t(mode === 'builder' ? 'sources.builder_hint' : `sources.syntax_${source}`)}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium">{t('import.query')}</span>
+              <div role="tablist" className="inline-flex rounded-md border border-stone-300 p-0.5 dark:border-stone-700">
+                {(['builder', 'text'] as const).map((m) => (
+                  <button
+                    key={m}
+                    role="tab"
+                    type="button"
+                    aria-selected={m === mode}
+                    onClick={() => {
+                      setMode(m)
+                      preview.reset()
+                      search.reset()
+                    }}
+                    className={`rounded px-3 py-1 text-sm ${m === mode ? 'bg-brand-600 text-white' : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'}`}
+                  >
+                    {t(`sources.mode_${m}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {mode === 'builder' ? (
+              <SearchBuilder rows={rows} onChange={changeRows} info={fieldInfo.data?.[source]} />
+            ) : (
+              <textarea
+                rows={4}
+                aria-label={t('import.query')}
+                className={textarea}
+                value={query}
+                onChange={(e) => changeQuery(e.target.value)}
+              />
+            )}
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <Button
+              variant="ghost"
+              className="border border-stone-300 dark:border-stone-700"
+              disabled={!hasTerms || preview.isPending}
+              onClick={() => preview.mutate(payload)}
+            >
+              {preview.isPending ? t('sources.counting') : t('sources.count')}
+            </Button>
+            <Field label={t('sources.limit')}>
+              <Input
+                type="number"
+                min={1}
+                max={p?.max}
+                className="w-32"
+                value={limit}
+                onChange={(e) => setLimit(Math.max(1, Number(e.target.value) || 1))}
+              />
+            </Field>
+            <Button
+              disabled={!hasTerms || search.isPending || search.isSuccess}
+              onClick={() => search.mutate({ ...payload, limit })}
+            >
+              {t('sources.import')}
+            </Button>
+          </div>
+          <ErrorText error={preview.error ?? search.error} />
+          {search.isSuccess && (
+            <p role="status" className="text-sm text-brand-700 dark:text-brand-100">
+              {t('sources.started')}
+            </p>
+          )}
+          {!p && <LastSearch />}
+          {p && (
+            <div className="space-y-2 rounded-md bg-stone-50 p-3 text-sm dark:bg-stone-900">
+              <p className="font-medium">{t('sources.found', { count: p.count, n: fmt(p.count) })}</p>
+              {p.count > Math.min(limit, p.max) && (
+                <p className="text-amber-700 dark:text-amber-300">
+                  {t('sources.over_limit', { limit: fmt(Math.min(limit, p.max)) })}
+                </p>
+              )}
+              <Corrections items={p.corrections} />
+              {p.warnings.length > 0 && (
+                <div className="text-amber-700 dark:text-amber-300">
+                  <p>{t('sources.ignored')}</p>
+                  <ul className="list-disc pl-5">
+                    {p.warnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {p.translation && (
+                <details>
+                  <summary className="cursor-pointer text-stone-500">{t('sources.translation')}</summary>
+                  <p className="mt-1 break-words font-mono text-xs">{p.translation}</p>
+                </details>
+              )}
+              {p.sample.length > 0 && (
+                <>
+                  <p className="text-stone-500">{t('sources.sample')}</p>
+                  <ol className="list-decimal space-y-1 pl-5">
+                    {p.sample.map((r, i) => (
+                      <li key={i}>
+                        <span className="font-medium">{r.title || t('records.no_title')}</span>
+                        <span className="text-stone-500">
+                          {' '}
+                          · {[r.authors[0], r.year, r.journal].filter(Boolean).join(' · ')}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
       <Translate
-        query={mode === 'builder' ? (p?.strategy ?? '') : query}
+        query={mode === 'builder' && !noDirect ? (p?.strategy ?? '') : query}
         onUse={(s, q) => {
           setSource(s)
           setMode('text')

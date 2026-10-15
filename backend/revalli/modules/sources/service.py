@@ -22,7 +22,7 @@ from revalli.modules.fulltext.studies import default_label
 from revalli.modules.imports.normalize import ParsedRecord, normalize_doi, normalize_title
 from revalli.modules.screening.models import Phase
 from revalli.modules.screening.service import State, compute_states
-from revalli.modules.sources import clients, keys
+from revalli.modules.sources import catalog, clients, keys
 from revalli.modules.sources.clients import openalex_pages, openalex_work, short_openalex_id
 from revalli.modules.sources.fields import Row, compile_strategy
 
@@ -360,6 +360,65 @@ TARGETS = {
         "quoted phrases, AND/OR/NOT in uppercase and parentheses; no field tags and no "
         "truncation; psychology terms, add Portuguese and Spanish synonyms"
     ),
+    "eric": (
+        "ERIC, Education Resources Information Center (education research): field:term syntax "
+        "with title:, description: (abstract), subject: (ERIC thesaurus descriptors), author:, "
+        "source: (journal); AND/OR/NOT in uppercase, parentheses, quoted phrases, * truncation; "
+        "English terms"
+    ),
+    "clinicaltrials": (
+        "ClinicalTrials.gov (registry of trials, not articles): Essie expressions such as "
+        "AREA[Condition](...), AREA[InterventionName](...), AREA[BriefTitle](...); AND, OR and "
+        "AND NOT in uppercase and parentheses; search by condition and intervention rather "
+        "than by methodology words"
+    ),
+    "preprints": (
+        "Preprints in Europe PMC (PsyArXiv, medRxiv, bioRxiv, Research Square and others): same "
+        "syntax as Europe PMC (TITLE:, ABSTRACT:, TITLE_ABS:, KW:, AUTH:); the preprint filter is "
+        "added by the tool, so do not write SRC:PPR"
+    ),
+    "arxiv": (
+        "arXiv (physics, mathematics, computer science, statistics, quantitative fields): "
+        "ti:, abs:, au:, all: prefixes; AND, OR and ANDNOT in uppercase, parentheses, quoted "
+        "phrases; English terms"
+    ),
+    "doaj": (
+        "DOAJ, Directory of Open Access Journals (open access articles in all fields): Lucene "
+        "syntax with bibjson.title:, bibjson.abstract:, bibjson.keywords:, bibjson.author.name:, "
+        "bibjson.journal.title:; AND, OR and AND NOT in uppercase, parentheses, quoted phrases; "
+        "no truncation (* is refused)"
+    ),
+    "openaire": (
+        "OpenAIRE (European repositories, grey literature, theses and articles): plain words, "
+        "quoted phrases, AND/OR/NOT in uppercase and parentheses; no field tags and no "
+        "truncation; add terms in the languages of the repositories"
+    ),
+    "semanticscholar": (
+        "Semantic Scholar bulk search: + for AND, | for OR, - before a term for NOT, quoted "
+        "phrases, parentheses, * suffix truncation; plain terms with no field tags"
+    ),
+    "sportdiscus": (
+        "SPORTDiscus via EBSCOhost (TI, AB, SU, KW field codes, e.g. TI (term) OR AB (term); "
+        "SU for subject terms; Nn and Wn proximity; * truncation)"
+    ),
+    "pedro": (
+        "PEDro, Physiotherapy Evidence Database (simple search on abstract and title): plain "
+        "words and quoted phrases with AND/OR; keep the strategy short because the interface "
+        "has few operators; therapy, problem and body part are chosen in form fields"
+    ),
+    "econlit": (
+        "EconLit via EBSCOhost or Ovid (TI, AB, SU field codes, JEL classification codes, Nn "
+        "proximity, * truncation)"
+    ),
+    "ieee": (
+        'IEEE Xplore command search ("Document Title":term, "Abstract":term, "Author '
+        'Keywords":term, "All Metadata":term; AND/OR/NOT in uppercase; NEAR/n; * and ? '
+        "wildcards)"
+    ),
+    "acm": (
+        "ACM Digital Library advanced search (Title:(...), Abstract:(...), Keyword:(...), "
+        "AllField:(...); AND/OR/NOT in uppercase; quoted phrases; * wildcard)"
+    ),
 }
 
 TRANSLATE_SYSTEM = """You translate literature search strategies between bibliographic databases.
@@ -433,8 +492,8 @@ How to work:
   Latin American ones).
 - Write each strategy in the syntax of its database. Databases and their syntax:
 {targets}
-- Give strategies only for the databases the team asked for; if they named none, give PubMed
-  and SciELO.
+- Give strategies only for databases in the list above. The team has already chosen these
+  databases for the project, so if they name none, give one strategy per listed database.
 - Reply to the team in the language they write in. The query text keeps the languages of the
   search terms.
 
@@ -442,10 +501,10 @@ Answer with a single JSON object and nothing else:
 {{"reply": "what you understood and your questions",
   "strategies": [{{"base": "one of: {keys}", "query": "...", "notes": ["short note"]}}]}}"""
 
-MAX_STRATEGIES = 6
+MAX_STRATEGIES = 30
 
 
-def parse_assist(data: dict) -> dict:
+def parse_assist(data: dict, allowed: tuple[str, ...] | list[str] | None = None) -> dict:
     reply = str(data.get("reply") or "").strip()[:4000]
     strategies, seen = [], set()
     for raw in data.get("strategies") or []:
@@ -453,7 +512,7 @@ def parse_assist(data: dict) -> dict:
             continue
         base = str(raw.get("base") or "").strip().lower()
         query = str(raw.get("query") or "").strip()[:20_000]
-        if base not in TARGETS or base in seen or not query:
+        if base not in (allowed or TARGETS) or base in seen or not query:
             continue
         seen.add(base)
         notes = raw.get("notes") or []
@@ -524,8 +583,9 @@ async def assist_search(db: AsyncSession, project: Project, history: list[dict])
     context = f"Review title: {project.title}"
     if project.description.strip():
         context += f"\nReview description: {project.description.strip()}"
+    chosen = catalog.enabled(project.settings)
     system = ASSIST_SYSTEM.format(
-        targets="\n".join(f"- {k}: {v}" for k, v in TARGETS.items()), keys=", ".join(TARGETS)
+        targets="\n".join(f"- {k}: {TARGETS[k]}" for k in chosen), keys=", ".join(chosen)
     )
     messages = [
         {"role": "system", "content": f"{system}\n\n{context}"},
@@ -544,5 +604,5 @@ async def assist_search(db: AsyncSession, project: Project, history: list[dict])
         )
     )
     await db.commit()
-    out = parse_assist(ai_client.parse_json(result.content))
+    out = parse_assist(ai_client.parse_json(result.content), chosen)
     return {**out, "model": res.choice.model}

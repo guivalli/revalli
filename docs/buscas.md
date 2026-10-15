@@ -33,6 +33,48 @@ Em todas, `AND`, `OR` e `NOT` em maiúsculas, parênteses, frases entre aspas e 
 
 A importação vira uma busca como as feitas por arquivo: data, estratégia, número informado pela base e número importado ficam registrados para o relato PRISMA-S. Depois, a deduplicação roda sozinha.
 
+### Bases do projeto e bases além da psicologia
+
+Em **Importar**, o cartão **Bases do projeto** escolhe quais bases esta revisão usa. A escolha vale para a lista da busca direta, para os alvos da tradução e para o que o assistente de busca propõe (uma estratégia por base escolhida, em vez de todas). Só a pessoa líder altera. Enquanto ninguém escolhe, valem as 12 bases com busca direta (PubMed, OpenAlex, Europe PMC, Preprints, ClinicalTrials.gov, ERIC, arXiv, DOAJ, OpenAIRE, Semantic Scholar, SciELO e PePSIC) mais Scopus, Web of Science, Embase, CINAHL, PsycInfo, Cochrane, BVS/LILACS e Portal CAPES. Escolher um pacote reduz a lista.
+
+Os **pacotes por área** trocam a seleção pelo conjunto típico da área; depois dá para ajustar caixa por caixa:
+
+| Pacote | Bases |
+|---|---|
+| Saúde | PubMed, Embase, Cochrane, ClinicalTrials.gov, Scopus, Web of Science, Preprints |
+| Enfermagem e reabilitação | PubMed, CINAHL, PEDro, SPORTDiscus, Cochrane, BVS/LILACS, SciELO |
+| Psicologia | PubMed, PsycInfo, PePSIC, ERIC, SciELO, BVS/LILACS, Preprints |
+| Educação | ERIC, Scopus, Web of Science, SciELO, Portal CAPES, OpenAlex, DOAJ |
+| Sociais, economia e direito | OpenAlex, Scopus, Web of Science, EconLit, SciELO, Portal CAPES, DOAJ, OpenAIRE |
+| Computação e engenharia | IEEE Xplore, ACM, Scopus, arXiv, Semantic Scholar, OpenAlex |
+
+Bases com **busca direta** novas (APIs abertas, sem chave; conferidas em 2026-10-15):
+
+| Base | Para quê | Campos do construtor | Observações |
+|---|---|---|---|
+| **ERIC** | educação e psicologia educacional | título e resumo, título, resumo, autor, palavra-chave (descritor), revista, ano, idioma, tipo | Termos em inglês. `title:`, `description:`, `subject:`, `author:`, `source:` são as siglas nativas; as de outras bases (`ti:`) são trocadas |
+| **ClinicalTrials.gov** | registro de ensaios (literatura cinza) | título e resumo, título, resumo, palavra-chave, **condição**, **intervenção**, ano de início, tipo de estudo | É um registro, não uma base de artigos: o registro guarda patrocinador como "autor" e `ClinicalTrials.gov` como revista. Expressões `AREA[...]` escritas à mão vão como estão |
+| **Preprints** | PsyArXiv, medRxiv, bioRxiv, Research Square e outros | os do Europe PMC | É o Europe PMC com `SRC:PPR` acrescentado; a estratégia salva já mostra o filtro |
+| **arXiv** | computação, física, matemática, estatística | título e resumo, título, resumo, autor, revista | `NOT` vira `ANDNOT`; termo solto vira `all:`. O arXiv pede uma consulta a cada 3 segundos, então a importação é mais lenta |
+
+Segundo lote de bases com busca direta (conferidas em 2026-10-15):
+
+| Base | Para quê | Campos do construtor | Observações |
+|---|---|---|---|
+| **DOAJ** | artigos de revistas de acesso aberto, todas as áreas | título e resumo, título, resumo, autor, palavra-chave, revista, ano, idioma | Sintaxe Lucene; **recusa `*`** (HTTP 400), então o asterisco é retirado e a estratégia mostra o aviso. `NOT` vira `AND NOT` |
+| **OpenAIRE** | repositórios europeus, teses e literatura cinza | título e resumo (todos os metadados), título, resumo, autor, ano | Cada campo é um filtro à parte (só E entre campos). **Sem curinga** (`anxi*` vira texto literal) e traz muitas duplicatas entre repositórios: confira a contagem e deduplique |
+| **Semantic Scholar** | geral, forte em computação e ciências exatas | título e resumo, ano, tipo, revista | `AND`, `OR` e `NOT` viram `+`, `\|` e `-`. A chave gratuita (`SEMANTIC_SCHOLAR_API_KEY`) é exigida na prática: sem ela a base responde 429 na maioria das vezes. Usa a busca em lote, que não ordena por relevância |
+
+**OSF Preprints (SocArXiv, EdArXiv, LawArXiv, SportRxiv e outros) ficou de fora.** A API só filtra o título por substring (`filter[title]`), não tem OU, e os autores exigem uma requisição a mais por registro; isso não serve para uma estratégia com sinônimos. O Europe PMC, usado em **Preprints**, cobre PsyArXiv, SSRN e Research Square, mas não SocArXiv nem EdArXiv (conferido em 2026-10-15). Para esses, exporte do OSF e importe o arquivo.
+
+Sem busca direta (só tradução da estratégia e importação do arquivo exportado): Scopus, Web of Science, Embase, CINAHL, PsycInfo, Cochrane, BVS/LILACS, Portal CAPES, **SPORTDiscus**, **PEDro**, **EconLit**, **IEEE Xplore** e **ACM Digital Library**. Para a revisão sistemática formal, o OpenAlex não substitui a base própria da área (Embase e CINAHL na saúde, PsycInfo na psicologia).
+
+Limites conhecidos:
+
+- Os registros do ClinicalTrials.gov e dos preprints só entram na deduplicação se tiverem DOI ou título parecido com o de um artigo; um ensaio registrado e o artigo que o publicou aparecem como dois registros.
+- O arXiv limitou o ritmo da rede de desenvolvimento durante os testes (HTTP 429), por isso a sintaxe com parênteses e `ANDNOT` do arXiv segue a documentação da API e os testes com transporte falso, e **não foi conferida contra a API real** com uma consulta composta. Confira a contagem na tela antes de importar.
+- O Semantic Scholar respondeu a uma consulta real sem chave (21.760 resultados para `anxiety + exercise`), mas é o mesmo serviço que costuma devolver 429 sem chave. A leitura dos registros (DOI, PubMed, revista) foi testada só com transporte falso.
+
 ### LILACS e Portal CAPES (e o buscador do SciELO)
 
 LILACS/BVS e Portal de Periódicos CAPES **não têm busca direta** no ReValli. Testamos (2026-10-11) o acesso programático:
