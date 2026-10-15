@@ -17,6 +17,7 @@ from revalli.modules.ai.crypto import decrypt
 from revalli.modules.imports.normalize import ParsedRecord, normalize_title
 from revalli.modules.imports.parsers import ImportFormatError, parse_file
 from revalli.modules.sources import clients, keys
+from revalli.modules.sources.fields import compile_strategy
 from revalli.modules.sources.service import save_search
 from revalli.modules.watches.models import Watch
 
@@ -79,11 +80,13 @@ def only_new(records: list[ParsedRecord], known: Known) -> list[ParsedRecord]:
 
 async def _fetch_search(watch: Watch, progress) -> tuple[str, int, list[ParsedRecord]]:
     name, _, fetch = clients.SOURCES[watch.source]
+    # A estratégia salva é texto; é corrigida para a base do mesmo jeito que na busca
+    strategy = compile_strategy(watch.source, watch.query)
     limit = get_settings().api_search_max
     found: list[ParsedRecord] = []
     total = 0
     async with clients.http_client() as c:
-        async for total, batch in fetch(c, watch.query, limit):
+        async for total, batch in fetch(c, strategy, limit):
             found.extend(r for r in batch if not r.is_empty)
             if progress:
                 progress(len(found), min(total, limit))

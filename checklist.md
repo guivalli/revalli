@@ -40,6 +40,12 @@ Os itens que dependem de pessoas estão no [checklist-humano.md](checklist-human
 - [ ] **Triagem por IA no texto completo, lendo o PDF.** Hoje a IA só vale em título e resumo, e o botão fica escondido no texto completo. Plano: texto do PDF principal até `AI_EXTRACT_MAX_CHARS`, pular estudos sem PDF ou escaneados, prompt próprio, prévia de custo contando o texto. ~1 hora.
 - [ ] Parar também embeddings, extração por IA e importações (só a triagem por IA para).
 - [ ] OCR de PDFs escaneados.
+- [ ] **Bases para além da psicologia** (decisão de 2026-10-14; APIs conferidas ao vivo, ver [docs/buscas.md](docs/buscas.md)):
+  - [ ] Seletor de bases por projeto no topo de Importar (só `lead`), com pacotes por área; vale para a busca direta, a tradução e o assistente. ~meio dia.
+  - [ ] Lote 1, busca direta: ERIC, ClinicalTrials.gov, preprints (Europe PMC `SRC:PPR`) e arXiv, com campos no construtor e testes com transporte falso.
+  - [ ] Alvos de tradução e importação por arquivo: IEEE Xplore, ACM DL, SPORTDiscus, PEDro e EconLit.
+  - [ ] Aviso na tela quando o pacote da área pede uma base paga (Embase, CINAHL, PsycINFO): o OpenAlex não a substitui numa revisão formal.
+  - [ ] Lote 2: OpenAIRE, DOAJ, OSF Preprints e Semantic Scholar (com chave grátis). Depois: Redalyc, BDTD e Epistemonikos como alvos de importação.
 - [ ] Busca direta em LILACS/BVS (depende de uma chave da API da BVS) e no Portal CAPES (não tem API pública).
 - [ ] Título original na importação da BVS: o campo `TI` pode vir em inglês num artigo em português, e a exportação não diz qual título é o original.
 - [ ] Acesso pela instituição (CAFe): adiado. O link pelo proxy do Portal CAPES foi tentado e removido em 2026-10-12 (404 e página inicial do Portal; o proxy não atende `doi.org`). Para retomar, é preciso conferir com login real como o Portal monta o endereço de cada editora.
@@ -58,6 +64,8 @@ Os itens que dependem de pessoas estão no [checklist-humano.md](checklist-human
 
 ## Feito recentemente
 
+- [x] Construtor de busca (operador, termo e campo por linha) com tradução da estratégia para a sintaxe de cada base e lista do que foi corrigido; campos conferidos contra as APIs reais.
+- [x] Importação por arquivo agrupa buscas de nome parecido (`source_similar`), para o PRISMA não separar a mesma base com grafias diferentes. Estado: 225 testes do backend passam.
 - [x] Interface nova: tela inicial com boas-vindas e tabela, assistente de nova revisão em três passos, Visão geral em cartões com anel de progresso e primeiros passos, menu lateral e gaveta de critérios, abas em pílulas.
 - [x] Tema claro, automático e escuro; paleta e logos da marca (azul e verde-limão, com versão para fundo escuro).
 - [x] Redefinição de senha: troca na página Conta e link de nova senha gerado pelo administrador em Membros.

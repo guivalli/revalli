@@ -7,6 +7,7 @@ from revalli.modules.records.dedup import run_dedup
 from revalli.modules.records.jobs import handler
 from revalli.modules.records.models import Job
 from revalli.modules.sources import service
+from revalli.modules.sources.fields import Row
 
 
 def _user(p: dict) -> uuid.UUID | None:
@@ -19,8 +20,16 @@ async def api_search_job(db: AsyncSession, job: Job) -> dict:
         job.progress, job.total = done, total
 
     p = job.params or {}
+    rows = [Row(**r) for r in p.get("rows") or []] or None
     stats = await service.run_api_search(
-        db, job.project_id, _user(p), p["source"], p["query"], int(p["limit"]), progress
+        db,
+        job.project_id,
+        _user(p),
+        p["source"],
+        p.get("query", ""),
+        int(p["limit"]),
+        progress,
+        rows,
     )
     stats["dedup"] = await run_dedup(db, job.project_id)
     return stats

@@ -36,6 +36,7 @@ from revalli.modules.records.schemas import (
     SplitIn,
     Summary,
 )
+from revalli.modules.records.source_names import same_name, similar_source
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["records"])
 
@@ -58,6 +59,34 @@ def _record_out(r: Record, is_dup: bool) -> RecordOut:
 # --- Importação e buscas ------------------------------------------------------
 
 
+async def _resolve_source(
+    db: AsyncSession, project_id: uuid.UUID, source: str, same_source: bool | None
+) -> str:
+    """Nome igual ou parecido com o de uma busca já importada exige uma resposta: é a mesma base
+    (junta, com a grafia que já existe) ou é outra (fica separada, com outro nome)."""
+    existing = list(
+        (
+            await db.execute(
+                select(Search.source).where(
+                    Search.project_id == project_id, Search.method == "database"
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    match = similar_source(source, existing)
+    if match is None:
+        return source.strip()
+    if same_source is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"source_similar: {match}")
+    if same_source:
+        return match
+    if any(same_name(source, e) for e in existing):
+        raise HTTPException(422, f"source_must_differ: {match}")
+    return source.strip()
+
+
 @router.post("/imports", response_model=ImportResult, status_code=status.HTTP_201_CREATED)
 async def import_file(
     project_id: uuid.UUID,
@@ -68,10 +97,12 @@ async def import_file(
     reported_count: int | None = Form(None, ge=0),
     notes: str = Form("", max_length=20_000),
     file_format: str | None = Form(None),
+    same_source: bool | None = Form(None),
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
     await require_lead(db, project_id, user)
+    source = await _resolve_source(db, project_id, source, same_source)
     limit = get_settings().max_import_mb * 1024 * 1024
     data = await file.read(limit + 1)
     if len(data) > limit:
@@ -89,7 +120,7 @@ async def import_file(
 
     search = Search(
         project_id=project_id,
-        source=source.strip(),
+        source=source,
         query=query,
         searched_on=searched_on,
         reported_count=reported_count,

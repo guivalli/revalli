@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRecentJobs } from '../../api/records'
-import { useAssistChat, useSnowballInfo, useSourceActions } from '../../api/sources'
-import type { ApiSource, AssistTurn, Job } from '../../api/types'
+import { useAssistChat, useSnowballInfo, useSourceActions, useSourceFields } from '../../api/sources'
+import type { ApiSource, AssistTurn, Job, SearchRow } from '../../api/types'
+import { SearchBuilder } from '../../components/SearchBuilder'
+import { emptyRow } from '../../components/searchRows'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
 import { useProjectContext } from './context'
 
@@ -32,16 +34,58 @@ function useLastJob(kind: Job['kind']) {
   return jobs.data?.find((j) => j.kind === kind && j.status === 'done')
 }
 
+/** Texto de uma correção (`código` ou `código: detalhe`); campos do detalhe viram o nome na tela. */
+function useFixText() {
+  const { t } = useTranslation()
+  return (fix: string) => {
+    const [code, ...rest] = fix.split(': ')
+    const detail = rest
+      .join(': ')
+      .split(', ')
+      .map((d) => t(`sources.field_${d}`, { defaultValue: d }))
+      .join(', ')
+    return t(`sources.fix_${code}`, { detail, defaultValue: fix })
+  }
+}
+
+function Corrections({ items }: { items: string[] }) {
+  const { t } = useTranslation()
+  const text = useFixText()
+  if (!items.length) return null
+  return (
+    <div
+      role="status"
+      className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+    >
+      <p className="font-medium">{t('sources.fixed_title')}</p>
+      <ul className="list-disc pl-5">
+        {items.map((f) => (
+          <li key={f}>{text(f)}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function LastSearch() {
   const { t } = useTranslation()
   const job = useLastJob('api_search')
   if (!job) return null
-  const r = job.result as { source: string; found: number; imported: number; truncated: boolean }
+  const r = job.result as {
+    source: string
+    found: number
+    imported: number
+    truncated: boolean
+    corrections?: string[]
+  }
   return (
-    <p className="text-sm text-stone-600 dark:text-stone-400">
-      {t('sources.last_search', { source: r.source, imported: r.imported, found: r.found })}
-      {r.truncated && ` ${t('sources.last_truncated')}`}
-    </p>
+    <div className="space-y-2">
+      <p className="text-sm text-stone-600 dark:text-stone-400">
+        {t('sources.last_search', { source: r.source, imported: r.imported, found: r.found })}
+        {r.truncated && ` ${t('sources.last_truncated')}`}
+      </p>
+      <Corrections items={r.corrections ?? []} />
+    </div>
   )
 }
 
@@ -261,14 +305,25 @@ export function ApiSearchCard() {
   const { t, i18n } = useTranslation()
   const { project } = useProjectContext()
   const { preview, search } = useSourceActions(project.id)
+  const fieldInfo = useSourceFields(project.id)
   const [source, setSource] = useState<ApiSource>('pubmed')
+  const [mode, setMode] = useState<'builder' | 'text'>('builder')
+  const [rows, setRows] = useState<SearchRow[]>([emptyRow()])
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(5000)
   const p = preview.data
   const fmt = (n: number) => n.toLocaleString(i18n.language)
+  const usedRows = rows.filter((r) => r.term.trim())
+  const hasTerms = mode === 'builder' ? usedRows.length > 0 : !!query.trim()
+  const payload = mode === 'builder' ? { source, rows: usedRows } : { source, query }
 
   const changeQuery = (q: string) => {
     setQuery(q)
+    preview.reset()
+    search.reset()
+  }
+  const changeRows = (r: SearchRow[]) => {
+    setRows(r)
     preview.reset()
     search.reset()
   }
@@ -283,6 +338,7 @@ export function ApiSearchCard() {
       <SearchAssistant
         onUse={(s, q) => {
           setSource(s)
+          setMode('text')
           changeQuery(q)
         }}
       />
@@ -303,17 +359,50 @@ export function ApiSearchCard() {
             ))}
           </Select>
         </Field>
-        <p className="self-end pb-2 text-xs text-stone-500">{t(`sources.syntax_${source}`)}</p>
+        <p className="self-end pb-2 text-xs text-stone-500">
+          {t(mode === 'builder' ? 'sources.builder_hint' : `sources.syntax_${source}`)}
+        </p>
       </div>
-      <Field label={t('import.query')}>
-        <textarea rows={4} className={textarea} value={query} onChange={(e) => changeQuery(e.target.value)} />
-      </Field>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-medium">{t('import.query')}</span>
+          <div role="tablist" className="inline-flex rounded-md border border-stone-300 p-0.5 dark:border-stone-700">
+            {(['builder', 'text'] as const).map((m) => (
+              <button
+                key={m}
+                role="tab"
+                type="button"
+                aria-selected={m === mode}
+                onClick={() => {
+                  setMode(m)
+                  preview.reset()
+                  search.reset()
+                }}
+                className={`rounded px-3 py-1 text-sm ${m === mode ? 'bg-brand-600 text-white' : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'}`}
+              >
+                {t(`sources.mode_${m}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+        {mode === 'builder' ? (
+          <SearchBuilder rows={rows} onChange={changeRows} info={fieldInfo.data?.[source]} />
+        ) : (
+          <textarea
+            rows={4}
+            aria-label={t('import.query')}
+            className={textarea}
+            value={query}
+            onChange={(e) => changeQuery(e.target.value)}
+          />
+        )}
+      </div>
       <div className="flex flex-wrap items-end gap-3">
         <Button
           variant="ghost"
           className="border border-stone-300 dark:border-stone-700"
-          disabled={!query.trim() || preview.isPending}
-          onClick={() => preview.mutate({ source, query })}
+          disabled={!hasTerms || preview.isPending}
+          onClick={() => preview.mutate(payload)}
         >
           {preview.isPending ? t('sources.counting') : t('sources.count')}
         </Button>
@@ -328,8 +417,8 @@ export function ApiSearchCard() {
           />
         </Field>
         <Button
-          disabled={!query.trim() || search.isPending || search.isSuccess}
-          onClick={() => search.mutate({ source, query, limit })}
+          disabled={!hasTerms || search.isPending || search.isSuccess}
+          onClick={() => search.mutate({ ...payload, limit })}
         >
           {t('sources.import')}
         </Button>
@@ -349,6 +438,7 @@ export function ApiSearchCard() {
               {t('sources.over_limit', { limit: fmt(Math.min(limit, p.max)) })}
             </p>
           )}
+          <Corrections items={p.corrections} />
           {p.warnings.length > 0 && (
             <div className="text-amber-700 dark:text-amber-300">
               <p>{t('sources.ignored')}</p>
@@ -384,9 +474,10 @@ export function ApiSearchCard() {
         </div>
       )}
       <Translate
-        query={query}
+        query={mode === 'builder' ? (p?.strategy ?? '') : query}
         onUse={(s, q) => {
           setSource(s)
+          setMode('text')
           changeQuery(q)
         }}
       />

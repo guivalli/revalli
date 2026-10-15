@@ -18,6 +18,7 @@ from revalli.modules.imports.normalize import ParsedRecord, normalize_pmid
 from revalli.modules.imports.parsers import parse_pubmed_xml
 from revalli.modules.records.enrich import abstract_from_index
 from revalli.modules.sources import keys
+from revalli.modules.sources.fields import Compiled
 
 # Permite trocar o transporte nos testes (sem rede)
 _transport: httpx.AsyncBaseTransport | None = None
@@ -62,7 +63,7 @@ _next_heavy: dict[str, float] = {}
 def is_heavy(params: dict) -> bool:
     return any(
         len(_BOOLEAN.findall(str(params.get(k) or ""))) > HEAVY_OPERATORS
-        for k in ("search", "search.exact")
+        for k in ("search", "search.exact", "filter")
     )
 
 
@@ -127,6 +128,10 @@ class Preview:
     # Como a base interpretou a estratégia e o que ela descartou (só o PubMed informa)
     translation: str = ""
     warnings: list[str] = field(default_factory=list)
+    # O que foi corrigido na estratégia antes de enviar (`código` ou `código: detalhe`)
+    corrections: list[str] = field(default_factory=list)
+    # A estratégia compilada para a base, como foi enviada
+    strategy: str = ""
 
 
 # --- OpenAlex ------------------------------------------------------------------
@@ -138,30 +143,6 @@ def openalex_params() -> dict:
     if key := keys.openalex_key():
         params["api_key"] = key
     return params
-
-
-_QUOTED = re.compile(r'"([^"]*)"')
-
-
-def adapt_query(query: str) -> str:
-    """O OpenAlex recusa curingas dentro de frases entre aspas ("efeito* adverso*"). A frase
-    vira as palavras ligadas por AND, o que é um pouco mais amplo mas é aceito."""
-
-    def unquote(m: re.Match) -> str:
-        phrase = m.group(1)
-        if "*" not in phrase and "?" not in phrase:
-            return m.group(0)
-        words = phrase.split()
-        return words[0] if len(words) == 1 else "(" + " AND ".join(words) + ")"
-
-    return _QUOTED.sub(unquote, query)
-
-
-def search_param(query: str) -> dict:
-    """Curingas (* ou ?) só funcionam na busca exata do OpenAlex, que não radicaliza as palavras."""
-    query = adapt_query(query)
-    exact = "*" in query or "?" in query
-    return {"search.exact" if exact else "search": query}
 
 
 def short_openalex_id(value: str | None) -> str:
@@ -218,22 +199,21 @@ async def openalex_pages(
         await pause()
 
 
-async def openalex_preview(client: httpx.AsyncClient, query: str) -> Preview:
+async def openalex_preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
     url = get_settings().openalex_url.rstrip("/") + "/works"
-    resp = await get(client, url, {**openalex_params(), **search_param(query), "per-page": 5})
-    data = resp.json()
-    adapted = adapt_query(query)
+    params = {**openalex_params(), "filter": ",".join(strategy.filters), "per-page": 5}
+    data = (await get(client, url, params)).json()
     return Preview(
         int((data.get("meta") or {}).get("count") or 0),
         [openalex_work(w) for w in data.get("results") or []],
-        translation=adapted if adapted != query else "",
     )
 
 
 async def openalex_fetch(
-    client: httpx.AsyncClient, query: str, limit: int
+    client: httpx.AsyncClient, strategy: Compiled, limit: int
 ) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
-    async for total, works in openalex_pages(client, search_param(query), limit):
+    params = {"filter": ",".join(strategy.filters)}
+    async for total, works in openalex_pages(client, params, limit):
         yield total, [openalex_work(w) for w in works]
 
 
@@ -426,33 +406,38 @@ def _issn_filters(issns: list[str]) -> list[str]:
     ]
 
 
-async def collection_preview(client: httpx.AsyncClient, collection: str, query: str) -> Preview:
+def _collection_filter(strategy: Compiled, issn_filter: str) -> str:
+    return ",".join([*strategy.filters, issn_filter])
+
+
+async def collection_preview(
+    client: httpx.AsyncClient, collection: str, strategy: Compiled
+) -> Preview:
     url = get_settings().openalex_url.rstrip("/") + "/works"
     total, sample = 0, []
     for flt in _issn_filters(await collection_issns(client, collection)):
-        resp = await get(
-            client,
-            url,
-            {**openalex_params(), **search_param(query), "filter": flt, "per-page": 5},
-        )
-        data = resp.json()
+        params = {
+            **openalex_params(),
+            "filter": _collection_filter(strategy, flt),
+            "per-page": 5,
+        }
+        data = (await get(client, url, params)).json()
         total += int((data.get("meta") or {}).get("count") or 0)
         if len(sample) < 5:
             sample += [openalex_work(w) for w in data.get("results") or []][: 5 - len(sample)]
         await pause()
-    adapted = adapt_query(query)
-    return Preview(total, sample, translation=adapted if adapted != query else "")
+    return Preview(total, sample)
 
 
 async def collection_fetch(
-    client: httpx.AsyncClient, collection: str, query: str, limit: int
+    client: httpx.AsyncClient, collection: str, strategy: Compiled, limit: int
 ) -> AsyncIterator[tuple[int, list[ParsedRecord]]]:
     """Um lote de revistas por vez. O total acumula as contagens de cada lote; ao atingir o
     limite, os lotes restantes só são contados, para o total informado ser o da base inteira."""
     url = get_settings().openalex_url.rstrip("/") + "/works"
     total = seen = 0
     for flt in _issn_filters(await collection_issns(client, collection)):
-        params = {**search_param(query), "filter": flt}
+        params = {"filter": _collection_filter(strategy, flt)}
         if seen >= limit:
             resp = await get(client, url, {**openalex_params(), **params, "per-page": 1})
             total += int((resp.json().get("meta") or {}).get("count") or 0)
@@ -467,19 +452,31 @@ async def collection_fetch(
 
 
 def _collection_source(label: str, collection: str):
-    async def preview(client: httpx.AsyncClient, query: str) -> Preview:
-        return await collection_preview(client, collection, query)
+    async def preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
+        return await collection_preview(client, collection, strategy)
 
-    def fetch(client: httpx.AsyncClient, query: str, limit: int):
-        return collection_fetch(client, collection, query, limit)
+    def fetch(client: httpx.AsyncClient, strategy: Compiled, limit: int):
+        return collection_fetch(client, collection, strategy, limit)
 
     return (label, preview, fetch)
 
 
+def _text_source(label: str, preview, fetch):
+    """PubMed e Europe PMC recebem a estratégia como texto já compilada."""
+
+    async def run_preview(client: httpx.AsyncClient, strategy: Compiled) -> Preview:
+        return await preview(client, strategy.native)
+
+    def run_fetch(client: httpx.AsyncClient, strategy: Compiled, limit: int):
+        return fetch(client, strategy.native, limit)
+
+    return (label, run_preview, run_fetch)
+
+
 SOURCES = {
-    "pubmed": ("PubMed", pubmed_preview, pubmed_fetch),
+    "pubmed": _text_source("PubMed", pubmed_preview, pubmed_fetch),
     "openalex": ("OpenAlex", openalex_preview, openalex_fetch),
-    "europepmc": ("Europe PMC", europepmc_preview, europepmc_fetch),
+    "europepmc": _text_source("Europe PMC", europepmc_preview, europepmc_fetch),
     "scielo": _collection_source("SciELO (via OpenAlex)", "scl"),
     "pepsic": _collection_source("PePSIC (via OpenAlex)", "psi"),
 }

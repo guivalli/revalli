@@ -5,6 +5,8 @@ import type {
   AssistReply,
   AssistTurn,
   Job,
+  SearchRow,
+  SourceFields,
   SourcePreview,
   SourcesSettings,
   Translation,
@@ -16,6 +18,14 @@ export function useAssistChat(pid: string) {
   return useQuery({
     queryKey: ['projects', pid, 'sources', 'assist'],
     queryFn: () => api.get<{ messages: AssistTurn[] }>(`${base(pid)}/assist`),
+  })
+}
+
+export function useSourceFields(pid: string) {
+  return useQuery({
+    queryKey: ['projects', pid, 'sources', 'fields'],
+    queryFn: () => api.get<Record<ApiSource, SourceFields>>(`${base(pid)}/fields`),
+    staleTime: Infinity,
   })
 }
 
@@ -48,11 +58,11 @@ export function useSourceActions(pid: string) {
   const refresh = () => qc.invalidateQueries({ queryKey: ['projects', pid] })
   return {
     preview: useMutation({
-      mutationFn: (body: { source: ApiSource; query: string }) =>
+      mutationFn: (body: { source: ApiSource; query?: string; rows?: SearchRow[] }) =>
         api.post<SourcePreview>(`${base(pid)}/preview`, body),
     }),
     search: useMutation({
-      mutationFn: (body: { source: ApiSource; query: string; limit: number }) =>
+      mutationFn: (body: { source: ApiSource; query?: string; rows?: SearchRow[]; limit: number }) =>
         api.post<Job>(`${base(pid)}/search`, body),
       onSuccess: refresh,
     }),

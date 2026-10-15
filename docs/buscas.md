@@ -6,13 +6,24 @@
 
 Na aba **Importar**, o cartão **Buscar direto na base** consulta pela API pública:
 
-| Base | Sintaxe aceita |
-|---|---|
-| PubMed | A mesma do site: MeSH com `[mh]`, campos como `[tiab]`, `AND`, `OR`, `NOT`, truncamento com `*` |
-| OpenAlex | Palavras, frases entre aspas, `AND`, `OR`, `NOT` em maiúsculas e parênteses, sem campos. Com `*` ou `?` a busca vira exata (sem radicalização), exigência do OpenAlex |
-| Europe PMC | Campos como `TITLE:`, `ABSTRACT:`, `KW:` e `MESH:`, com `AND`, `OR` e `NOT` |
-| SciELO | A do OpenAlex (palavras, aspas, `AND`, `OR`, `NOT`, parênteses; `*` liga a busca exata) |
-| PePSIC | A do OpenAlex |
+A estratégia pode ser montada no **Construtor** (uma linha por conceito, com operador, termo e campo, como na busca avançada das bases) ou escrita como **Texto**. O construtor só oferece os campos que a base aceita; o servidor os traduz para a sintaxe nativa e a tela mostra, em "Como a base interpretou a estratégia", o que foi enviado.
+
+| Campo | PubMed | Europe PMC | OpenAlex, SciELO e PePSIC |
+|---|---|---|---|
+| Título e resumo | `[tiab]` | `TITLE_ABS:` | `title_and_abstract.search` |
+| Título | `[ti]` | `TITLE:` | `title.search` |
+| Resumo | (use título e resumo) | `ABSTRACT:` | `abstract.search` |
+| Texto completo | não | não | `fulltext.search` |
+| Autor | `[au]` | `AUTH:` | `raw_author_name.search` |
+| Palavra-chave | não | `KW:` | não |
+| Descritor MeSH | `[mh]` | não | não |
+| Revista | `[ta]` | `JOURNAL:` | não |
+| Afiliação | `[ad]` | `AFF:` | `raw_affiliation_strings.search` |
+| Ano, idioma, tipo | `[dp]`, `[la]`, `[pt]` | `PUB_YEAR:`, `LANG:`, `PUB_TYPE:` | `publication_year`, `language`, `type` |
+
+Em todas, `AND`, `OR` e `NOT` em maiúsculas, parênteses, frases entre aspas e `*` valem dentro do termo. No OpenAlex (e SciELO e PePSIC), `OR` só vale dentro de um campo (título e resumo se unem); campos diferentes se combinam com `AND`.
+
+**O ReValli corrige a estratégia em vez de recusá-la** e avisa o que mudou: siglas de outras bases (`ti:(...)`, `ab:(...)`, `[tiab]`) são trocadas pelas da base escolhida; no OpenAlex, que não tem esses campos, a busca roda em título e resumo; `and`, `or` e `not` em minúsculas viram operadores; `OR` entre campos diferentes onde a base não aceita vira `AND`. Isso importa: o `search` padrão do OpenAlex inclui o texto completo e devolvia milhares de registros a mais do que o buscador do SciELO, que só olha título e resumo. Num teste real, a mesma estratégia deu 37 resultados no OpenAlex (título e resumo, revistas do SciELO) contra 38 no site do SciELO.
 
 **SciELO e PePSIC** não usam o buscador do SciELO (que bloqueia robôs): o ReValli lista as revistas da coleção (SciELO Brasil, cerca de 430; PePSIC, cerca de 120) pela API ArticleMeta e busca no OpenAlex só nelas. A cobertura é a do OpenAlex nessas revistas, então pode diferir do que o portal mostra. Cada busca faz uma consulta por lote de 50 revistas e soma as contagens; a lista de revistas fica em cache por 24 horas. Se a base pedir calma (HTTP 429) ou falhar por instantes, o ReValli tenta de novo até 4 vezes, esperando mais a cada tentativa; se ainda assim falhar, a tela mostra o motivo devolvido pela base. A busca aparece no PRISMA como "SciELO (via OpenAlex)" ou "PePSIC (via OpenAlex)". O endereço do ArticleMeta é `ARTICLEMETA_URL`. Atenção: a busca do OpenAlex ordena por relevância e aceita resultados que casam só parte dos termos, então a contagem tende a ser larga (num teste real, "ansiedade AND exercício" no SciELO deu 5.724 resultados, com itens fora do tema entre os primeiros). Confira a amostra antes de importar e refine na triagem.
 

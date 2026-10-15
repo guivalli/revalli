@@ -31,7 +31,6 @@ function SettingsCard({ initial }: { initial: ProjectAISettings }) {
       <h2 className="font-semibold">{t('ai.project_title')}</h2>
       <fieldset disabled={!canManage} className="space-y-4">
         {[
-          ['enabled', 'ai.enabled', 'ai.enabled_hint'],
           ['local_only', 'ai.local_only', 'ai.local_only_hint'],
           ['active_learning', 'ai.active_learning', 'ai.active_learning_hint'],
           ['suggest_tags', 'ai.suggest_tags', 'ai.suggest_tags_hint'],
@@ -41,7 +40,7 @@ function SettingsCard({ initial }: { initial: ProjectAISettings }) {
             <input
               type="checkbox"
               className="mt-1 size-4 accent-brand-600"
-              checked={s[k as 'enabled' | 'local_only' | 'active_learning' | 'suggest_tags' | 'suggest_reasons']}
+              checked={s[k as 'local_only' | 'active_learning' | 'suggest_tags' | 'suggest_reasons']}
               onChange={(e) => setS({ ...s, [k]: e.target.checked })}
             />
             <span>
@@ -121,10 +120,49 @@ function SettingsCard({ initial }: { initial: ProjectAISettings }) {
         </p>
       )}
       {canManage && (
-        <Button onClick={() => save.mutate(s)} disabled={save.isPending}>
+        <Button onClick={() => save.mutate({ ...s, enabled: initial.enabled })} disabled={save.isPending}>
           {t('ai.save_project')}
         </Button>
       )}
+    </Card>
+  )
+}
+
+/** O interruptor principal: salva na hora, sem passar pelo botão Salvar das opções. */
+function PowerCard({ settings, configured }: { settings: ProjectAISettings; configured: boolean }) {
+  const { t } = useTranslation()
+  const { project, canManage } = useProjectContext()
+  const { save } = useProjectAIActions(project.id)
+  const on = settings.enabled
+  return (
+    <Card
+      className={`space-y-3 ${on ? 'border-brand-500 dark:border-brand-500' : ''}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-semibold">{t(on ? 'ai.power_on' : 'ai.power_off')}</h2>
+          <p className="text-sm text-stone-500">{t(on ? 'ai.power_on_hint' : 'ai.power_off_hint')}</p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label={t('ai.enabled')}
+          disabled={!canManage || save.isPending || (!on && !configured)}
+          onClick={() => save.mutate({ ...settings, enabled: !on })}
+          className={`relative h-7 w-12 shrink-0 rounded-full transition disabled:opacity-50 ${
+            on ? 'bg-brand-600' : 'bg-stone-300 dark:bg-stone-700'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 size-6 rounded-full bg-white shadow transition-all ${
+              on ? 'left-[1.4rem]' : 'left-0.5'
+            }`}
+          />
+        </button>
+      </div>
+      {!canManage && <p className="text-xs text-stone-500">{t('ai.power_lead_only')}</p>}
+      <ErrorText error={save.error} />
     </Card>
   )
 }
@@ -368,9 +406,10 @@ export default function AI() {
           )}
         </p>
       )}
-      {settings.data && <SettingsCard initial={settings.data} />}
+      {settings.data && <PowerCard settings={settings.data} configured={configured} />}
       {settings.data?.enabled && (
         <>
+          <SettingsCard initial={settings.data} />
           <div role="tablist" className="inline-flex rounded-md border border-stone-300 p-0.5 dark:border-stone-700">
             {(['title_abstract', 'full_text'] as const).map((ph) => (
               <button

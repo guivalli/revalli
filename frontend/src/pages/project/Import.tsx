@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
+import { ApiError } from '../../api/client'
 import { useRecordActions, useSearches } from '../../api/records'
 import type { Search } from '../../api/types'
 import { Button, Card, ErrorText, Field, Input, Select } from '../../components/ui'
@@ -27,14 +28,48 @@ const FORMATS = ['ris', 'medline', 'pubmed_xml', 'bibtex', 'wos', 'csv', 'csl']
 const textarea =
   'w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-sm dark:border-stone-700 dark:bg-stone-900'
 
-function SearchRow({ s, onDelete }: { s: Search; onDelete: () => void }) {
+function SearchRow({
+  s,
+  onDelete,
+  onRename,
+}: {
+  s: Search
+  onDelete: () => void
+  onRename: (name: string) => void
+}) {
   const { t } = useTranslation()
   const [showQuery, setShowQuery] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [name, setName] = useState(s.source)
   const mismatch = s.reported_count != null && s.reported_count !== s.imported_count
   return (
     <li className="space-y-2 py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
+          {renaming ? (
+            <form
+              className="flex flex-wrap items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (name.trim() && name.trim() !== s.source) onRename(name.trim())
+                setRenaming(false)
+              }}
+            >
+              <Input
+                autoFocus
+                required
+                maxLength={200}
+                aria-label={t('import.source')}
+                className="w-64"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Button type="submit">{t('import.rename_save')}</Button>
+              <Button type="button" variant="ghost" onClick={() => setRenaming(false)}>
+                {t('projects.cancel')}
+              </Button>
+            </form>
+          ) : (
           <p className="font-medium">
             {s.source}
             {s.method !== 'database' && (
@@ -43,6 +78,7 @@ function SearchRow({ s, onDelete }: { s: Search; onDelete: () => void }) {
               </span>
             )}
           </p>
+          )}
           <p className="text-sm text-stone-500">
             {s.file_format === 'api' ? t('import.via_api') : s.file_name} · {t('import.imported')}: {s.imported_count}
             {s.reported_count != null && ` · ${t('import.reported')}: ${s.reported_count}`}
@@ -58,6 +94,11 @@ function SearchRow({ s, onDelete }: { s: Search; onDelete: () => void }) {
           )}
         </div>
         <div className="flex gap-1">
+          {s.method === 'database' && !renaming && (
+            <Button variant="ghost" onClick={() => setRenaming(true)}>
+              {t('import.rename')}
+            </Button>
+          )}
           {s.query && (
             <Button variant="ghost" onClick={() => setShowQuery(!showQuery)}>
               {showQuery ? t('import.hide_query') : t('import.edit_query')}
@@ -81,7 +122,7 @@ export default function Import() {
   const { t } = useTranslation()
   const { project, canManage } = useProjectContext()
   const searches = useSearches(project.id)
-  const { importFile, deleteSearch } = useRecordActions(project.id)
+  const { importFile, deleteSearch, updateSearch } = useRecordActions(project.id)
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState(() => ({
     source: '',
@@ -91,23 +132,45 @@ export default function Import() {
     notes: '',
     file_format: '',
   }))
+  // Nome parecido com o de uma busca já importada: a pessoa diz se é a mesma base ou outra
+  const [similar, setSimilar] = useState<string | null>(null)
+  const [distinct, setDistinct] = useState(false)
+  const sourceRef = useRef<HTMLInputElement>(null)
 
   if (!canManage) return <Navigate to=".." replace />
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
+  const send = (sameSource?: boolean) => {
     const file = fileRef.current?.files?.[0]
     if (!file) return
     const data = new FormData()
     data.set('file', file)
     for (const [k, v] of Object.entries(form)) if (v) data.set(k, v)
+    const answer = sameSource ?? (distinct ? false : undefined)
+    if (answer !== undefined) data.set('same_source', String(answer))
+    setSimilar(null)
     importFile.mutate(data, {
       onSuccess: () => {
         if (fileRef.current) fileRef.current.value = ''
-        setForm((f) => ({ ...f, query: '', reported_count: '', notes: '' }))
+        // O nome não fica para o próximo arquivo: cada importação é uma base a nomear
+        setForm((f) => ({ ...f, source: '', query: '', reported_count: '', notes: '' }))
+        setDistinct(false)
+      },
+      onError: (err) => {
+        if (err instanceof ApiError && err.code.startsWith('source_similar: ')) {
+          setSimilar(err.code.slice('source_similar: '.length))
+          importFile.reset()
+        }
       },
     })
   }
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    send()
+  }
+
+  const sameBase = searches.data?.find((x) => x.source === similar)
+  const rename = (s: Search, source: string) => updateSearch.mutate({ sid: s.id, body: { source } })
 
   const remove = (s: Search) => {
     if (window.confirm(t('import.delete_confirm', { count: s.imported_count })))
@@ -134,8 +197,12 @@ export default function Import() {
                 required
                 list="revalli-sources"
                 placeholder={t('import.source_placeholder')}
+                ref={sourceRef}
                 value={form.source}
-                onChange={(e) => setForm({ ...form, source: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, source: e.target.value })
+                  setSimilar(null)
+                }}
               />
               <datalist id="revalli-sources">
                 {SOURCES.map((s) => (
@@ -185,6 +252,44 @@ export default function Import() {
               </Select>
             </Field>
           </div>
+          {similar && (
+            <div
+              role="alertdialog"
+              aria-label={t('import.similar_title')}
+              className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+            >
+              <p className="font-medium">{t('import.similar_title', { name: similar })}</p>
+              <p>
+                {t('import.similar_body', {
+                  name: form.source.trim(),
+                  existing: similar,
+                  count: sameBase?.imported_count ?? 0,
+                  file: sameBase?.file_name || t('import.via_api'),
+                })}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" onClick={() => send(true)} disabled={importFile.isPending}>
+                  {t('import.similar_same', { name: similar })}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="border border-amber-400 dark:border-amber-700"
+                  onClick={() => {
+                    setDistinct(true)
+                    setSimilar(null)
+                    sourceRef.current?.focus()
+                    sourceRef.current?.select()
+                  }}
+                >
+                  {t('import.similar_other')}
+                </Button>
+              </div>
+            </div>
+          )}
+          {distinct && !similar && (
+            <p className="text-sm text-amber-700 dark:text-amber-300">{t('import.similar_rename_hint')}</p>
+          )}
           <ErrorText error={importFile.error} />
           {importFile.data && (
             <p role="status" className="text-sm text-brand-700 dark:text-brand-100">
@@ -203,11 +308,16 @@ export default function Import() {
 
       <Card>
         <h2 className="font-semibold">{t('import.history')}</h2>
-        <ErrorText error={deleteSearch.error} />
+        <ErrorText error={deleteSearch.error ?? updateSearch.error} />
         {searches.data?.length === 0 && <p className="mt-2 text-sm text-stone-500">{t('import.none')}</p>}
         <ul className="divide-y divide-stone-200 dark:divide-stone-800">
           {searches.data?.map((s) => (
-            <SearchRow key={s.id} s={s} onDelete={() => remove(s)} />
+            <SearchRow
+              key={s.id}
+              s={s}
+              onDelete={() => remove(s)}
+              onRename={(name) => rename(s, name)}
+            />
           ))}
         </ul>
       </Card>

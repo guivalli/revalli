@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from revalli.modules.ai import client as ai_client
-from revalli.modules.sources import clients
+from revalli.modules.sources import clients, fields
 from tests.test_ai import _configure
 from tests.test_extraction import _project_included
 from tests.test_fulltext import TITLES
@@ -74,8 +74,10 @@ def _openalex(request: httpx.Request) -> httpx.Response:
     q = {k: v[0] for k, v in parse_qs(request.url.query.decode()).items()}
     CALLS.append(q.get("filter") or q.get("search") or "exact:" + q.get("search.exact", ""))
     flt = q.get("filter", "")
-    if flt.startswith("primary_location.source.issn:"):
-        wanted = flt.split(":", 1)[1].split("|")
+    parts = flt.split(",")
+    issn = next((p for p in parts if p.startswith("primary_location.source.issn:")), None)
+    if issn:
+        wanted = issn.split(":", 1)[1].split("|")
         return _page([BY_ISSN[i] for i in wanted if i in BY_ISSN])
     if flt.startswith("openalex:"):
         return _page([WORKS[i] for i in flt[9:].split("|") if i in WORKS])
@@ -86,7 +88,8 @@ def _openalex(request: httpx.Request) -> httpx.Response:
         return _page([])
     if flt.startswith("cites:"):
         return _page([WORKS[i] for i in CITES.get(flt[6:], [])])
-    search = q.get("search") or q.get("search.exact", "")
+    field = next((p for p in parts if p.startswith("title_and_abstract.search")), "")
+    search = field.split(":", 1)[1] if field else q.get("search") or q.get("search.exact", "")
     found = [w for w in WORKS.values() if search.lower() in w["title"].lower()]
     if search == "anxiety":
         found = [WORKS["W1"], WORKS["W2"], WORKS["W10"]]
@@ -422,7 +425,7 @@ async def test_scielo_and_pepsic_search_openalex_restricted_to_collection_journa
     # 3 revistas em lotes de 2: a contagem soma os dois lotes
     assert p["count"] == 3 and len(p["sample"]) == 3
     assert CALLS.count("articlemeta:scl") == 1
-    issn_calls = [c for c in CALLS if c.startswith("primary_location.source.issn:")]
+    issn_calls = [c.split(",")[-1] for c in CALLS if "primary_location.source.issn:" in c]
     assert issn_calls == [
         "primary_location.source.issn:1111-1111|2222-2222",
         "primary_location.source.issn:3333-3333",
@@ -443,7 +446,7 @@ async def test_scielo_and_pepsic_search_openalex_restricted_to_collection_journa
     assert r.json()["result"]["imported"] == 2 and r.json()["result"]["truncated"] is True
 
 
-async def test_wildcard_queries_use_openalex_exact_search(admin):
+async def test_wildcard_queries_use_openalex_exact_field_filter(admin):
     pid = (await admin.post("/api/projects", json={"title": "Curinga"})).json()["id"]
     url = f"/api/projects/{pid}/sources/preview"
     seen: list[dict] = []
@@ -458,12 +461,16 @@ async def test_wildcard_queries_use_openalex_exact_search(admin):
         seen.clear()
         r = await admin.post(url, json={"source": source, "query": "anxi* AND sono"})
         assert r.status_code == 200, r.text
+        # Curinga só vale no campo sem radicalização; título e resumo, nunca o texto completo
         assert seen and all(
-            p.get("search.exact") == "anxi* AND sono" and "search" not in p for p in seen
+            p["filter"].startswith("title_and_abstract.search.exact:(anxi* AND sono)")
+            and "search" not in p
+            for p in seen
         )
     seen.clear()
     await admin.post(url, json={"source": "openalex", "query": "anxiety AND sono"})
-    assert seen[0].get("search") == "anxiety AND sono" and "search.exact" not in seen[0]
+    assert seen[0]["filter"] == "title_and_abstract.search:(anxiety AND sono)"
+    assert "search" not in seen[0] and "search.exact" not in seen[0]
 
 
 async def test_rate_limited_source_is_retried_then_reported(admin):
@@ -613,12 +620,14 @@ async def test_retry_waits_for_the_time_the_server_asks(monkeypatch):
 
 def test_quoted_phrases_with_wildcards_are_rewritten_for_openalex():
     q = '(bullying OR "assédio escolar") AND ("efeito* adverso*" OR "iatrogeni*" OR "adverse effect")'
-    assert clients.adapt_query(q) == (
+    assert fields.adapt_query(q) == (
         '(bullying OR "assédio escolar") AND ((efeito* AND adverso*) OR iatrogeni* '
         'OR "adverse effect")'
     )
-    assert clients.adapt_query("plain words") == "plain words"
-    assert clients.search_param('"efeito* adverso*"') == {"search.exact": "(efeito* AND adverso*)"}
+    assert fields.adapt_query("plain words") == "plain words"
+    assert fields.compile_strategy("openalex", '"efeito* adverso*"').filters == [
+        "title_and_abstract.search.exact:(efeito* AND adverso*)"
+    ]
 
 
 async def test_preview_reports_the_adapted_query(admin):
@@ -771,3 +780,170 @@ async def test_search_assistant_conversation_is_saved_per_person_and_project(adm
         assert (await admin.get(url)).json() == {"messages": []}
     finally:
         ai_client.set_transport(None)
+
+
+# --- Construtor de busca: campos por base e correção automática ---------------------
+
+
+def test_text_with_field_tags_is_corrected_for_each_base():
+    q = '(ti:("supervisão" OR supervision) OR ab:("clinical supervision")) AND humanista'
+    pubmed = fields.compile_strategy("pubmed", q)
+    # O PubMed ignora o campo aplicado a um grupo: ele é repetido em cada termo
+    assert pubmed.native == (
+        '(("supervisão"[ti] OR supervision[ti]) OR ("clinical supervision"[tiab])) AND humanista'
+    )
+    assert pubmed.corrections == ["field_tags_converted: ti, ab", "field_unavailable: abstract"]
+
+    epmc = fields.compile_strategy("europepmc", q)
+    assert epmc.native == (
+        '((TITLE:"supervisão" OR TITLE:supervision) OR (ABSTRACT:"clinical supervision")) '
+        "AND humanista"
+    )
+    assert epmc.corrections == ["field_tags_converted: ti, ab"]
+
+    for source in ("openalex", "scielo", "pepsic"):
+        oa = fields.compile_strategy(source, q)
+        assert len(oa.filters) == 1
+        assert oa.filters[0].startswith("title_and_abstract.search:")
+        assert "ti:" not in oa.filters[0] and "ab:" not in oa.filters[0]
+        assert oa.corrections == ["field_tags_removed: ti, ab"]
+
+
+def test_native_text_is_sent_untouched_and_pubmed_tags_are_converted_elsewhere():
+    c = fields.compile_strategy("pubmed", '"clinical supervision"[tiab] AND humanist*')
+    assert c.native == '"clinical supervision"[tiab] AND humanist*'
+    assert c.corrections == [] and c.shown == ""
+    c = fields.compile_strategy("europepmc", 'TITLE_ABS:"clinical supervision" AND humanist*')
+    assert c.corrections == [] and c.shown == ""
+    # Estratégia do PubMed colada no Europe PMC e no OpenAlex
+    c = fields.compile_strategy("europepmc", '"clinical supervision"[tiab] AND humanist*[ti]')
+    assert c.native == 'TITLE_ABS:"clinical supervision" AND TITLE:humanist*'
+    assert c.corrections == ["field_tags_converted: tiab, ti"]
+    c = fields.compile_strategy("scielo", '"clinical supervision"[tiab] AND x[zzz]')
+    assert c.filters == ['title_and_abstract.search:("clinical supervision" AND x)']
+    assert c.corrections == ["pubmed_tags_removed", "field_tags_removed: tiab"]
+
+
+def test_lowercase_operators_are_uppercased_and_commas_are_kept_out_of_filters():
+    c = fields.compile_strategy("openalex", '"a b" and c, d or e')
+    assert c.corrections == ["operators_uppercased"]
+    assert c.filters == ['title_and_abstract.search:("a b" AND c d OR e)']
+    assert fields.compile_strategy("pubmed", "x and y").native == "x AND y"
+
+
+def test_rows_build_native_syntax_for_each_base():
+    rows = [
+        fields.Row("supervisão OR supervision", "title"),
+        fields.Row("humanista", "title_abstract", "AND"),
+        fields.Row("Rogers C", "author", "AND"),
+        fields.Row("2015-2020", "year", "AND"),
+        fields.Row("gestalt", "title_abstract", "NOT"),
+    ]
+    pubmed = fields.compile_strategy("pubmed", rows=rows)
+    assert pubmed.native == (
+        '((supervisão[ti] OR supervision[ti]) AND humanista[tiab] AND "Rogers C"[au] '
+        "AND 2015:2020[dp]) NOT gestalt[tiab]"
+    )
+    epmc = fields.compile_strategy("europepmc", rows=rows)
+    assert epmc.native == (
+        '((TITLE:supervisão OR TITLE:supervision) AND TITLE_ABS:humanista AND AUTH:"Rogers C" '
+        "AND PUB_YEAR:[2015 TO 2020]) NOT TITLE_ABS:gestalt"
+    )
+    oa = fields.compile_strategy("scielo", rows=rows)
+    assert oa.filters == [
+        "title.search:(supervisão OR supervision)",
+        "title_and_abstract.search:humanista",
+        'raw_author_name.search:"Rogers C"',
+        "publication_year:2015-2020",
+        "title_and_abstract.search:!(gestalt)",
+    ]
+    assert oa.corrections == []
+
+
+def test_openalex_or_between_fields_is_corrected():
+    # Título OU resumo vira um filtro de título e resumo
+    c = fields.compile_strategy(
+        "openalex", rows=[fields.Row("a", "title"), fields.Row("b", "abstract", "OR")]
+    )
+    assert c.filters == ["title_and_abstract.search:((a) OR (b))"]
+    assert c.corrections == ["or_merged_title_abstract"]
+    # Autor OU título não existe no OpenAlex: vira E
+    c = fields.compile_strategy(
+        "openalex", rows=[fields.Row("Rogers", "author"), fields.Row("a", "title", "OR")]
+    )
+    assert len(c.filters) == 2 and c.corrections == ["or_across_fields: author, title"]
+    # O PubMed aceita o OU entre campos
+    c = fields.compile_strategy(
+        "pubmed", rows=[fields.Row("Rogers", "author"), fields.Row("a", "title", "OR")]
+    )
+    assert c.native == "Rogers[au] OR a[ti]" and c.corrections == []
+
+
+def test_unavailable_field_falls_back_to_title_and_abstract():
+    c = fields.compile_strategy("pubmed", rows=[fields.Row("x", "abstract")])
+    assert c.native == "x[tiab]" and c.corrections == ["field_unavailable: abstract"]
+    c = fields.compile_strategy("scielo", rows=[fields.Row("x", "mesh")])
+    assert c.filters == ["title_and_abstract.search:x"]
+    assert c.corrections == ["field_unavailable: mesh"]
+    c = fields.compile_strategy("scielo", rows=[fields.Row("abc", "year")])
+    assert c.filters == [] and c.corrections == ["year_invalid: abc"]
+
+
+def test_available_fields_per_base():
+    assert "abstract" not in fields.available_fields("pubmed")
+    assert "fulltext" in fields.available_fields("scielo")
+    assert "keyword" in fields.available_fields("europepmc")
+    assert fields.mixes_fields_with_or("pubmed") and not fields.mixes_fields_with_or("pepsic")
+
+
+async def test_rows_and_tagged_text_work_through_the_api(admin):
+    pid = (await admin.post("/api/projects", json={"title": "Construtor"})).json()["id"]
+    base = f"/api/projects/{pid}/sources"
+    seen: list[dict] = []
+
+    def spy(request: httpx.Request) -> httpx.Response:
+        if "openalex" in request.url.host:
+            seen.append(dict(request.url.params))
+        return _router(request)
+
+    clients.set_transport(httpx.MockTransport(spy))
+    r = await admin.get(f"{base}/fields")
+    assert r.status_code == 200, r.text
+    assert r.json()["pubmed"]["or_across_fields"] is True
+    assert r.json()["scielo"] == {
+        "fields": fields.available_fields("scielo"),
+        "or_across_fields": False,
+    }
+
+    r = await admin.post(
+        f"{base}/preview",
+        json={
+            "source": "openalex",
+            "rows": [
+                {"term": "anxiety", "field": "title"},
+                {"term": "2020", "field": "year", "op": "AND"},
+            ],
+        },
+    )
+    assert r.status_code == 200, r.text
+    assert seen[-1]["filter"] == "title.search:anxiety,publication_year:2020"
+    assert r.json()["translation"] == "title.search:anxiety AND publication_year:2020"
+    assert r.json()["corrections"] == []
+
+    r = await admin.post(
+        f"{base}/preview", json={"source": "scielo", "query": 'ti:("anxiety") AND ab:(sono)'}
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["corrections"] == ["field_tags_removed: ti, ab"]
+    assert seen[-1]["filter"].startswith('title_and_abstract.search:(("anxiety") AND (sono))')
+
+    # A busca importada guarda a estratégia como foi enviada
+    r = await admin.post(
+        f"{base}/search", json={"source": "openalex", "rows": [{"term": "anxiety"}]}
+    )
+    assert r.status_code == 202, r.text
+    searches = (await admin.get(f"/api/projects/{pid}/searches")).json()
+    assert searches[0]["query"] == "title_and_abstract.search:anxiety"
+
+    r = await admin.post(f"{base}/preview", json={"source": "openalex", "rows": [{"term": " "}]})
+    assert r.status_code == 422
